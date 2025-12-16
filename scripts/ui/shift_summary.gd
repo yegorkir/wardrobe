@@ -2,12 +2,12 @@ extends Control
 
 @onready var _summary_label: Label = %SummaryLabel
 @onready var _back_button: Button = %BackButton
-var _run_manager: Node
+var _run_manager: RunManagerBase
 var _payload: Dictionary = {}
 var _is_ready := false
 
 func _ready() -> void:
-	_run_manager = get_node_or_null("/root/RunManager")
+	_run_manager = get_node_or_null("/root/RunManager") as RunManagerBase
 	if _back_button:
 		_back_button.pressed.connect(_on_back_pressed)
 	else:
@@ -42,14 +42,14 @@ func _refresh() -> void:
 	_summary_label.text = "\n".join(lines)
 
 func _on_back_pressed() -> void:
-	var run_manager := _ensure_run_manager()
+	var run_manager: RunManagerBase = _ensure_run_manager()
 	if run_manager:
 		run_manager.go_to_menu()
 	else:
 		push_warning("RunManager singleton not found; cannot go to menu.")
 
-func _ensure_run_manager() -> Node:
+func _ensure_run_manager() -> RunManagerBase:
 	if _run_manager and is_instance_valid(_run_manager):
 		return _run_manager
-	_run_manager = get_node_or_null("/root/RunManager")
+	_run_manager = get_node_or_null("/root/RunManager") as RunManagerBase
 	return _run_manager

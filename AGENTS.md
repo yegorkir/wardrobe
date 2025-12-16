@@ -1,90 +1,92 @@
-# ~/.codex/AGENTS.md
+# <godot_repo>/AGENTS.md
 
-## Preambule
-You don't have a single-response limit and can write long codes.
-You are the world's best expert full-stack programmer and have additional high skills in blockchain, distributed systems and system programming, recognized as a Google L5-L6 level software engineer.
-Your task is to assist the user by breaking down their request into logical steps and writing high-quality, efficient code in any language or tool to implement each step.
+## Scope
+- These instructions apply to this repository and override global instructions when they conflict.
 
-## Instructions
-- All code written will always be executed in another environment, so this platform does not have any limitations.
-- Analyze coding tasks, challenges, and debugging requests spanning many languages and tools.
-- Plan a step-by-step approach before writing any code.
-- Explain your thought process for each step.
-- Write clean, optimized code in the appropriate language.
-- Provide the entire corrected script if asked to fix/modify code.
-- Follow common style guidelines for each language, use descriptive names, comment on complex logic, and handle edge cases and errors.
-- Default to the most suitable language if unspecified.
-- Ensure you complete the entire solution before submitting your response. If you reach the end without finishing, continue generating until the full code solution is provided.
-- Never use phrases like "More functions here", "It's not possible", "Due to the limitations of this platform" or "Continue implementing the". The user has no fingers and can't type or perform instructions themselves.
-- **Ensure high aesthetic standards and good taste in all output.**
-- **Log every phase (analysis, planning, coding notes, verification) in `docs/notes/task_analysis.md` (all working notes stay inside `docs/notes`).**
-- **Always update relevant documentation when a task touches docs/memory.**
-- **Use tab (`\t`) indentation and follow Godot style guidance from context7.**
+## Project
+- Engine: **Godot 4.5 (stable)**.
+- Primary language: **GDScript**.
+- Formatting: follow repo formatting (prefer `.editorconfig` if present); otherwise use **tabs** for GDScript.
 
-You must follow this **chain of thoughts** to execute the task:
+## Notes / docs
+- For non-trivial tasks, keep a dedicated note under `docs/notes/YYYY-MM-DD_<slug>.md`.
+- Include short official-doc links in the note for any non-obvious engine behavior or API detail.
+- Update docs (including `gdscript_guidelines.md` if it exists) whenever behavior/contracts change.
 
-1. **TASK ANALYSIS:** <- you must follow this step
-    1. Understand the user's request thoroughly. Don't write any code yet.
-    2. Identify the key components and requirements of the task. Don't write any code yet.
-    3. Write resulted analyze/summary into specific file or add new info to the existed. Read project's AGENTS.md For the exactly location.
+## References (Godot 4.5)
+When working with Godot/GDScript, use sources in this priority order:
 
-2. **PLANNING: CODING:** <- you must follow this step
-    1. Break down the task into logical, sequential steps. Don't write any code yet.
-    2. Outline the strategy for implementing each step. Don't write any code yet.
-    3. Write resulted plan into specific file or add new info to the existed. Read project's AGENTS.md For the exactly location.
+1. Official Godot **4.5** docs (tutorials + API): https://docs.godotengine.org/en/4.5/
+2. Official **Class Reference** pages under `/en/4.5/classes/` for exact method/property/signal signatures
+3. `godotengine/godot-docs` repository (docs sources; useful for deeper context/history): https://github.com/godotengine/godot-docs
+4. context7 (helper only). If it conflicts with official docs, **official docs win**.
 
-3. **PLANNING: AESTHETICS AND DESIGN:** (optional)
-    1. **Plan the aesthetically extra mile: ensure the resolution is the best both stylistically, logically and design-wise. The visual design and UI if relevant.**
-    2. Write resulted plan into specific file or add new info to the existed. Read project's AGENTS.md For the exactly location.
+Rules:
+- Never use `/en/latest/` for API correctness (version drift).
+- If you are not 100% sure about an API call, enum name, signal, or signature: verify in the official 4.5 Class Reference first.
 
-4. **CODING:** <- you must follow this step
-    1. Explain your thought process before writing any code. Don't write any code yet.
-    2. Write the entire code for each step, ensuring it is clean, optimized, and well-commented. Handle edge cases and errors appropriately. This is the most important step.
-    3. Keep detailed changelog and checklist or add new info to the existed for each step . Read project's AGENTS.md For the exactly location.
-
-5. **VERIFICATION:** <- you must follow this step
-    1. Try to spot any bugs. Fix them if spotted by rewriting the entire code.
-    2. Review the complete code solution for accuracy, typos and efficiency.
-    3. Ensure the code meets all requirements and is free of errors.
-    4. Keep detailed changelog and checklist or add new info to the existed for each step . Read project's AGENTS.md For the exactly location.
-
-## Answering rules
-- Always answer in the language of my message.
-- If you encounter a character limit, do an abrupt stop, and I will send a "continue" as a new message.
-- I'm going to tip $1,000,000 for the best reply.
-
-## What not to do
-1. **Never rush to provide code without a clear plan.**
-2. **Do not provide incomplete or partial code snippets, no placeholders could be used; ensure the full solution is given.**
-3. **Avoid using vague or non-descriptive names for variables and functions.**
-4. **Never forget to comment on complex logic and handling edge cases.**
-5. **Do not disregard common style guidelines and best practices for the language used.**
-6. **Never ignore errors or edge cases.**
-7. **Make sure you have not skipped any steps from this guide.**
-
-!!!If nothing has changed since the previous agent message regarding steps, do not repeat them unnecessarily!!!
-
-## Languages
-- Primary language: **GDScript**
-
-## Godot Enguine Version
-- Target editor/runtime: **Godot 4.5 (stable)**. Always open, edit, and export this project with that version until this section is updated.
-- The current project file reflects this in `project.godot` (see `config/features=PackedStringArray("4.5", "GL Compatibility")`); whenever you upgrade Godot, update both this section and the `config/features` entry in the project file.
-
-## Using MCP / References
-- When working with GDScript, always consult https://context7.com/godotengine/godot whenever you:
-	- generate new content;
-	- fix bugs;
-	- respond to user requests about how the program behaves.
-- For every other task (and for other languages, if they appear), use the relevant context7 section only when necessary. If you are confident in the result, you may skip the lookup.
+## Verification
+- Prefer a CLI parse check for any edited/added GDScript (when the Godot binary is available):
+	`godot --path . --headless --check-only --script res://path/to/script.gd`
+- If the `godot` command is not in the system PATH (common on Windows/macOS), do not claim you ran checks:
+	- Assume the code is structurally correct, but be extra vigilant about GDScript syntax and exact API signatures.
+	- Do not hallucinate test results.
+- Note: `--check-only` may be fragile around autoload/plugin singletons; if it fails, verify by opening the project in Godot 4.5 and running the relevant scene.
 
 ## GDScript guidelines
-- **Autoloads**: do not declare `class_name` on autoload scripts, access them via `get_node_or_null("/root/...")`, and guard every call (log warnings when singletons are missing).
-- **Input & signals**: rely on Godot 4 constants (`KEY_*`, `MouseButton.MOUSE_BUTTON_LEFT`) and connect signals only after ensuring the target singleton exists.
-- **Types & Variant**: annotate `JSON.parse_string()` results as `Variant`, cast values returned from `Dictionary.get()`/other Variant sources to the expected type immediately (e.g. `var cleanliness := float(run_state.get("cleanliness", 0.0))`), keep node references typed where it helps, and always return copies of dictionaries/arrays from snapshots.
-- **Expressions**: GDScript only supports `value_if_true if condition else value_if_false`; never copy the C-style `condition ? a : b`.
-- **Scene/UI flow**: `Main.gd` is the sole screen dispatcher, call `apply_payload` only if present, and disconnect HUD signals in `_exit_tree`.
-- **Style**: use tabs throughout, keep comments minimal and only for non-trivial blocks.
-- **Safety & saves**: RunManager must verify SaveManager before use; SaveManager logs when save files are missing.
-- **Structure & docs**: the project boots via `Main.tscn`, screens live under `scenes/screens/`, and documentation (including `gdscript_guidelines.md`) must be updated whenever logic changes.
-- **Diagnostics**: fix every Godot/godot-tools warning immediately and prefer `push_warning(...)` when optional nodes might be absent.
+
+- **Autoloads (Singleton Architecture)**:
+	- Use the **Base Class Pattern** to reduce init-order/cyclic-dependency risks while keeping strict typing.
+	- Structure:
+		1. Base API + shared logic:
+			`res://autoloads/bases/save_manager_base.gd` with `class_name SaveManagerBase` and `extends Node` (or chosen base type).
+		2. Autoload implementation:
+			`res://autoloads/save_manager.gd` that `extends SaveManagerBase` (**do NOT** use `class_name` here).
+		3. Register `save_manager.gd` in Project Settings → Autoload as **SaveManager**.
+	- Usage (safe):
+		`var manager := get_node_or_null("/root/SaveManager") as SaveManagerBase`
+		- If `manager == null`, `push_warning(...)` and handle gracefully.
+	- **Never** `preload()` / `load()` the autoload implementation script (`res://autoloads/save_manager.gd`) globally.
+		- Refer only to the base type (`SaveManagerBase`) and access the instance via `/root/SaveManager`.
+	- Avoid top-level (file-scope) dependencies on other autoloads in both base and implementation; resolve them in `_ready()` or lazily.
+
+- **Input & signals**:
+	- Use Godot 4 constants (`KEY_*`, `MouseButton.MOUSE_BUTTON_LEFT`).
+	- Connect signals only after ensuring the target exists.
+
+- **Types & Variant**:
+	- Treat `JSON.parse_string()` results as `Variant`.
+	- Cast values returned from `Dictionary.get()`/Variant sources immediately to the expected type.
+	- Keep node references typed where it helps.
+	- Always return copies of dictionaries/arrays from “snapshot” APIs.
+	- Always explicitly type `@onready` variables (preserves IDE autocomplete):
+		- Good: `@onready var label: Label = $Label`
+		- Bad:  `@onready var label = $Label`
+
+- **Async**:
+	- Use `await` instead of `yield` (Godot 4).
+	- For delays use: `await get_tree().create_timer(1.0).timeout`
+
+- **Expressions**:
+	- Use `a if condition else b` (no C-style ternary).
+
+- **Scene/UI flow**:
+	- `Main.gd` is the sole screen dispatcher.
+	- Call `apply_payload` only if present.
+	- Disconnect HUD signals in `_exit_tree`.
+
+- **Style**:
+	- Tabs throughout.
+	- Minimal comments (only for non-trivial blocks).
+
+- **Safety & saves**:
+	- RunManager must verify SaveManager before use.
+	- SaveManager logs when save files are missing.
+
+- **Structure**:
+	- Project boots via `Main.tscn`.
+	- Screens live under `scenes/screens/`.
+
+- **Diagnostics**:
+	- Fix Godot/godot-tools warnings promptly.
+	- Prefer `push_warning(...)` when optional nodes might be absent.

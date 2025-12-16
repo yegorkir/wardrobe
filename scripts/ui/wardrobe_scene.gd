@@ -6,7 +6,7 @@ extends Control
 @onready var _magic_label: Label = %MagicValue
 @onready var _debt_label: Label = %DebtValue
 @onready var _end_shift_button: Button = %EndShiftButton
-@onready var _run_manager := get_node_or_null("/root/RunManager")
+@onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
 var _hud_connected := false
 
 func _ready() -> void:

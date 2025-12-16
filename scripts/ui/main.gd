@@ -8,7 +8,7 @@ const SCREEN_SCENES := {
 }
 
 @onready var _screen_root: Control = %ScreenRoot
-@onready var _run_manager := get_node_or_null("/root/RunManager")
+@onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
 var _current_screen: Control
 
 func _ready() -> void:
