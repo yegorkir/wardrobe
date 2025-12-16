@@ -4,6 +4,7 @@ const SCREEN_SCENES := {
 	"main_menu": preload("res://scenes/screens/MainMenu.tscn"),
 	"wardrobe": preload("res://scenes/screens/WardrobeScene.tscn"),
 	"shift_summary": preload("res://scenes/screens/ShiftSummary.tscn"),
+	"modifier_select": preload("res://scenes/screens/ModifierSelect.tscn"),
 }
 
 @onready var _screen_root: Control = %ScreenRoot

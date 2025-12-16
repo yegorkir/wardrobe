@@ -81,7 +81,8 @@ You must follow this **chain of thoughts** to execute the task:
 ## GDScript guidelines
 - **Autoloads**: do not declare `class_name` on autoload scripts, access them via `get_node_or_null("/root/...")`, and guard every call (log warnings when singletons are missing).
 - **Input & signals**: rely on Godot 4 constants (`KEY_*`, `MouseButton.MOUSE_BUTTON_LEFT`) and connect signals only after ensuring the target singleton exists.
-- **Types & Variant**: annotate `JSON.parse_string()` results as `Variant`, keep node references typed where it helps, and always return copies of dictionaries/arrays from snapshots.
+- **Types & Variant**: annotate `JSON.parse_string()` results as `Variant`, cast values returned from `Dictionary.get()`/other Variant sources to the expected type immediately (e.g. `var cleanliness := float(run_state.get("cleanliness", 0.0))`), keep node references typed where it helps, and always return copies of dictionaries/arrays from snapshots.
+- **Expressions**: GDScript only supports `value_if_true if condition else value_if_false`; never copy the C-style `condition ? a : b`.
 - **Scene/UI flow**: `Main.gd` is the sole screen dispatcher, call `apply_payload` only if present, and disconnect HUD signals in `_exit_tree`.
 - **Style**: use tabs throughout, keep comments minimal and only for non-trivial blocks.
 - **Safety & saves**: RunManager must verify SaveManager before use; SaveManager logs when save files are missing.
