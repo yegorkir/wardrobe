@@ -1,0 +1,6 @@
+{
+  "id": "human",
+  "display_name": "Human",
+  "patience": 100,
+  "payout": 10
+}

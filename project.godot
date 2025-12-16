@@ -11,8 +11,16 @@ config_version=5
 [application]
 
 config/name="wardrobe"
+run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/icon="res://icon.svg"
+
+[autoload]
+
+RunManager="*res://scripts/autoload/run_manager.gd"
+ContentDB="*res://scripts/autoload/content_db.gd"
+SaveManager="*res://scripts/autoload/save_manager.gd"
+Debug="*res://scripts/autoload/debug.gd"
 
 [rendering]
 

@@ -1,0 +1,6 @@
+{
+  "id": "wave_1",
+  "duration": 90,
+  "clients": ["human", "zombie", "vampire"],
+  "difficulty": 1
+}
