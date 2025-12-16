@@ -1,9 +1,12 @@
 class_name ContentDBBase
 extends Node
 
+signal content_event(event_name, payload)
+
 var _archetypes: Dictionary = {}
 var _modifiers: Dictionary = {}
 var _waves: Dictionary = {}
+var _log_entries: Array = []
 
 func _ready() -> void:
 	_load_category("archetypes", _archetypes)
@@ -23,6 +26,10 @@ func _load_category(category: String, target: Dictionary) -> void:
 			target[parsed["id"]] = parsed
 		else:
 			push_warning("ContentDB: failed to parse %s" % path)
+	_record_content_event("category_loaded", {
+		"category": category,
+		"count": target.size(),
+	})
 
 func _log_status() -> void:
 	print("ContentDB: loaded %d archetypes, %d modifiers, %d waves" % [
@@ -30,6 +37,11 @@ func _log_status() -> void:
 		_modifiers.size(),
 		_waves.size()
 	])
+	_record_content_event("content_summary", {
+		"archetypes": _archetypes.size(),
+		"modifiers": _modifiers.size(),
+		"waves": _waves.size(),
+	})
 
 func get_archetype(id: String) -> Dictionary:
 	return _archetypes.get(id, {})
@@ -39,3 +51,15 @@ func get_modifier(id: String) -> Dictionary:
 
 func get_wave(id: String) -> Dictionary:
 	return _waves.get(id, {})
+
+func get_log_entries() -> Array:
+	return _log_entries.duplicate(true)
+
+func _record_content_event(event_name: String, payload: Dictionary) -> void:
+	var entry := {
+		"event": event_name,
+		"payload": payload.duplicate(true),
+	}
+	_log_entries.append(entry)
+	var payload_copy: Dictionary = entry["payload"].duplicate(true)
+	emit_signal("content_event", event_name, payload_copy)

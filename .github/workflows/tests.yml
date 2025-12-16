@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  skeleton:
+    name: Skeleton validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.5
+        run: |
+          wget -q https://downloads.tuxfamily.org/godotengine/4.5/Godot_v4.5-stable_linux.x86_64.zip
+          unzip -q Godot_v4.5-stable_linux.x86_64.zip
+          sudo install -m 0755 Godot_v4.5-stable_linux.x86_64 /usr/local/bin/godot
+
+      - name: Run GdUnit4 tests
+        env:
+          GODOT_BIN: godot
+        run: |
+          chmod +x addons/gdUnit4/runtest.sh
+          ./addons/gdUnit4/runtest.sh -a ./tests

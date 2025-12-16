@@ -3,3 +3,5 @@
 /android/
 /builds/
 .DS_Store
+reports/
+*.uid
