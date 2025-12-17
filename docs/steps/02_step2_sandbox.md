@@ -1,0 +1,70 @@
+# Step 2 — Movement + Pick/Put/Swap Sandbox
+
+> Дополняет [TDD §9](../technical_design_document.md#9-step-2--movement--pickputswap-sandbox). В TDD описаны цели и ответственность систем; этот документ хранит конкретные численные значения и рабочий чеклист, чтобы их можно было менять без переписывания TDD.
+
+## 1. Layout и координаты
+
+- `HookBoard` origin: `(640, 240)`.
+- 6 крючков в сетке 2×3 (смещение `Δx = 160 px`, `Δy = 200 px`):
+	- Row 0: `Hook_0 (0, 0)`, `Hook_1 (160, 0)`, `Hook_2 (320, 0)`.
+	- Row 1: `Hook_3 (0, 200)`, `Hook_4 (160, 200)`, `Hook_5 (320, 200)`.
+- Каждый `Hook_i` содержит два слота:
+	- `SlotA`: `(0, -32)` относительно крючка.
+	- `SlotB`: `(0, +32)` относительно крючка.
+- `InteractArea` — `CircleShape2D` радиусом `90 px`, центр (`position = Vector2.ZERO`) совпадает с Player.
+
+## 2. Управление и движение
+
+- Input Map: `move_left/right/up/down`, `interact`, `debug_reset`.
+- Скорость игрока: `240 px/s`.
+- При вычислении направления движения `dir = Vector2(x, y).normalized()` (диагонали не ускоряют персонажа).
+
+## 3. Targeting и взаимодействия
+
+`find_best_slot()` применяет правила:
+
+1. Минимальная дистанция до `slot.global_position`.
+2. Если разница < `6 px`, выбираем слот с максимальным `dot(slot_direction, last_move_dir)`.
+3. Если снова ничья — алфавитный порядок по `slot.name`.
+
+## 4. Item data и перенос предметов
+
+- `enum ItemType { COAT, TICKET, ANCHOR_TICKET }`.
+- `item_id` формат `<type>_<nnn>` (`coat_001`, `ticket_003`, `anchor_ticket_001`).
+- Поля на Step 2:
+	- `item_id: String`
+	- `item_type: ItemType`
+	- `ticket_number: int = -1` (резерв)
+	- `durability: float = 100.0` (резерв)
+- Перемещение предмета:
+	1. `item.reparent(anchor_node)` (или `remove_child`/`add_child`).
+	2. Сброс трансформа `global_position = anchor.global_position`, `global_rotation = 0`, `global_scale = Vector2.ONE`. Если item остаётся дочерним `ItemAnchor`, допустимо `item.position = Vector2.ZERO`.
+
+## 5. Seed раскладка
+
+| Slot             | Item              |
+| ---------------- | ----------------- |
+| `DeskSlot_0`     | `coat_001`        |
+| `Hook_0/SlotA`   | `ticket_001`      |
+| `Hook_1/SlotB`   | `coat_002`        |
+| `Hook_3/SlotA`   | `ticket_002`      |
+| `Hook_5/SlotB`   | `anchor_ticket_001` |
+
+Остальные слоты пусты. Seed вызывается при запуске WardrobeScene.
+
+## 6. Debug и QA процедуры
+
+- `debug_reset` (R): перезагружает текущую сцену.
+- `validate_world()` после каждого `interact`:
+	- каждый слот содержит 0/1 предмет;
+	- активная рука содержит 0/1 предмет;
+	- ни один `ItemNode` не числится одновременно в руке и слоте/нескольких слотах.
+	Нарушения → `push_error()` + список; `assert()` только в editor/debug сборках.
+
+## 7. Web smoke test
+
+1. Export preset “Web (release)” в `build/web/`.
+2. CLI (если нужно автоматизировать):  
+	`godot --headless --export-release "Web" build/web/index.html`
+3. Поднять локальный статиκ-сервер и открыть сцену в браузере.
+4. Проверить WASD, `E` (pick/put/swap) и `R` (reset) на desktop. На mobile браузере убедиться, что сцена стартует без ошибок.
