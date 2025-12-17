@@ -51,12 +51,23 @@ if echo "$GODOT_VERSION" | grep -i "mono" > /dev/null; then
     echo "done $?"
 fi
 
+# Force Godot to use a writable HOME inside the workspace (prevents sandbox issues)
+test_home="${GODOT_TEST_HOME:-$PWD/.godot_home}"
+mkdir -p "$test_home"
+mkdir -p "$test_home/Library/Application Support"
+mkdir -p "$test_home/.local/share"
+
+# Ensure headless runs don't abort; allow override by passing flag manually
+if ! echo "$filtered_args" | grep -q -- "--ignoreHeadlessMode"; then
+    filtered_args="--ignoreHeadlessMode $filtered_args"
+fi
+
 # Run the tests with the filtered arguments
-"$godot_binary" --path . -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd $filtered_args
+HOME="$test_home" XDG_DATA_HOME="$test_home/.local/share" "$godot_binary" --headless --path . -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd $filtered_args
 exit_code=$?
 echo "Run tests ends with $exit_code"
 
 # Run the copy log command
-"$godot_binary" --headless --path . --quiet -s res://addons/gdUnit4/bin/GdUnitCopyLog.gd $filtered_args > /dev/null
+HOME="$test_home" XDG_DATA_HOME="$test_home/.local/share" "$godot_binary" --headless --path . --quiet -s res://addons/gdUnit4/bin/GdUnitCopyLog.gd $filtered_args > /dev/null
 exit_code2=$?
 exit $exit_code

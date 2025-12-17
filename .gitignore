@@ -1,7 +1,9 @@
 # Godot 4+ specific ignores
 .godot/
+.godot_home/
 /android/
 /builds/
 .DS_Store
 reports/
 *.uid
+docs/notes/

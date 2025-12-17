@@ -1,0 +1,61 @@
+{
+  "id": "color_match_basic",
+  "name": "Color Match Basic",
+  "seed_layout": [
+    {
+      "slot_id": "Hook_0_SlotA",
+      "item_id": "coat_101",
+      "item_type": "COAT",
+      "color": "#e05c5c"
+    },
+    {
+      "slot_id": "Hook_1_SlotB",
+      "item_id": "coat_102",
+      "item_type": "COAT",
+      "color": "#4f8fd6"
+    },
+    {
+      "slot_id": "Hook_3_SlotA",
+      "item_id": "coat_103",
+      "item_type": "COAT",
+      "color": "#5cc58c"
+    },
+    {
+      "slot_id": "Hook_4_SlotB",
+      "item_id": "coat_104",
+      "item_type": "COAT",
+      "color": "#e4d95c"
+    }
+  ],
+  "target_layout": [
+    {
+      "slot_id": "DeskSlot_0",
+      "item_id": "coat_101",
+      "item_type": "COAT",
+      "color": "#e05c5c",
+      "display_name": "Red Coat"
+    },
+    {
+      "slot_id": "DeskSlot_0",
+      "item_id": "coat_102",
+      "item_type": "COAT",
+      "color": "#4f8fd6",
+      "display_name": "Blue Coat"
+    },
+    {
+      "slot_id": "DeskSlot_0",
+      "item_id": "coat_103",
+      "item_type": "COAT",
+      "color": "#5cc58c",
+      "display_name": "Green Coat"
+    },
+    {
+      "slot_id": "DeskSlot_0",
+      "item_id": "coat_104",
+      "item_type": "COAT",
+      "color": "#e4d95c",
+      "display_name": "Yellow Coat"
+    }
+  ],
+  "par_actions": 12
+}

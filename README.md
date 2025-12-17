@@ -32,7 +32,7 @@ export GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot   # поправь
 | `just web-local` | Экспорт веба в режиме debug для локальных smoke-тестов. |
 | `just mac-debug` | Собирает debug-билд для macOS (`builds/current/macos/Wardrobe.app`). |
 | `just tests` | Запускает все GdUnit4-суиты (`addons/gdUnit4/runtest.sh -a ./tests`). |
-| `just save-and-clear` | Архивирует содержимое `builds/current/` в `builds/archive/` и очищает текущие сборки. |
+| `just save` | Архивирует содержимое `builds/current/` в `builds/archive/` и очищает текущие сборки. |
 
 Набор команд синхронизирован с CI (`.github/workflows/tests.yml`), поэтому одинаковый `GODOT_BIN` гарантирует идентичность локальных и CI-результатов.
 Экспортные пресеты исключают `tests` и `addons/gdUnit4`, так что сборки не содержат тестовые сцены и плагин.

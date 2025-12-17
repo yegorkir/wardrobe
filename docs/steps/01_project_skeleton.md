@@ -83,7 +83,7 @@
 4. (опционально) `Debug.gd`
 	- Переключает debug overlay и шлёт логи в консоль.
 
-> Дополнительно: в `scripts/sim/` создать модули `magic_system.gd` и `inspection_system.gd`, которые принимают конфиги (`insurance_mode`, `emergency_cost_mode`, `inspection_mode`) и предоставляют методы-заглушки (`apply_insurance`, `request_emergency_locate`, `record_entropy`). Эти сервисы пока могут возвращать только структуру данных и печатать логи, но их наличие гарантирует, что переключение режимов произойдёт конфигом, а не переписыванием кода.
+> Дополнительно: в `scripts/domain/` (или `scripts/app/`) создать модули `magic_system.gd` и `inspection_system.gd`, которые принимают конфиги (`insurance_mode`, `emergency_cost_mode`, `inspection_mode`) и предоставляют методы-заглушки (`apply_insurance`, `request_emergency_locate`, `record_entropy`). Эти сервисы пока могут возвращать только структуру данных и печатать логи, но их наличие гарантирует, что переключение режимов произойдёт конфигом, а не переписыванием кода.
 > Ограничение: эти модули не должны зависеть от `Node`/`SceneTree`, они работают с данными (`WardrobeRunState` + config), чтобы их можно было тестировать и переносить в SimulationCore без изменений.
 
 ---

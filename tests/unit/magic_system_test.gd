@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-const MagicSystemScript := preload("res://scripts/sim/magic_system.gd")
+const MagicSystemScript := preload("res://scripts/domain/magic/magic_system.gd")
 
 func test_apply_insurance_registers_magic_links() -> void:
 	var magic_system := MagicSystemScript.new()

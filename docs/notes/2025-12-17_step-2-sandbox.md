@@ -7,6 +7,9 @@
 ## Decisions
 - Выделен отдельный раздел TDD (“Step 2 — Movement + Pick/Put/Swap Sandbox”) с общими целями, layout-структурой, системами S0–S9 и Definition of Done.
 - Все численные уточнения и процедурные детали перенесены из TDD в `docs/steps/02_step2_sandbox.md`, чтобы их было проще менять (HookBoard координаты, InteractArea, скорость игрока, таргетинг, ItemData/seed, debug-reset/validate-world и web smoke процесс).
+- Seed Step 2 теперь хранится в `res://content/seeds/step2_seed.json`; сцена читает JSON и fallback'ит на таблицу по умолчанию, поэтому правки стартовой раскладки доступны без правки кода.
+- Макет адаптирован под портретное окно 720×1280: Player/Desk/HookBoard перепозиционированы по центру, пропорции Placeholder-спрайтов увеличены для лучшей читаемости.
+- HookBoard получил отдельный `wardrobe.png` фон + `doublehook.png`, а слоты располагаются горизонтально (`SlotA/SlotB = ±40 px`), предметы используют реальные спрайты (`item_ticket.png`, `item_anchor_ticket.png`) с fallback на плейсхолдеры.
 
 ## Follow-ups
-- Нет блокеров: спецификация разделена на “what” (TDD) и “how (numbers)” в step-документе; можно переходить к имплементации и будущему Step 2.1.
+- Нет блокеров: спецификация разделена на “what” (TDD) и “how (numbers)” в step-документе; seed вынесен в файл — можно переходить к имплементации и будущему Step 2.1.

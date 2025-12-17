@@ -1,0 +1,35 @@
+{
+	"id": "step2_seed",
+	"items": [
+		{
+			"slot_id": "DeskSlot_0",
+			"item_id": "coat_001",
+			"item_type": "COAT",
+			"color": "#e69966"
+		},
+		{
+			"slot_id": "Hook_0_SlotA",
+			"item_id": "ticket_001",
+			"item_type": "TICKET",
+			"color": "#66ccff"
+		},
+		{
+			"slot_id": "Hook_1_SlotB",
+			"item_id": "coat_002",
+			"item_type": "COAT",
+			"color": "#b366e6"
+		},
+		{
+			"slot_id": "Hook_3_SlotA",
+			"item_id": "ticket_002",
+			"item_type": "TICKET",
+			"color": "#33e6b3"
+		},
+		{
+			"slot_id": "Hook_5_SlotB",
+			"item_id": "anchor_ticket_001",
+			"item_type": "ANCHOR_TICKET",
+			"color": "#ffd24d"
+		}
+	]
+}

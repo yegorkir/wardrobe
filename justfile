@@ -27,7 +27,7 @@ mac-debug: _require_godot_bin
 tests: _require_godot_bin
 	GODOT_BIN="{{godot_bin}}" ./addons/gdUnit4/runtest.sh -a ./tests
 
-save-and-clear:
+save:
 	mkdir -p builds/archive
 	cd builds/current && zip -r "../archive/build_`date +%y%m%d_%H%M%S`.zip" .
 	rm -rf builds/current/*

@@ -7,9 +7,9 @@ const SCREEN_SCENES := {
 	"modifier_select": preload("res://scenes/screens/ModifierSelect.tscn"),
 }
 
-@onready var _screen_root: Control = %ScreenRoot
+@onready var _screen_root: CanvasItem = %ScreenRoot
 @onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
-var _current_screen: Control
+var _current_screen: Node
 
 func _ready() -> void:
 	if _run_manager:
@@ -21,10 +21,10 @@ func _on_screen_requested(screen_id: String, payload: Dictionary = {}) -> void:
 	if not SCREEN_SCENES.has(screen_id):
 		push_warning("Unknown screen requested: %s" % screen_id)
 		return
-	var scene: Control = SCREEN_SCENES[screen_id].instantiate()
+	var scene: Node = SCREEN_SCENES[screen_id].instantiate()
 	_swap_screen(scene, payload)
 
-func _swap_screen(new_screen: Control, payload: Dictionary) -> void:
+func _swap_screen(new_screen: Node, payload: Dictionary) -> void:
 	if _current_screen:
 		_current_screen.queue_free()
 	_current_screen = new_screen

@@ -14,7 +14,17 @@ const CONTENT_DIRECTORIES := {
 	"waves": "res://content/waves",
 }
 
-const REQUIRED_INPUT_ACTIONS := ["tap", "cancel", "debug_toggle"]
+const REQUIRED_INPUT_ACTIONS := [
+	"tap",
+	"cancel",
+	"debug_toggle",
+	"move_left",
+	"move_right",
+	"move_up",
+	"move_down",
+	"interact",
+	"debug_reset",
+]
 
 const WARDROBE_SCENE := preload("res://scenes/screens/WardrobeScene.tscn")
 
@@ -184,10 +194,10 @@ func test_wardrobe_scene_receives_hud_updates() -> void:
 	var run_manager := _get_autoload("RunManager") as RunManagerBase
 	assert_object(run_manager).is_not_null()
 	run_manager.start_shift()
-	var wardrobe: Control = auto_free(WARDROBE_SCENE.instantiate())
+	var wardrobe: Node = auto_free(WARDROBE_SCENE.instantiate())
 	get_tree().root.add_child(wardrobe)
 	await _wait_frames(1)
-	var money_label := wardrobe.get_node("HUDContainer/HUDPanel/VBox/MoneyValue") as Label
+	var money_label := wardrobe.get_node("HUDLayer/HUDContainer/HUDPanel/VBox/MoneyValue") as Label
 	assert_object(money_label).is_not_null()
 	var initial_value := _extract_label_value(money_label.text)
 	run_manager.adjust_demo_money(3)

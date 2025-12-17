@@ -250,8 +250,8 @@
 - операции place/remove/swap;
 - принцип: “разрешаем многое, последствия потом”;
 - выдаёт события для SpecialRules;
-- перед каждым `pick/place/swap` проверяет ограничения архетипов (например, `ghost`): если `item.flags.has("ghost")` и слот, из которого берём или в который кладём, находится в свете (`is_slot_lit(source_slot/target_slot)`), возвращается причина для ShiftLog/Debug (не для UI игрока); реализация `is_slot_lit` может читать `hook.zone == Light` или обращаться к LightSystem.
-- baseline-инварианты: `pick/place/swap` разрешены по умолчанию, блокировки вводятся только явными правилами; все операции логируют последствия (ShiftLog).
+- перед каждым `pick/place/swap` проверяет ограничения архетипов (например, `ghost`): если `item.flags.has("ghost")` и слот, из которого берём или в который кладём, находится в свете (`is_slot_lit(source_slot/target_slot)`), возвращается причина для WardrobeShiftLog/Debug (не для UI игрока); реализация `is_slot_lit` может читать `hook.zone == Light` или обращаться к LightSystem.
+- baseline-инварианты: `pick/place/swap` разрешены по умолчанию, блокировки вводятся только явными правилами; все операции логируют последствия (WardrobeShiftLog).
 - Для правил света проверка `is_slot_lit(source_slot/target_slot)` применяется к слоту, из которого берём предмет, и/или к целевому слоту — Ghost трактуем как `INTERACT_BLOCK` (блокируем операции), Vampire — как `DAMAGE` (взаимодействие разрешено, но тик-процесс порчи запускается).
 
 ### 6.4 SpecialRulesSystem (архетипы)
@@ -268,7 +268,7 @@
 	- Технические требования:
 		- предмет видим, но `pick/place/swap` запрещены, если `is_lit == true`;
 		- допустимый намёк: изменение альфы (`ghost_visibility_alpha_when_lit`), других предварительных подсказок нет;
-		- блокировки фиксируются в ShiftLog; конфиг: `ghost_interaction_blocked_when_lit`, `ghost_visibility_alpha_when_lit`, `light_rule`.
+		- блокировки фиксируются в WardrobeShiftLog; конфиг: `ghost_interaction_blocked_when_lit`, `ghost_visibility_alpha_when_lit`, `light_rule`.
 	- UX намерение (может меняться): нет превентивных текстов/иконок; при попытке действия проигрывается краткий VFX/звук отказа (TBD).
 - Werewolf: фазовый таймер.
 - Hydra (multi-item наборы, отложено):
@@ -283,7 +283,7 @@
 ### 6.5 Satisfaction & Scoring
 
 - перевод patience/ошибок/порчи в payout/penalty;
-- пишет причины в `ShiftLog` (для объяснимости).
+- пишет причины в `WardrobeShiftLog` (для объяснимости).
 
 ### 6.6 MagicSystem
 
@@ -302,7 +302,7 @@ MagicSystem — отдельный сервис симуляции, которы
 	- тратит `magic_resource` (стоимость из конфига) и создаёт связь `ticket_number -> item_id(s)`;
 	- цель — снизить когнитивный долг; дефолт для skeleton/MVP — `insurance_mode=FREE`, но конфиг позволяет переключиться на `SOFT_LIMIT`.
 2. **Emergency Locate (аварийный поиск)**
-	- платим ресурсом, связанным с выплатой за смену (см. `emergency_cost_mode`), поэтому запись события обязательно попадает в `ShiftLog`;
+	- платим ресурсом, связанным с выплатой за смену (см. `emergency_cost_mode`), поэтому запись события обязательно попадает в `WardrobeShiftLog`;
 	- дефолт для MVP — `emergency_cost_mode=DEBT`, остальные варианты включаются данными без переписывания логики поиска.
 
 Эффект поиска всегда информационный: подсветить текущий `hook_id/slot` (симуляция ничего не телепортирует). Presentation-уровень может дополнить это стрелкой/маркером.
@@ -321,7 +321,7 @@ InspectionSystem также управляется конфигом, числа 
 - `inspection_mode`: `PER_SHIFT` (отчёт/штраф после каждой смены) или `INTERVAL` (раз в `N` смен — параметр `inspection_interval`).
 - `mvp_emulation`: bool — если включено, показываем “inspection-style report” каждую смену, но штрафы можем занулять.
 - `thresholds`: таблица штрафов/похвал за чистоту (оставляем пустой до тестов).
-- `logging`: любое начисление грязи пишет причину в `ShiftLog`.
+	- `logging`: любое начисление грязи пишет причину в `WardrobeShiftLog`.
 
 Система накапливает `cleanliness_or_entropy` и `inspector_risk` от:
 
@@ -434,7 +434,7 @@ WardrobeScene (Node2D)
 ### 9.3 Input Map
 
 - `move_left`, `move_right`, `move_up`, `move_down` (WASD).
-- `interact` (E) запускает InteractionResolver.
+- `interact` (E) запускает PickPutSwapResolver.
 - `debug_reset` (R) — опционально для dev-фичей.
 
 ### 9.4 Системы Step 2 (S0–S9)
@@ -465,7 +465,7 @@ WardrobeScene (Node2D)
 - Из всех слотов внутри `InteractArea` выбирается ближайший по дистанции с предсказуемым тайбрейком (см. [steps/02_step2_sandbox.md#3-targeting-и-взаимодействия](steps/02_step2_sandbox.md#3-targeting-и-взаимодействия)).
 - API: `find_best_slot() -> Slot?`.
 
-#### S6. InteractionResolver
+#### S6. PickPutSwapResolver
 - Реагирует на `interact`:
 	- если `target_slot == null` → no-op;
 	- рука пуста + слот занят → `PICK`;
@@ -476,7 +476,7 @@ WardrobeScene (Node2D)
 #### S7. Инварианты
 - Предмет существует ровно в одном месте: либо в руке, либо в конкретном слоте.
 - `Slot.held_item` и `Hand.held_item` никогда не указывают на один и тот же объект.
-- Любая операция атомарна: при ошибке состояние мира не меняется. Допустима debug-проверка целостности после InteractionResolver.
+- Любая операция атомарна: при ошибке состояние мира не меняется. Допустима debug-проверка целостности после PickPutSwapResolver.
 
 #### S8. Seeding
 - WardrobeScene запускает `seed_items()` (или аналог) и расставляет фиксированный набор предметов (таблица — в [steps/02_step2_sandbox.md#5-seed-раскладка](steps/02_step2_sandbox.md#5-seed-раскладка)).
@@ -494,7 +494,7 @@ WardrobeScene (Node2D)
 4. **Фидбек:** Видно, куда переезжает предмет (HandSocket ↔ ItemAnchor) + `print()` лог успеха/ошибки.
 5. **Seed:** При запуске сцены создаётся фиксированная раскладка 3–6 предметов.
 6. **Web smoke:** Web-сборка запускается, WASD+E работают на desktop web; на mobile web сцена открывается без ошибок (управление может быть неудобным).
-7. **Стабильность:** Консоль без ошибок/спама, InteractionResolver не дребезжит, производительность стабильна.
+7. **Стабильность:** Консоль без ошибок/спама, PickPutSwapResolver не дребезжит, производительность стабильна.
 
 ### 9.6 Debug / QA процедуры
 
