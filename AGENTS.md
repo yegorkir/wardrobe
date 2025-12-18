@@ -190,12 +190,13 @@ Rules:
 
 ---
 
-# Anti-patterns (hard запрещено)
+# Anti-patterns (hard forbidden)
 - “Slot/Hook emits domain signals to run the simulation” — forbidden.
 - “PlacementSystem scans SceneTree / groups to apply rules” — forbidden.
 - “UI reads truth from Label.text or Node properties as the source of state” — forbidden.
 - “Simulation code reaches into `/root/*` autoloads” — forbidden.
 - “New features implemented in `res://scripts/sim/**`” — forbidden.
+- "Do not edit any files in `res://addons/*`" without permission
 
 ---
 

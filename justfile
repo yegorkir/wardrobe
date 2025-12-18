@@ -6,13 +6,13 @@ godot_bin := env_var_or_default('GODOT_BIN', '')
 _require_godot_bin:
 	@if [ -z "{{godot_bin}}" ]; then echo "GODOT_BIN is required (export GODOT_BIN=/path/to/Godot)"; exit 1; fi
 
-all: web-itch web-local mac-debug
+all: web web-local mac-debug
 
-web-itch: _require_godot_bin
+web: _require_godot_bin
 	rm -rf builds/current/web_itch
 	mkdir -p builds/current/web_itch
-	"{{godot_bin}}" --headless --export-release "Web (itch.io)" builds/current/web_itch/index.html
-	cd builds/current/web_itch && zip -r ../web_itch.zip .
+	"{{godot_bin}}" --headless --export-release "Web" builds/current/web_itch/index.html
+# 	cd builds/current/web_itch && zip -r ../web_itch.zip .
 
 web-local: _require_godot_bin
 	rm -rf builds/current/web_local
