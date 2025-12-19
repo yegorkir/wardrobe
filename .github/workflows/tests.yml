@@ -56,7 +56,7 @@ jobs:
         run: godot --headless --path . --import
 
       - name: Build web (itch)
-        run: just web-itch
+        run: just web
 #      - name: Build linux
 #        run: just linux
 #      - name: Build win
@@ -65,7 +65,7 @@ jobs:
       - name: Upload web build
         uses: actions/upload-artifact@v4
         with:
-          name: web-itch
+          name: web
           path: builds/current/web_itch.zip
 
       - name: Upload Pages artifact
@@ -78,8 +78,6 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
-    env:
-      GODOT_BIN: /usr/local/bin/godot
     concurrency:
       group: pages
       cancel-in-progress: true
