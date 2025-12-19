@@ -7,7 +7,6 @@
 [ext_resource type="Texture2D" uid="uid://b5i02up0x3qej" path="res://assets/sprites/placeholder/desk.svg" id="5"]
 [ext_resource type="Texture2D" uid="uid://ckyaef5gy7qrw" path="res://assets/sprites/placeholder/slot.png" id="7"]
 [ext_resource type="PackedScene" uid="uid://djktkpfea03nu" path="res://scenes/prefabs/hook_item.tscn" id="9"]
-[ext_resource type="Texture2D" uid="uid://nlxwdbaics8" path="res://assets/sprites/item_ticket.png" id="10"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(25, 34)
@@ -54,11 +53,10 @@ texture = ExtResource("7")
 
 [node name="WardroabeBoard_0" type="Node2D" parent="GameRoot"]
 unique_name_in_owner = true
-position = Vector2(520, 408)
+position = Vector2(40, 400)
 
 [node name="Hook_0" parent="GameRoot/WardroabeBoard_0" instance=ExtResource("9")]
 position = Vector2(-1, 0)
-slot_prefix = "Hook_0"
 
 [node name="Hook_1" parent="GameRoot/WardroabeBoard_0" instance=ExtResource("9")]
 position = Vector2(79, 0)
@@ -69,7 +67,7 @@ position = Vector2(159, 0)
 slot_prefix = "Hook_2"
 
 [node name="WardroabeBoard_1" type="Node2D" parent="GameRoot"]
-position = Vector2(520, 702)
+position = Vector2(520, 400)
 
 [node name="Hook_0" parent="GameRoot/WardroabeBoard_1" instance=ExtResource("9")]
 slot_prefix = "Hook_3"
@@ -83,7 +81,7 @@ position = Vector2(160, 0)
 slot_prefix = "Hook_5"
 
 [node name="WardroabeBoard_2" type="Node2D" parent="GameRoot"]
-position = Vector2(48, 410)
+position = Vector2(40, 700)
 
 [node name="Hook_0" parent="GameRoot/WardroabeBoard_2" instance=ExtResource("9")]
 slot_prefix = "Hook_6"
@@ -96,9 +94,23 @@ slot_prefix = "Hook_7"
 position = Vector2(160, 0)
 slot_prefix = "Hook_8"
 
+[node name="WardroabeBoard_3" type="Node2D" parent="GameRoot"]
+position = Vector2(520, 700)
+
+[node name="Hook_0" parent="GameRoot/WardroabeBoard_3" instance=ExtResource("9")]
+slot_prefix = "Hook_6"
+
+[node name="Hook_1" parent="GameRoot/WardroabeBoard_3" instance=ExtResource("9")]
+position = Vector2(80, 0)
+slot_prefix = "Hook_7"
+
+[node name="Hook_2" parent="GameRoot/WardroabeBoard_3" instance=ExtResource("9")]
+position = Vector2(160, 0)
+slot_prefix = "Hook_8"
+
 [node name="Player" type="CharacterBody2D" parent="GameRoot"]
 unique_name_in_owner = true
-position = Vector2(360, 1100)
+position = Vector2(360, 800)
 scale = Vector2(1.3, 1.3)
 script = ExtResource("2")
 
@@ -118,6 +130,7 @@ position = Vector2(22.230774, -21.692322)
 unique_name_in_owner = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="GameRoot/Player/InteractArea"]
+visible = false
 position = Vector2(-1.5384617, -30.000008)
 shape = SubResource("2")
 
@@ -171,9 +184,10 @@ text = "End Shift (debug)"
 
 [node name="ChallengeOverlayLabel" type="Label" parent="HUDLayer"]
 unique_name_in_owner = true
-anchors_preset = 1
-offset_left = 24.0
-offset_top = 24.0
+offset_left = 12.0
+offset_top = 1005.0
+offset_right = 141.0
+offset_bottom = 1028.0
 text = "00:00 | Actions 0"
 
 [node name="ChallengeSummary" type="PanelContainer" parent="HUDLayer"]
@@ -190,82 +204,101 @@ offset_right = -20.0
 offset_bottom = -20.0
 
 [node name="SummaryVBox" type="VBoxContainer" parent="HUDLayer/ChallengeSummary"]
-offset_left = 10.0
-offset_top = 10.0
-offset_right = 280.0
-offset_bottom = 260.0
+layout_mode = 2
 theme_override_constants/separation = 4
 
 [node name="TimeRow" type="HBoxContainer" parent="HUDLayer/ChallengeSummary/SummaryVBox"]
+layout_mode = 2
 
 [node name="SummaryTimeLabel" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/TimeRow"]
+layout_mode = 2
 text = "Time:"
 
 [node name="SummaryTimeValue" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/TimeRow"]
 unique_name_in_owner = true
-horizontal_alignment = 2
+layout_mode = 2
 text = "00:00"
+horizontal_alignment = 2
 
 [node name="ActionsRow" type="HBoxContainer" parent="HUDLayer/ChallengeSummary/SummaryVBox"]
+layout_mode = 2
 
 [node name="SummaryActionsLabel" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/ActionsRow"]
+layout_mode = 2
 text = "Actions:"
 
 [node name="SummaryActionsValue" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/ActionsRow"]
 unique_name_in_owner = true
-horizontal_alignment = 2
+layout_mode = 2
 text = "0"
+horizontal_alignment = 2
 
 [node name="PicksRow" type="HBoxContainer" parent="HUDLayer/ChallengeSummary/SummaryVBox"]
+layout_mode = 2
 
 [node name="SummaryPicksLabel" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/PicksRow"]
+layout_mode = 2
 text = "Picks:"
 
 [node name="SummaryPicksValue" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/PicksRow"]
 unique_name_in_owner = true
-horizontal_alignment = 2
+layout_mode = 2
 text = "0"
+horizontal_alignment = 2
 
 [node name="PutsRow" type="HBoxContainer" parent="HUDLayer/ChallengeSummary/SummaryVBox"]
+layout_mode = 2
 
 [node name="SummaryPutsLabel" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/PutsRow"]
+layout_mode = 2
 text = "Puts:"
 
 [node name="SummaryPutsValue" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/PutsRow"]
 unique_name_in_owner = true
-horizontal_alignment = 2
+layout_mode = 2
 text = "0"
+horizontal_alignment = 2
 
 [node name="SwapsRow" type="HBoxContainer" parent="HUDLayer/ChallengeSummary/SummaryVBox"]
+layout_mode = 2
 
 [node name="SummarySwapsLabel" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/SwapsRow"]
+layout_mode = 2
 text = "Swaps:"
 
 [node name="SummarySwapsValue" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/SwapsRow"]
 unique_name_in_owner = true
-horizontal_alignment = 2
+layout_mode = 2
 text = "0"
+horizontal_alignment = 2
 
 [node name="MoveRow" type="HBoxContainer" parent="HUDLayer/ChallengeSummary/SummaryVBox"]
+layout_mode = 2
 
 [node name="SummaryMoveLabel" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/MoveRow"]
+layout_mode = 2
 text = "Move:"
 
 [node name="SummaryMoveValue" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/MoveRow"]
 unique_name_in_owner = true
-horizontal_alignment = 2
+layout_mode = 2
 text = "0 px"
+horizontal_alignment = 2
 
 [node name="AttemptsRow" type="HBoxContainer" parent="HUDLayer/ChallengeSummary/SummaryVBox"]
+layout_mode = 2
 
 [node name="SummaryAttemptsLabel" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/AttemptsRow"]
+layout_mode = 2
 text = "Attempts:"
 
 [node name="SummaryAttemptsValue" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox/AttemptsRow"]
 unique_name_in_owner = true
-horizontal_alignment = 2
+layout_mode = 2
 text = "0"
+horizontal_alignment = 2
 
 [node name="SummaryBestValue" type="Label" parent="HUDLayer/ChallengeSummary/SummaryVBox"]
 unique_name_in_owner = true
+layout_mode = 2
 text = "Best: -"
