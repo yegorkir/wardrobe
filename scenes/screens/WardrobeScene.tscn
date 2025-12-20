@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cmigkwlvjq07o"]
+[gd_scene load_steps=12 format=3 uid="uid://cmigkwlvjq07o"]
 
 [ext_resource type="Script" uid="uid://b2d8sx8isovll" path="res://scripts/ui/wardrobe_scene.gd" id="1"]
 [ext_resource type="Script" uid="uid://b7bgihstlou51" path="res://scripts/wardrobe/player_controller.gd" id="2"]
@@ -7,6 +7,8 @@
 [ext_resource type="Texture2D" uid="uid://b5i02up0x3qej" path="res://assets/sprites/placeholder/desk.svg" id="5"]
 [ext_resource type="Texture2D" uid="uid://ckyaef5gy7qrw" path="res://assets/sprites/placeholder/slot.png" id="7"]
 [ext_resource type="PackedScene" uid="uid://djktkpfea03nu" path="res://scenes/prefabs/hook_item.tscn" id="9"]
+[ext_resource type="PackedScene" uid="uid://d1grh7s2x1u1k" path="res://scenes/prefabs/DeskServicePoint.tscn" id="10"]
+[ext_resource type="PackedScene" uid="uid://p1f2j1f0k4h5k" path="res://scenes/prefabs/hook_board.tscn" id="11"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(25, 34)
@@ -32,81 +34,23 @@ color = Color(0.0901961, 0.109804, 0.156863, 1)
 [node name="GameRoot" type="Node2D" parent="."]
 unique_name_in_owner = true
 
-[node name="Desk" type="Node2D" parent="GameRoot"]
-position = Vector2(360, 920)
+[node name="Desk" parent="GameRoot" instance=ExtResource("10")]
+position = Vector2(260, 920)
+desk_id = &"Desk_A"
+desk_slot_id = &"DeskSlot_0"
 
-[node name="DeskSprite" type="Sprite2D" parent="GameRoot/Desk"]
-scale = Vector2(0.45, 0.45)
-texture = ExtResource("5")
+[node name="Desk_B" parent="GameRoot" instance=ExtResource("10")]
+position = Vector2(460, 920)
+desk_id = &"Desk_B"
+desk_slot_id = &"DeskSlot_1"
 
-[node name="DeskSlot_0" type="Node2D" parent="GameRoot/Desk"]
-unique_name_in_owner = true
-position = Vector2(0, -20)
-script = ExtResource("3")
-slot_id = "DeskSlot_0"
+[node name="HookBoard_A" parent="GameRoot" instance=ExtResource("11")]
+position = Vector2(120, 430)
+board_prefix = "Board_A"
 
-[node name="SlotSprite" type="Sprite2D" parent="GameRoot/Desk/DeskSlot_0"]
-scale = Vector2(0.35, 0.35)
-texture = ExtResource("7")
-
-[node name="ItemAnchor" type="Node2D" parent="GameRoot/Desk/DeskSlot_0"]
-
-[node name="WardroabeBoard_0" type="Node2D" parent="GameRoot"]
-unique_name_in_owner = true
-position = Vector2(40, 400)
-
-[node name="Hook_0" parent="GameRoot/WardroabeBoard_0" instance=ExtResource("9")]
-position = Vector2(-1, 0)
-
-[node name="Hook_1" parent="GameRoot/WardroabeBoard_0" instance=ExtResource("9")]
-position = Vector2(79, 0)
-slot_prefix = "Hook_1"
-
-[node name="Hook_2" parent="GameRoot/WardroabeBoard_0" instance=ExtResource("9")]
-position = Vector2(159, 0)
-slot_prefix = "Hook_2"
-
-[node name="WardroabeBoard_1" type="Node2D" parent="GameRoot"]
-position = Vector2(520, 400)
-
-[node name="Hook_0" parent="GameRoot/WardroabeBoard_1" instance=ExtResource("9")]
-slot_prefix = "Hook_3"
-
-[node name="Hook_1" parent="GameRoot/WardroabeBoard_1" instance=ExtResource("9")]
-position = Vector2(80, 0)
-slot_prefix = "Hook_4"
-
-[node name="Hook_2" parent="GameRoot/WardroabeBoard_1" instance=ExtResource("9")]
-position = Vector2(160, 0)
-slot_prefix = "Hook_5"
-
-[node name="WardroabeBoard_2" type="Node2D" parent="GameRoot"]
-position = Vector2(40, 700)
-
-[node name="Hook_0" parent="GameRoot/WardroabeBoard_2" instance=ExtResource("9")]
-slot_prefix = "Hook_6"
-
-[node name="Hook_1" parent="GameRoot/WardroabeBoard_2" instance=ExtResource("9")]
-position = Vector2(80, 0)
-slot_prefix = "Hook_7"
-
-[node name="Hook_2" parent="GameRoot/WardroabeBoard_2" instance=ExtResource("9")]
-position = Vector2(160, 0)
-slot_prefix = "Hook_8"
-
-[node name="WardroabeBoard_3" type="Node2D" parent="GameRoot"]
-position = Vector2(520, 700)
-
-[node name="Hook_0" parent="GameRoot/WardroabeBoard_3" instance=ExtResource("9")]
-slot_prefix = "Hook_6"
-
-[node name="Hook_1" parent="GameRoot/WardroabeBoard_3" instance=ExtResource("9")]
-position = Vector2(80, 0)
-slot_prefix = "Hook_7"
-
-[node name="Hook_2" parent="GameRoot/WardroabeBoard_3" instance=ExtResource("9")]
-position = Vector2(160, 0)
-slot_prefix = "Hook_8"
+[node name="HookBoard_B" parent="GameRoot" instance=ExtResource("11")]
+position = Vector2(520, 430)
+board_prefix = "Board_B"
 
 [node name="Player" type="CharacterBody2D" parent="GameRoot"]
 unique_name_in_owner = true

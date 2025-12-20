@@ -1,10 +1,11 @@
-[gd_scene load_steps=7 format=3 uid="uid://djktkpfea03nu"]
+[gd_scene load_steps=8 format=3 uid="uid://djktkpfea03nu"]
 
 [ext_resource type="Script" uid="uid://8m7qjvdh5fn8" path="res://scripts/wardrobe/hook_item.gd" id="1"]
 [ext_resource type="Script" uid="uid://cio6mjjwij4eb" path="res://scripts/wardrobe/slot.gd" id="2"]
 [ext_resource type="Texture2D" uid="uid://dfp2x8jbfnx2f" path="res://assets/sprites/wardrobe.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://cjfp2ixu8julx" path="res://assets/sprites/doublehook.png" id="4"]
 [ext_resource type="Texture2D" uid="uid://ckyaef5gy7qrw" path="res://assets/sprites/placeholder/slot.png" id="5"]
+[ext_resource type="Texture2D" path="res://assets/sprites/item_anchor_ticket.png" id="6"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(80, 160)
@@ -22,6 +23,11 @@ centered = false
 position = Vector2(0, -32.000004)
 scale = Vector2(0.8, 0.8)
 texture = ExtResource("4")
+
+[node name="AnchorTicket" type="Sprite2D" parent="HookSprite"]
+position = Vector2(0, -10)
+scale = Vector2(0.35, 0.35)
+texture = ExtResource("6")
 
 [node name="SlotA" type="Node2D" parent="HookSprite"]
 position = Vector2(-22, 12)

@@ -78,6 +78,15 @@ func get_slot_item(slot_id: StringName) -> ItemInstance:
 	var slot := _slots.get(slot_id) as SlotState
 	return slot.item if slot else null
 
+func find_item_slot(item_id: StringName) -> StringName:
+	if item_id.is_empty():
+		return StringName()
+	for key in _slots.keys():
+		var slot := _slots[key] as SlotState
+		if slot.item != null and slot.item.id == item_id:
+			return slot.id
+	return StringName()
+
 func get_snapshot() -> Dictionary:
 	var slots: Dictionary = {}
 	for key in _slots.keys():

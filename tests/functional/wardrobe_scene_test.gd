@@ -20,14 +20,18 @@ func test_wardrobe_scene_seeds_items() -> void:
 	var wardrobe: Node = auto_free(WardrobeScene.instantiate())
 	get_tree().root.add_child(wardrobe)
 	await get_tree().process_frame
-	var desk_slot := wardrobe.get_node("GameRoot/Desk/DeskSlot_0") as WardrobeSlot
-	assert_that(desk_slot).is_not_null()
-	assert_bool(desk_slot.has_item()).is_true()
-	assert_int(desk_slot.get_item().item_type).is_equal(ItemNode.ItemType.TICKET)
-	var hook_slot := _find_slot_by_id(wardrobe, "Hook_0_SlotA")
+	var desk_slot_a := wardrobe.get_node("GameRoot/Desk/DeskSlot") as WardrobeSlot
+	var desk_slot_b := wardrobe.get_node("GameRoot/Desk_B/DeskSlot") as WardrobeSlot
+	assert_that(desk_slot_a).is_not_null()
+	assert_that(desk_slot_b).is_not_null()
+	assert_bool(desk_slot_a.has_item()).is_true()
+	assert_bool(desk_slot_b.has_item()).is_true()
+	assert_int(desk_slot_a.get_item().item_type).is_equal(ItemNode.ItemType.COAT)
+	assert_int(desk_slot_b.get_item().item_type).is_equal(ItemNode.ItemType.COAT)
+	var hook_slot := _find_slot_by_id(wardrobe, "Board_A_Hook_0_SlotA")
 	assert_that(hook_slot).is_not_null()
 	assert_bool(hook_slot.has_item()).is_true()
-	assert_str(hook_slot.get_item().item_id).is_equal("coat_101")
+	assert_int(hook_slot.get_item().item_type).is_equal(ItemNode.ItemType.TICKET)
 
 func _parse_label_value(text: String) -> int:
 	var parts := text.split(": ")

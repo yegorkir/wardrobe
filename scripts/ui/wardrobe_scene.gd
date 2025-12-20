@@ -8,6 +8,10 @@ const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_p
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
+const DeskStateScript := preload("res://scripts/domain/desk/desk_state.gd")
+const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
+const DeskServicePointScript := preload("res://scripts/wardrobe/desk_service_point.gd")
 const ITEM_TEXTURE_PATHS := {
 	ItemNode.ItemType.COAT: [
 		"res://assets/sprites/item_coat.png",
@@ -24,6 +28,8 @@ const ITEM_TEXTURE_PATHS := {
 }
 
 @export var challenge_provider: Resource
+@export var step3_enabled := true
+@export var step3_seed: int = 1337
 
 @onready var _wave_label: Label = %WaveValue
 @onready var _time_label: Label = %TimeValue
@@ -44,7 +50,7 @@ const ITEM_TEXTURE_PATHS := {
 @onready var _summary_move_label: Label = %SummaryMoveValue
 @onready var _summary_attempts_label: Label = %SummaryAttemptsValue
 @onready var _summary_best_label: Label = %SummaryBestValue
-@onready var _desk_slot: WardrobeSlot = %DeskSlot_0
+var _desk_slot: WardrobeSlot
 
 var _hud_connected := false
 var _interaction_engine: WardrobeInteractionEngine = WardrobeInteractionEngineScript.new()
@@ -60,6 +66,13 @@ var _interaction_tick := 0
 var _storage_state: WardrobeStorageState = WardrobeStorageStateScript.new()
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _hand_item_instance: ItemInstance
+var _desk_system: RefCounted = DeskServicePointSystemScript.new()
+var _desk_nodes: Array = []
+var _desk_states: Array = []
+var _desk_by_id: Dictionary = {}
+var _desk_by_slot_id: Dictionary = {}
+var _clients: Dictionary = {}
+var _step3_rng := RandomNumberGenerator.new()
 
 const DISTANCE_TIE_THRESHOLD := 6.0
 
@@ -73,23 +86,29 @@ func _ready() -> void:
 
 func _finish_ready_setup() -> void:
 	_collect_slots()
+	_collect_desks()
 	if _slots.is_empty():
 		await get_tree().process_frame
 		_collect_slots()
-	_initialize_challenge_controller()
+		_collect_desks()
 	_reset_storage_state()
 	_connect_event_adapter()
-	if _challenge_controller.is_enabled():
-		_start_challenge_session(false)
+	if step3_enabled:
+		_initialize_step3()
 	else:
-		if challenge_provider:
+		_initialize_challenge_controller()
+		_desk_slot = _resolve_default_desk_slot()
+		if _challenge_controller.is_enabled():
+			_start_challenge_session(false)
+		elif challenge_provider:
 			_seed_entries = challenge_provider.load_seed_entries()
 			_apply_seed(_seed_entries)
 	if _challenge_summary_panel:
 		_challenge_summary_panel.visible = false
 	_update_overlay_label()
 	_end_shift_button.pressed.connect(_on_end_shift_pressed)
-	_materialize_missing_seed_items()
+	if not step3_enabled:
+		_materialize_missing_seed_items()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):
@@ -139,6 +158,18 @@ func _collect_slots() -> void:
 		_slots.append(_desk_slot)
 		_slot_lookup[_desk_slot.get_slot_identifier()] = _desk_slot
 
+func _collect_desks() -> void:
+	_desk_nodes.clear()
+	for node in get_tree().get_nodes_in_group(DeskServicePointScript.DESK_GROUP):
+		if node is Node2D and node.has_method("get_slot_id"):
+			_desk_nodes.append(node)
+
+func _resolve_default_desk_slot() -> WardrobeSlot:
+	var desk_node := get_node_or_null("GameRoot/Desk")
+	if desk_node and desk_node.has_method("get_slot_node"):
+		return desk_node.get_slot_node()
+	return null
+
 func _initialize_challenge_controller() -> void:
 	if challenge_provider == null:
 		push_warning("Challenge provider unavailable; challenge disabled.")
@@ -157,9 +188,132 @@ func _reset_storage_state() -> void:
 	_register_storage_slots()
 	_hand_item_instance = null
 
+func _initialize_step3() -> void:
+	_clear_spawned_items()
+	_collect_desks()
+	_setup_step3_rng()
+	_setup_step3_desks_and_clients()
+	_seed_step3_hook_tickets()
+	_sync_hook_anchor_tickets_once()
+	_spawn_step3_desk_coats()
+
+func _setup_step3_rng() -> void:
+	_step3_rng.seed = step3_seed
+
+func _setup_step3_desks_and_clients() -> void:
+	_desk_states.clear()
+	_desk_by_id.clear()
+	_desk_by_slot_id.clear()
+	_clients.clear()
+	if _desk_nodes.is_empty():
+		push_warning("Step 3 desks missing; no service points initialized.")
+		return
+	var desk_ids: Array[StringName] = []
+	for index in _desk_nodes.size():
+		var desk_node: Node = _desk_nodes[index]
+		if desk_node == null:
+			continue
+		var desk_id: StringName = desk_node.desk_id
+		var slot_id: StringName = desk_node.get_slot_id()
+		var desk_state := DeskStateScript.new(desk_id, slot_id)
+		_desk_states.append(desk_state)
+		_desk_by_id[desk_state.desk_id] = desk_state
+		_desk_by_slot_id[desk_state.desk_slot_id] = desk_state
+		desk_ids.append(desk_state.desk_id)
+	var per_desk_queue: Dictionary = {}
+	for desk_id in desk_ids:
+		per_desk_queue[desk_id] = []
+	var colors: Array[Color] = [
+		Color(0.85, 0.35, 0.35),
+		Color(0.35, 0.7, 0.45),
+		Color(0.35, 0.45, 0.9),
+		Color(0.9, 0.75, 0.35),
+	]
+	for i in range(4):
+		var client_id := StringName("Client_%d" % i)
+		var color: Color = colors[i % colors.size()]
+		var coat := ItemInstanceScript.new(
+			StringName("coat_%02d" % i),
+			ItemInstanceScript.KIND_COAT,
+			color
+		)
+		var ticket := ItemInstanceScript.new(
+			StringName("ticket_%02d" % i),
+			ItemInstanceScript.KIND_TICKET,
+			color
+		)
+		var desk_index := _step3_rng.randi_range(0, desk_ids.size() - 1)
+		var desk_id := desk_ids[desk_index]
+		var client := ClientStateScript.new(client_id, coat, ticket, desk_id, StringName("color_%d" % i))
+		_clients[client_id] = client
+		var queue: Array = per_desk_queue.get(desk_id, [])
+		queue.append(client_id)
+		per_desk_queue[desk_id] = queue
+	for desk_state in _desk_states:
+		var assigned: Array = per_desk_queue.get(desk_state.desk_id, [])
+		desk_state.set_dropoff_queue(assigned)
+		desk_state.set_phase(DeskStateScript.PHASE_DROP_OFF)
+		desk_state.current_client_id = desk_state.pop_next_dropoff()
+
+func _seed_step3_hook_tickets() -> void:
+	var ticket_slots: Array[WardrobeSlot] = _get_ticket_slots()
+	if ticket_slots.is_empty():
+		push_warning("Step 3 hooks missing; no ticket slots found.")
+		return
+	var client_ids: Array = _clients.keys()
+	var slot_count: int = min(ticket_slots.size(), client_ids.size())
+	for index in range(slot_count):
+		var client_id: StringName = StringName(str(client_ids[index]))
+		var client: RefCounted = _clients.get(client_id, null)
+		if client == null:
+			continue
+		_place_item_instance_in_slot(
+			StringName(ticket_slots[index].get_slot_identifier()),
+			client.get_ticket_item()
+			)
+
+func _sync_hook_anchor_tickets_once() -> void:
+	for node in find_children("*", "HookItem", true, true):
+		if node.has_method("sync_anchor_ticket_color"):
+			node.sync_anchor_ticket_color()
+
+func _spawn_step3_desk_coats() -> void:
+	for desk_state in _desk_states:
+		if desk_state.current_client_id.is_empty():
+			continue
+		var client: RefCounted = _clients.get(desk_state.current_client_id, null)
+		if client == null:
+			continue
+		_place_item_instance_in_slot(desk_state.desk_slot_id, client.get_coat_item())
+
 func _register_storage_slots() -> void:
 	for slot in _slots:
 		_storage_state.register_slot(StringName(slot.get_slot_identifier()))
+
+func _get_ticket_slots() -> Array[WardrobeSlot]:
+	var ticket_slots: Array[WardrobeSlot] = []
+	for slot in _slots:
+		var slot_id := slot.get_slot_identifier()
+		if slot_id.ends_with("_SlotA"):
+			ticket_slots.append(slot)
+	return ticket_slots
+
+func _place_item_instance_in_slot(slot_id: StringName, instance: ItemInstance) -> void:
+	if instance == null:
+		return
+	if not _storage_state.has_slot(slot_id):
+		_storage_state.register_slot(slot_id)
+	if _storage_state.get_slot_item(slot_id) != null:
+		return
+	var put_result := _storage_state.put(slot_id, instance)
+	if not put_result.get(WardrobeStorageStateScript.RESULT_KEY_SUCCESS, false):
+		push_warning("Step 3 failed to place item %s in slot %s: %s" % [
+			instance.id,
+			slot_id,
+			put_result.get(WardrobeStorageStateScript.RESULT_KEY_REASON, "unknown"),
+		])
+		return
+	_spawn_or_move_item_node(slot_id, instance)
 
 func _connect_event_adapter() -> void:
 	if _event_adapter == null:
@@ -383,7 +537,7 @@ func _materialize_missing_seed_items() -> void:
 	if _seed_entries.is_empty():
 		return
 	for entry in _seed_entries:
-		var slot_id_text := str(entry.get("slot_id", ""))
+		var slot_id_text: String = str(entry.get("slot_id", ""))
 		if slot_id_text.is_empty():
 			continue
 		var slot: WardrobeSlot = _slot_lookup.get(slot_id_text, null)
@@ -511,6 +665,9 @@ func _format_time(seconds: float) -> String:
 	return "%02d:%02d" % [mins, secs]
 
 func _reset_world() -> void:
+	if step3_enabled:
+		_initialize_step3()
+		return
 	if _challenge_controller.is_enabled():
 		_start_challenge_session(true)
 		return
@@ -547,6 +704,8 @@ func _perform_interact() -> void:
 	var events: Array = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_EVENTS, [])
 	_event_adapter.emit_events(events)
 	_hand_item_instance = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_HAND_ITEM)
+	if step3_enabled:
+		_process_desk_events(events)
 	var action: String = str(exec_result.get(WardrobeInteractionEngine.RESULT_KEY_ACTION, PickPutSwapResolverScript.ACTION_NONE))
 	if exec_result.get(WardrobeInteractionEngine.RESULT_KEY_SUCCESS, false):
 		command[WardrobeInteractionCommandScript.KEY_TYPE] = _resolve_command_type(action)
@@ -582,6 +741,70 @@ func _record_interaction_event(command: Dictionary, success: bool, reason: Strin
 	if _challenge_controller == null:
 		return
 	_challenge_controller.record_interaction_event(command, success, reason, slot_id)
+
+func _process_desk_events(events: Array) -> void:
+	if _desk_states.is_empty():
+		return
+	for event_data in events:
+		var payload: Dictionary = event_data.get(WardrobeInteractionEngine.EVENT_KEY_PAYLOAD, {})
+		var slot_id: StringName = StringName(str(payload.get(WardrobeInteractionEngine.PAYLOAD_SLOT_ID, "")))
+		if slot_id == StringName():
+			continue
+		var desk_state: RefCounted = _desk_by_slot_id.get(slot_id, null)
+		if desk_state == null:
+			continue
+		var desk_events: Array = _desk_system.process_interaction_event(
+			desk_state,
+			_clients,
+			_storage_state,
+			event_data
+		)
+		_apply_desk_events(desk_events)
+
+func _apply_desk_events(events: Array) -> void:
+	for event_data in events:
+		var event_type: StringName = event_data.get(DeskServicePointSystemScript.EVENT_KEY_TYPE, StringName())
+		var payload: Dictionary = event_data.get(DeskServicePointSystemScript.EVENT_KEY_PAYLOAD, {})
+		match event_type:
+			DeskServicePointSystemScript.EVENT_DESK_CONSUMED_ITEM:
+				_apply_desk_consumed(payload)
+			DeskServicePointSystemScript.EVENT_DESK_SPAWNED_ITEM:
+				_apply_desk_spawned(payload)
+			DeskServicePointSystemScript.EVENT_CLIENT_PHASE_CHANGED:
+				_debug_desk_event("client_phase_changed", payload)
+			DeskServicePointSystemScript.EVENT_CLIENT_COMPLETED:
+				_debug_desk_event("client_completed", payload)
+			DeskServicePointSystemScript.EVENT_DESK_PHASE_CHANGED:
+				_debug_desk_event("desk_phase_changed", payload)
+			DeskServicePointSystemScript.EVENT_DESK_REJECTED_DELIVERY:
+				_debug_desk_event("desk_rejected_delivery", payload)
+
+func _apply_desk_consumed(payload: Dictionary) -> void:
+	var item_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_ITEM_INSTANCE_ID, "")))
+	if item_id == StringName():
+		return
+	var node: ItemNode = _item_nodes.get(item_id, null)
+	if node == null:
+		return
+	_detach_item_node(node)
+	_item_nodes.erase(item_id)
+	node.queue_free()
+
+func _apply_desk_spawned(payload: Dictionary) -> void:
+	var desk_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_DESK_ID, "")))
+	var item_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_ITEM_INSTANCE_ID, "")))
+	if desk_id == StringName() or item_id == StringName():
+		return
+	var desk_state: RefCounted = _desk_by_id.get(desk_id, null)
+	if desk_state == null:
+		return
+	var instance := _find_item_instance(item_id)
+	if instance == null:
+		return
+	_spawn_or_move_item_node(desk_state.desk_slot_id, instance)
+
+func _debug_desk_event(label: String, payload: Dictionary) -> void:
+	print("DeskEvent %s %s" % [label, payload])
 
 func _resolve_command_type(action: String) -> StringName:
 	match action:
@@ -661,6 +884,46 @@ func _on_end_shift_pressed() -> void:
 	else:
 		push_warning("Cannot end shift: RunManager singleton missing.")
 
+func _spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> void:
+	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
+	if slot == null or instance == null:
+		return
+	var node: ItemNode = _item_nodes.get(instance.id, null)
+	if node == null:
+		node = ITEM_SCENE.instantiate() as ItemNode
+		node.item_id = str(instance.id)
+		node.item_type = _resolve_item_type_from_kind(instance.kind)
+		_apply_item_visuals(node, instance.color)
+		_item_nodes[instance.id] = node
+		_spawned_items.append(node)
+	else:
+		_apply_item_visuals(node, instance.color)
+	_detach_item_node(node)
+	slot.put_item(node)
+
+func _detach_item_node(node: ItemNode) -> void:
+	if node == null:
+		return
+	if _player and _player.get_active_hand_item() == node:
+		_player.take_item_from_hand()
+	for slot in _slots:
+		if slot.get_item() == node:
+			var _unused := slot.take_item()
+			break
+
+func _find_item_instance(item_id: StringName) -> ItemInstance:
+	if item_id == StringName():
+		return null
+	for client in _clients.values():
+		var client_state: RefCounted = client
+		if client_state == null:
+			continue
+		if client_state.get_coat_id() == item_id:
+			return client_state.get_coat_item()
+		if client_state.get_ticket_id() == item_id:
+			return client_state.get_ticket_item()
+	return null
+
 func _apply_item_visuals(item: ItemNode, tint: Variant) -> void:
 	var sprite := item.get_node_or_null("Sprite") as Sprite2D
 	if sprite:
@@ -699,6 +962,15 @@ func _resolve_kind_from_item_type(item_type: int) -> StringName:
 			return ItemInstanceScript.KIND_ANCHOR_TICKET
 		_:
 			return ItemInstanceScript.KIND_COAT
+
+func _resolve_item_type_from_kind(kind: StringName) -> ItemNode.ItemType:
+	match kind:
+		ItemInstanceScript.KIND_TICKET:
+			return ItemNode.ItemType.TICKET
+		ItemInstanceScript.KIND_ANCHOR_TICKET:
+			return ItemNode.ItemType.ANCHOR_TICKET
+		_:
+			return ItemNode.ItemType.COAT
 
 func _make_item_instance(item: ItemNode) -> ItemInstance:
 	var color := _get_item_color(item)
@@ -749,7 +1021,7 @@ func _ensure_challenge_provider() -> void:
 
 func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
-	var node := slot.take_item() if slot else null
+	var node: ItemNode = slot.take_item() if slot else null
 	var item_id: StringName = item.get("id", StringName())
 	if node == null:
 		node = _item_nodes.get(item_id, null)
@@ -759,7 +1031,7 @@ func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) ->
 
 func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
-	var node := _player.take_item_from_hand() if _player else null
+	var node: ItemNode = _player.take_item_from_hand() if _player else null
 	var item_id: StringName = item.get("id", StringName())
 	if node == null:
 		node = _item_nodes.get(item_id, null)
@@ -774,8 +1046,8 @@ func _on_event_item_swapped(
 	_tick: int
 ) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
-	var slot_outgoing := slot.take_item() if slot else null
-	var incoming_node := _player.take_item_from_hand() if _player else null
+	var slot_outgoing: ItemNode = slot.take_item() if slot else null
+	var incoming_node: ItemNode = _player.take_item_from_hand() if _player else null
 	if slot and incoming_node:
 		slot.put_item(incoming_node)
 	if slot_outgoing and _player:
