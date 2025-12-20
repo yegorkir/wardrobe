@@ -101,7 +101,7 @@ func _apply_desk_spawned(payload: Dictionary) -> void:
 		return
 	if not _find_item_instance.is_valid():
 		return
-	var instance := _find_item_instance.call(item_id)
+	var instance: ItemInstance = _find_item_instance.call(item_id) as ItemInstance
 	if instance == null:
 		return
 	if _spawn_or_move_item_node.is_valid():
