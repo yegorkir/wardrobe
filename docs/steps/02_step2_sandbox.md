@@ -72,31 +72,3 @@ Seed описан в `res://content/seeds/step2_seed.json` (массив `items`
 	`godot --headless --export-release "Web" build/web/index.html`
 3. Поднять локальный статиκ-сервер и открыть сцену в браузере.
 4. Проверить WASD, `E` (pick/put/swap) и `R` (reset) на desktop. На mobile браузере убедиться, что сцена стартует без ошибок.
-
-## 8. Step 2.1 — Color Match mini-challenge
-
-- **Автозапуск**: WardrobeScene при старте пытается загрузить `res://content/challenges/<id>.json` (по умолчанию `color_match_basic`). Если файл найден и валиден, включается режим челленджа; иначе сцена работает как sandbox.
-- **Формат JSON**:
-	```json
-	{
-	  "id": "color_match_basic",
-	  "seed_layout": [ { "slot_id": "...", "item_id": "...", "item_type": "COAT", "color": "#RRGGBB" } ],
-	  "target_layout": [ { "slot_id": "DeskSlot_0", "item_id": "...", "item_type": "COAT", "color": "#RRGGBB", "display_name": "Red Coat" } ],
-	  "par_actions": 12
-	}
-	```
-	`seed_layout` задаёт стартовую раскладку (в Step 2.1 все пальто висят на крючках). `target_layout` — очередь заказов (какой предмет надо доставить на стойку). `par_actions` пока справочной.
-- **Игровой цикл**:
-	1. После загрузки сцены `DeskSlot_0` содержит тикет (реальный `ItemNode` типа `TICKET`, который можно подобрать/переместить), его цвет соответствует текущему заказу.
-	2. Нужно забрать нужный `ItemNode` с крючка и положить в `DeskSlot_0`. Если `item_id` совпадает с текущим заказом (или тип+цвет), предмет удаляется из мира, очередь продвигается к следующему заказу.
-	3. Когда список заказов пуст — челлендж завершён, появляется summary панель, overlay показывает `Solved`.
-	4. `debug_reset` (`R`) возвращает seed из challenge JSON, сбрасывает таймер/метрики и увеличивает счётчик попыток.
-- **Метрики**:
-	- `time_to_solve` (сек, отображается как `MM:SS`).
-	- `actions_total` — каждое нажатие `E` (успешное или нет).
-	- `picks/puts/swaps` — успешные операции PickPutSwapResolver.
-	- `move_distance` — сумма перемещений персонажа в px.
-	- `attempts` — количество рестартов (R).
-	- Все значения выводятся: overlay (`time | actions` во время игры) + summary панель после завершения + `print()` в консоль.
-- **Best результаты**: сохраняем `min(time)` и `min(actions_total)` per challenge id в `user://challenge_bests.json`. Summary показывает сохранённые рекорды строкой `Best: ...`. Файл перезаписывается только при улучшении.
-- **Fallback**: если challenge JSON отсутствует, WardrobeScene автоматически возвращается к `content/seeds/step2_seed.json` и отключает overlay/summary.

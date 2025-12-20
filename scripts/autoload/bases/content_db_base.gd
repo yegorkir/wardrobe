@@ -8,7 +8,6 @@ const ContentDefinition := preload("res://scripts/domain/content/content_definit
 var _archetypes: Dictionary = {}
 var _modifiers: Dictionary = {}
 var _waves: Dictionary = {}
-var _challenges: Dictionary = {}
 var _seed_tables: Dictionary = {}
 var _log_entries: Array = []
 
@@ -16,7 +15,6 @@ func _ready() -> void:
 	_load_category("archetypes", _archetypes)
 	_load_category("modifiers", _modifiers)
 	_load_category("waves", _waves)
-	_load_category("challenges", _challenges)
 	_load_category("seeds", _seed_tables)
 	_log_status()
 
@@ -41,18 +39,16 @@ func _load_category(category: String, target: Dictionary) -> void:
 	})
 
 func _log_status() -> void:
-	print("ContentDB: loaded %d archetypes, %d modifiers, %d waves, %d challenges, %d seeds" % [
+	print("ContentDB: loaded %d archetypes, %d modifiers, %d waves, %d seeds" % [
 		_archetypes.size(),
 		_modifiers.size(),
 		_waves.size(),
-		_challenges.size(),
 		_seed_tables.size(),
 	])
 	_record_content_event("content_summary", {
 		"archetypes": _archetypes.size(),
 		"modifiers": _modifiers.size(),
 		"waves": _waves.size(),
-		"challenges": _challenges.size(),
 		"seeds": _seed_tables.size(),
 	})
 
@@ -66,10 +62,6 @@ func get_modifier(id: String) -> Dictionary:
 
 func get_wave(id: String) -> Dictionary:
 	var def: ContentDefinition = _waves.get(StringName(id))
-	return def.to_snapshot() if def else {}
-
-func get_challenge(id: String) -> Dictionary:
-	var def: ContentDefinition = _challenges.get(StringName(id))
 	return def.to_snapshot() if def else {}
 
 func get_seed_table(id: String) -> Dictionary:

@@ -5,7 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://dfp2x8jbfnx2f" path="res://assets/sprites/wardrobe.png" id="3"]
 [ext_resource type="Texture2D" uid="uid://cjfp2ixu8julx" path="res://assets/sprites/doublehook.png" id="4"]
 [ext_resource type="Texture2D" uid="uid://ckyaef5gy7qrw" path="res://assets/sprites/placeholder/slot.png" id="5"]
-[ext_resource type="Texture2D" path="res://assets/sprites/item_anchor_ticket.png" id="6"]
+[ext_resource type="Texture2D" uid="uid://o2ysv21e7o4s" path="res://assets/sprites/item_anchor_ticket.png" id="6"]
 
 [sub_resource type="RectangleShape2D" id="1"]
 size = Vector2(80, 160)
@@ -25,7 +25,7 @@ scale = Vector2(0.8, 0.8)
 texture = ExtResource("4")
 
 [node name="AnchorTicket" type="Sprite2D" parent="HookSprite"]
-position = Vector2(0, -10)
+position = Vector2(0, -18.5)
 scale = Vector2(0.35, 0.35)
 texture = ExtResource("6")
 
