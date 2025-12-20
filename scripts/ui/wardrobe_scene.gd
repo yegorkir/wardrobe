@@ -5,28 +5,15 @@ const WardrobeInteractionCommandScript := preload("res://scripts/app/interaction
 const WardrobeInteractionEngineScript := preload("res://scripts/app/interaction/interaction_engine.gd")
 const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
+const WardrobeStep3SetupAdapterScript := preload("res://scripts/ui/wardrobe_step3_setup.gd")
+const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardrobe_interaction_events.gd")
+const WardrobeItemVisualsAdapterScript := preload("res://scripts/ui/wardrobe_item_visuals.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
-const DeskStateScript := preload("res://scripts/domain/desk/desk_state.gd")
-const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
 const DeskServicePointScript := preload("res://scripts/wardrobe/desk_service_point.gd")
-const ITEM_TEXTURE_PATHS := {
-	ItemNode.ItemType.COAT: [
-		"res://assets/sprites/item_coat.png",
-		"res://assets/sprites/placeholder/item_coat.png",
-	],
-	ItemNode.ItemType.TICKET: [
-		"res://assets/sprites/item_ticket.png",
-		"res://assets/sprites/placeholder/item_ticket.png",
-	],
-	ItemNode.ItemType.ANCHOR_TICKET: [
-		"res://assets/sprites/item_anchor_ticket.png",
-		"res://assets/sprites/placeholder/item_anchor_ticket.png",
-	],
-}
 
 @export var step3_seed: int = 1337
 
@@ -48,6 +35,9 @@ var _item_nodes: Dictionary = {}
 var _interaction_tick := 0
 var _storage_state: WardrobeStorageState = WardrobeStorageStateScript.new()
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
+var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
+var _interaction_events: WardrobeInteractionEventsAdapter = WardrobeInteractionEventsAdapterScript.new()
+var _item_visuals: WardrobeItemVisualsAdapter = WardrobeItemVisualsAdapterScript.new()
 var _hand_item_instance: ItemInstance
 var _desk_system: DeskServicePointSystem = DeskServicePointSystemScript.new()
 var _desk_nodes: Array = []
@@ -76,7 +66,8 @@ func _finish_ready_setup() -> void:
 		_collect_desks()
 	_reset_storage_state()
 	_connect_event_adapter()
-	_initialize_step3()
+	_setup_adapters()
+	_step3_setup.initialize_step3()
 	_end_shift_button.pressed.connect(_on_end_shift_pressed)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -131,90 +122,6 @@ func _reset_storage_state() -> void:
 	_register_storage_slots()
 	_hand_item_instance = null
 
-func _initialize_step3() -> void:
-	_clear_spawned_items()
-	_collect_desks()
-	_setup_step3_desks_and_clients()
-	_seed_step3_hook_tickets()
-	_sync_hook_anchor_tickets_once()
-
-func _setup_step3_desks_and_clients() -> void:
-	_desk_states.clear()
-	_desk_by_id.clear()
-	_desk_by_slot_id.clear()
-	_clients.clear()
-	if _client_queue_state == null:
-		_client_queue_state = ClientQueueStateScript.new()
-	else:
-		_client_queue_state.clear()
-	if _desk_nodes.is_empty():
-		push_warning("Step 3 desks missing; no service points initialized.")
-		return
-	for index in _desk_nodes.size():
-		var desk_node: Node = _desk_nodes[index]
-		if desk_node == null:
-			continue
-		var desk_id: StringName = desk_node.desk_id
-		var slot_id: StringName = desk_node.get_slot_id()
-		var desk_state := DeskStateScript.new(desk_id, slot_id)
-		_desk_states.append(desk_state)
-		_desk_by_id[desk_state.desk_id] = desk_state
-		_desk_by_slot_id[desk_state.desk_slot_id] = desk_state
-	var colors: Array[Color] = [
-		Color(0.85, 0.35, 0.35),
-		Color(0.35, 0.7, 0.45),
-		Color(0.35, 0.45, 0.9),
-		Color(0.9, 0.75, 0.35),
-	]
-	var client_ids: Array[StringName] = []
-	for i in range(4):
-		var client_id := StringName("Client_%d" % i)
-		var color: Color = colors[i % colors.size()]
-		var coat := ItemInstanceScript.new(
-			StringName("coat_%02d" % i),
-			ItemInstanceScript.KIND_COAT,
-			color
-		)
-		var ticket := ItemInstanceScript.new(
-			StringName("ticket_%02d" % i),
-			ItemInstanceScript.KIND_TICKET,
-			color
-		)
-		var client := ClientStateScript.new(client_id, coat, ticket, StringName(), StringName("color_%d" % i))
-		_clients[client_id] = client
-		client_ids.append(client_id)
-	_queue_system.enqueue_clients(_client_queue_state, client_ids)
-	for desk_state in _desk_states:
-		var events := _desk_system.assign_next_client_to_desk(
-			desk_state,
-			_client_queue_state,
-			_clients,
-			_storage_state
-		)
-		_apply_desk_events(events)
-
-func _seed_step3_hook_tickets() -> void:
-	var ticket_slots: Array[WardrobeSlot] = _get_ticket_slots()
-	if ticket_slots.is_empty():
-		push_warning("Step 3 hooks missing; no ticket slots found.")
-		return
-	var client_ids: Array = _clients.keys()
-	var slot_count: int = min(ticket_slots.size(), client_ids.size())
-	for index in range(slot_count):
-		var client_id: StringName = StringName(str(client_ids[index]))
-		var client: RefCounted = _clients.get(client_id, null)
-		if client == null:
-			continue
-		_place_item_instance_in_slot(
-			StringName(ticket_slots[index].get_slot_identifier()),
-			client.get_ticket_item()
-			)
-
-func _sync_hook_anchor_tickets_once() -> void:
-	for node in find_children("*", "HookItem", true, true):
-		if node.has_method("sync_anchor_ticket_color"):
-			node.sync_anchor_ticket_color()
-
 func _register_storage_slots() -> void:
 	for slot in _slots:
 		_storage_state.register_slot(StringName(slot.get_slot_identifier()))
@@ -242,7 +149,7 @@ func _place_item_instance_in_slot(slot_id: StringName, instance: ItemInstance) -
 			put_result.get(WardrobeStorageStateScript.RESULT_KEY_REASON, "unknown"),
 		])
 		return
-	_spawn_or_move_item_node(slot_id, instance)
+	_item_visuals.spawn_or_move_item_node(slot_id, instance)
 
 func _connect_event_adapter() -> void:
 	if _event_adapter == null:
@@ -251,6 +158,51 @@ func _connect_event_adapter() -> void:
 	_event_adapter.item_placed.connect(_on_event_item_placed)
 	_event_adapter.item_swapped.connect(_on_event_item_swapped)
 	_event_adapter.action_rejected.connect(_on_event_action_rejected)
+
+func _setup_adapters() -> void:
+	if _item_visuals == null:
+		_item_visuals = WardrobeItemVisualsAdapterScript.new()
+	_item_visuals.configure(
+		ITEM_SCENE,
+		_slot_lookup,
+		_item_nodes,
+		_spawned_items,
+		Callable(self, "_detach_item_node")
+	)
+	if _interaction_events == null:
+		_interaction_events = WardrobeInteractionEventsAdapterScript.new()
+	_interaction_events.configure(
+		_desk_states,
+		_desk_by_slot_id,
+		_desk_by_id,
+		_desk_system,
+		_client_queue_state,
+		_clients,
+		_storage_state,
+		_item_nodes,
+		Callable(self, "_detach_item_node"),
+		Callable(_item_visuals, "spawn_or_move_item_node"),
+		Callable(self, "_find_item_instance")
+	)
+	if _step3_setup == null:
+		_step3_setup = WardrobeStep3SetupAdapterScript.new()
+	_step3_setup.configure(
+		self,
+		Callable(self, "_clear_spawned_items"),
+		Callable(self, "_collect_desks"),
+		_desk_nodes,
+		_desk_states,
+		_desk_by_id,
+		_desk_by_slot_id,
+		_clients,
+		_client_queue_state,
+		_desk_system,
+		_queue_system,
+		_storage_state,
+		Callable(self, "_get_ticket_slots"),
+		Callable(self, "_place_item_instance_in_slot"),
+		Callable(_interaction_events, "apply_desk_events")
+	)
 
 func _clear_spawned_items() -> void:
 	for slot in _slots:
@@ -267,7 +219,7 @@ func _clear_spawned_items() -> void:
 		_storage_state.clear()
 	_register_storage_slots()
 func _reset_world() -> void:
-	_initialize_step3()
+	_step3_setup.initialize_step3()
 
 func _perform_interact() -> void:
 	if _player == null:
@@ -292,7 +244,7 @@ func _perform_interact() -> void:
 	var events: Array = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_EVENTS, [])
 	_event_adapter.emit_events(events)
 	_hand_item_instance = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_HAND_ITEM)
-	_process_desk_events(events)
+	_interaction_events.process_desk_events(events)
 	var action: String = str(exec_result.get(WardrobeInteractionEngine.RESULT_KEY_ACTION, PickPutSwapResolverScript.ACTION_NONE))
 	if exec_result.get(WardrobeInteractionEngine.RESULT_KEY_SUCCESS, false):
 		command[WardrobeInteractionCommandScript.KEY_TYPE] = _resolve_command_type(action)
@@ -313,69 +265,6 @@ func _perform_interact() -> void:
 
 func _record_interaction_event(_command: Dictionary, _success: bool, _slot_id: String) -> void:
 	pass
-
-func _process_desk_events(events: Array) -> void:
-	if _desk_states.is_empty():
-		return
-	for event_data in events:
-		var payload: Dictionary = event_data.get(WardrobeInteractionEngine.EVENT_KEY_PAYLOAD, {})
-		var slot_id: StringName = StringName(str(payload.get(WardrobeInteractionEngine.PAYLOAD_SLOT_ID, "")))
-		if slot_id == StringName():
-			continue
-		var desk_state: RefCounted = _desk_by_slot_id.get(slot_id, null)
-		if desk_state == null:
-			continue
-		var desk_events: Array = _desk_system.process_interaction_event(
-			desk_state,
-			_client_queue_state,
-			_clients,
-			_storage_state,
-			event_data
-		)
-		_apply_desk_events(desk_events)
-
-func _apply_desk_events(events: Array) -> void:
-	for event_data in events:
-		var event_type: StringName = event_data.get(DeskServicePointSystemScript.EVENT_KEY_TYPE, StringName())
-		var payload: Dictionary = event_data.get(DeskServicePointSystemScript.EVENT_KEY_PAYLOAD, {})
-		match event_type:
-			DeskServicePointSystemScript.EVENT_DESK_CONSUMED_ITEM:
-				_apply_desk_consumed(payload)
-			DeskServicePointSystemScript.EVENT_DESK_SPAWNED_ITEM:
-				_apply_desk_spawned(payload)
-			DeskServicePointSystemScript.EVENT_CLIENT_PHASE_CHANGED:
-				_debug_desk_event("client_phase_changed", payload)
-			DeskServicePointSystemScript.EVENT_CLIENT_COMPLETED:
-				_debug_desk_event("client_completed", payload)
-			DeskServicePointSystemScript.EVENT_DESK_REJECTED_DELIVERY:
-				_debug_desk_event("desk_rejected_delivery", payload)
-
-func _apply_desk_consumed(payload: Dictionary) -> void:
-	var item_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_ITEM_INSTANCE_ID, "")))
-	if item_id == StringName():
-		return
-	var node: ItemNode = _item_nodes.get(item_id, null)
-	if node == null:
-		return
-	_detach_item_node(node)
-	_item_nodes.erase(item_id)
-	node.queue_free()
-
-func _apply_desk_spawned(payload: Dictionary) -> void:
-	var desk_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_DESK_ID, "")))
-	var item_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_ITEM_INSTANCE_ID, "")))
-	if desk_id == StringName() or item_id == StringName():
-		return
-	var desk_state: RefCounted = _desk_by_id.get(desk_id, null)
-	if desk_state == null:
-		return
-	var instance := _find_item_instance(item_id)
-	if instance == null:
-		return
-	_spawn_or_move_item_node(desk_state.desk_slot_id, instance)
-
-func _debug_desk_event(label: String, payload: Dictionary) -> void:
-	print("DeskEvent %s %s" % [label, payload])
 
 func _resolve_command_type(action: String) -> StringName:
 	match action:
@@ -455,23 +344,6 @@ func _on_end_shift_pressed() -> void:
 	else:
 		push_warning("Cannot end shift: RunManager singleton missing.")
 
-func _spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
-	if slot == null or instance == null:
-		return
-	var node: ItemNode = _item_nodes.get(instance.id, null)
-	if node == null:
-		node = ITEM_SCENE.instantiate() as ItemNode
-		node.item_id = str(instance.id)
-		node.item_type = _resolve_item_type_from_kind(instance.kind)
-		_apply_item_visuals(node, instance.color)
-		_item_nodes[instance.id] = node
-		_spawned_items.append(node)
-	else:
-		_apply_item_visuals(node, instance.color)
-	_detach_item_node(node)
-	slot.put_item(node)
-
 func _detach_item_node(node: ItemNode) -> void:
 	if node == null:
 		return
@@ -495,26 +367,6 @@ func _find_item_instance(item_id: StringName) -> ItemInstance:
 			return client_state.get_ticket_item()
 	return null
 
-func _apply_item_visuals(item: ItemNode, tint: Variant) -> void:
-	var sprite := item.get_node_or_null("Sprite") as Sprite2D
-	if sprite:
-		var texture := _get_item_texture(item.item_type)
-		if texture:
-			sprite.texture = texture
-		if tint == null:
-			sprite.modulate = Color.WHITE
-		else:
-			sprite.modulate = _parse_color(tint)
-
-func _get_item_texture(item_type: int) -> Texture2D:
-	var paths: Array = ITEM_TEXTURE_PATHS.get(item_type, ITEM_TEXTURE_PATHS[ItemNode.ItemType.COAT])
-	for path in paths:
-		if ResourceLoader.exists(path, "Texture2D"):
-			var resource := load(path)
-			if resource is Texture2D:
-				return resource
-	return null
-
 func _resolve_item_type(type_name: Variant) -> ItemNode.ItemType:
 	var text := str(type_name).to_upper()
 	match text:
@@ -525,29 +377,11 @@ func _resolve_item_type(type_name: Variant) -> ItemNode.ItemType:
 		_:
 			return ItemNode.ItemType.COAT
 
-func _resolve_kind_from_item_type(item_type: int) -> StringName:
-	match item_type:
-		ItemNode.ItemType.TICKET:
-			return ItemInstanceScript.KIND_TICKET
-		ItemNode.ItemType.ANCHOR_TICKET:
-			return ItemInstanceScript.KIND_ANCHOR_TICKET
-		_:
-			return ItemInstanceScript.KIND_COAT
-
-func _resolve_item_type_from_kind(kind: StringName) -> ItemNode.ItemType:
-	match kind:
-		ItemInstanceScript.KIND_TICKET:
-			return ItemNode.ItemType.TICKET
-		ItemInstanceScript.KIND_ANCHOR_TICKET:
-			return ItemNode.ItemType.ANCHOR_TICKET
-		_:
-			return ItemNode.ItemType.COAT
-
 func _make_item_instance(item: ItemNode) -> ItemInstance:
-	var color := _get_item_color(item)
+	var color := _item_visuals.get_item_color(item)
 	return ItemInstanceScript.new(
 		StringName(item.item_id),
-		_resolve_kind_from_item_type(item.item_type),
+		_item_visuals.resolve_kind_from_item_type(item.item_type),
 		color
 	)
 
@@ -555,30 +389,8 @@ func _instance_from_snapshot(snapshot: Dictionary) -> ItemInstance:
 	var id: StringName = snapshot.get("id", StringName())
 	var kind: StringName = snapshot.get("kind", ItemInstanceScript.KIND_COAT)
 	var color_variant: Variant = snapshot.get("color", Color.WHITE)
-	var color := _parse_color(color_variant)
+	var color := _item_visuals.parse_color(color_variant)
 	return ItemInstanceScript.new(id, kind, color)
-
-func _parse_color(value: Variant) -> Color:
-	match typeof(value):
-		TYPE_COLOR:
-			return value
-		TYPE_STRING:
-			return Color.from_string(value, Color.WHITE)
-		TYPE_ARRAY:
-			var components := value as Array
-			if components.size() >= 3:
-				var r := float(components[0])
-				var g := float(components[1])
-				var b := float(components[2])
-				var a := float(components[3]) if components.size() >= 4 else 1.0
-				return Color(r, g, b, a)
-	return Color.WHITE
-
-func _get_item_color(item: ItemNode) -> Color:
-	var sprite := item.get_node_or_null("Sprite") as Sprite2D
-	if sprite:
-		return sprite.modulate
-	return Color.WHITE
 
 func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
