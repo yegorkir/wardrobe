@@ -4,16 +4,17 @@ class_name DeskServicePointSystem
 
 const DeskStateScript := preload("res://scripts/domain/desk/desk_state.gd")
 const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
+const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const InteractionEngineScript := preload("res://scripts/app/interaction/interaction_engine.gd")
+const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
 
 const EVENT_KEY_TYPE := StringName("type")
 const EVENT_KEY_PAYLOAD := StringName("payload")
 
 const EVENT_DESK_CONSUMED_ITEM := StringName("desk_consumed_item")
 const EVENT_DESK_SPAWNED_ITEM := StringName("desk_spawned_item")
-const EVENT_DESK_PHASE_CHANGED := StringName("desk_phase_changed")
 const EVENT_CLIENT_PHASE_CHANGED := StringName("client_phase_changed")
 const EVENT_CLIENT_COMPLETED := StringName("client_completed")
 const EVENT_DESK_REJECTED_DELIVERY := StringName("desk_rejected_delivery")
@@ -31,8 +32,11 @@ const REASON_PICKUP_COAT := StringName("pickup_coat_taken")
 const REASON_CLIENT_AWAY := StringName("client_away")
 const REASON_WRONG_COAT := StringName("wrong_coat")
 
+var _queue_system: ClientQueueSystem = ClientQueueSystemScript.new()
+
 func process_interaction_event(
 	desk_state: DeskState,
+	queue_state: ClientQueueState,
 	clients: Dictionary,
 	storage_state: WardrobeStorageState,
 	interaction_event: Dictionary
@@ -49,22 +53,24 @@ func process_interaction_event(
 	var slot_item := storage_state.get_slot_item(desk_state.desk_slot_id)
 	if slot_item == null:
 		return []
-	if desk_state.phase == DeskState.PHASE_DROP_OFF:
-		return _handle_dropoff(desk_state, clients, storage_state, slot_item)
-	if desk_state.phase == DeskState.PHASE_PICK_UP:
-		return _handle_pickup(desk_state, clients, storage_state, slot_item)
+	var current_client := _get_current_client(desk_state, clients)
+	if current_client == null:
+		return []
+	if current_client.phase == ClientState.PHASE_DROP_OFF:
+		return _handle_dropoff(desk_state, queue_state, clients, storage_state, current_client, slot_item)
+	if current_client.phase == ClientState.PHASE_PICK_UP:
+		return _handle_pickup(desk_state, queue_state, clients, storage_state, current_client, slot_item)
 	return []
 
 func _handle_dropoff(
 	desk_state: DeskState,
+	queue_state: ClientQueueState,
 	clients: Dictionary,
 	storage_state: WardrobeStorageState,
+	current_client: ClientState,
 	slot_item: ItemInstance
 ) -> Array:
 	if slot_item.kind != ItemInstanceScript.KIND_TICKET:
-		return []
-	var current_client := _get_current_client(desk_state, clients)
-	if current_client == null:
 		return []
 	if current_client.presence == ClientState.PRESENCE_AWAY:
 		return [_make_event(EVENT_DESK_REJECTED_DELIVERY, {
@@ -79,7 +85,7 @@ func _handle_dropoff(
 	current_client.assign_ticket_item(slot_item)
 	var previous_phase := current_client.phase
 	current_client.set_phase(ClientState.PHASE_PICK_UP)
-	desk_state.enqueue_pickup(current_client.client_id)
+	_queue_system.requeue_after_dropoff(queue_state, current_client.client_id)
 	var events := [
 		_make_event(EVENT_DESK_CONSUMED_ITEM, {
 			PAYLOAD_DESK_ID: desk_state.desk_id,
@@ -92,45 +98,18 @@ func _handle_dropoff(
 			PAYLOAD_TO: current_client.phase,
 		})
 	]
-	var next_client_id := desk_state.pop_next_dropoff()
-	if not next_client_id.is_empty():
-		desk_state.current_client_id = next_client_id
-		var next_client := _get_client(clients, next_client_id)
-		events.append_array(_spawn_item_for_client(
-			desk_state,
-			storage_state,
-			next_client,
-			ItemInstanceScript.KIND_COAT
-		))
-		return events
-	var previous_desk_phase := desk_state.phase
-	desk_state.set_phase(DeskState.PHASE_PICK_UP)
-	events.append(_make_event(EVENT_DESK_PHASE_CHANGED, {
-		PAYLOAD_DESK_ID: desk_state.desk_id,
-		PAYLOAD_FROM: previous_desk_phase,
-		PAYLOAD_TO: desk_state.phase,
-	}))
-	desk_state.current_client_id = desk_state.pop_next_pickup()
-	if not desk_state.current_client_id.is_empty():
-		var pickup_client := _get_client(clients, desk_state.current_client_id)
-		events.append_array(_spawn_item_for_client(
-			desk_state,
-			storage_state,
-			pickup_client,
-			ItemInstanceScript.KIND_TICKET
-		))
+	events.append_array(_assign_next_client_to_desk(desk_state, queue_state, clients, storage_state))
 	return events
 
 func _handle_pickup(
 	desk_state: DeskState,
+	queue_state: ClientQueueState,
 	clients: Dictionary,
 	storage_state: WardrobeStorageState,
+	current_client: ClientState,
 	slot_item: ItemInstance
 ) -> Array:
 	if slot_item.kind != ItemInstanceScript.KIND_COAT:
-		return []
-	var current_client := _get_current_client(desk_state, clients)
-	if current_client == null:
 		return []
 	if current_client.presence == ClientState.PRESENCE_AWAY:
 		return [_make_event(EVENT_DESK_REJECTED_DELIVERY, {
@@ -151,6 +130,7 @@ func _handle_pickup(
 		return []
 	var previous_phase := current_client.phase
 	current_client.set_phase(ClientState.PHASE_DONE)
+	_queue_system.remove_client(queue_state, current_client.client_id)
 	var events := [
 		_make_event(EVENT_DESK_CONSUMED_ITEM, {
 			PAYLOAD_DESK_ID: desk_state.desk_id,
@@ -166,16 +146,51 @@ func _handle_pickup(
 			PAYLOAD_CLIENT_ID: current_client.client_id,
 		})
 	]
-	desk_state.current_client_id = desk_state.pop_next_pickup()
-	if not desk_state.current_client_id.is_empty():
-		var pickup_client := _get_client(clients, desk_state.current_client_id)
-		events.append_array(_spawn_item_for_client(
-			desk_state,
-			storage_state,
-			pickup_client,
-			ItemInstanceScript.KIND_TICKET
-		))
+	events.append_array(_assign_next_client_to_desk(desk_state, queue_state, clients, storage_state))
 	return events
+
+func assign_next_client_to_desk(
+	desk_state: DeskState,
+	queue_state: ClientQueueState,
+	clients: Dictionary,
+	storage_state: WardrobeStorageState
+) -> Array:
+	return _assign_next_client_to_desk(desk_state, queue_state, clients, storage_state)
+
+func _assign_next_client_to_desk(
+	desk_state: DeskState,
+	queue_state: ClientQueueState,
+	clients: Dictionary,
+	storage_state: WardrobeStorageState
+) -> Array:
+	if desk_state == null:
+		return []
+	desk_state.current_client_id = StringName()
+	if queue_state == null:
+		return []
+	while true:
+		var next_client_id := _queue_system.take_next_waiting_client(queue_state)
+		if next_client_id.is_empty():
+			return []
+		var next_client := _get_client(clients, next_client_id)
+		if next_client == null or next_client.phase == ClientState.PHASE_DONE:
+			continue
+		desk_state.current_client_id = next_client_id
+		next_client.set_assigned_service_point(desk_state.desk_id)
+		var expected_kind := _get_expected_kind_for_client(next_client)
+		if expected_kind == StringName():
+			return []
+		return _spawn_item_for_client(desk_state, storage_state, next_client, expected_kind)
+	return []
+
+func _get_expected_kind_for_client(client: ClientState) -> StringName:
+	if client == null:
+		return StringName()
+	if client.phase == ClientState.PHASE_DROP_OFF:
+		return ItemInstanceScript.KIND_COAT
+	if client.phase == ClientState.PHASE_PICK_UP:
+		return ItemInstanceScript.KIND_TICKET
+	return StringName()
 
 func _spawn_item_for_client(
 	desk_state: DeskState,

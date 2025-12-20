@@ -10,6 +10,8 @@ const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.
 const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
 const DeskStateScript := preload("res://scripts/domain/desk/desk_state.gd")
 const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
+const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
+const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
 const DeskServicePointScript := preload("res://scripts/wardrobe/desk_service_point.gd")
 const ITEM_TEXTURE_PATHS := {
 	ItemNode.ItemType.COAT: [
@@ -47,13 +49,14 @@ var _interaction_tick := 0
 var _storage_state: WardrobeStorageState = WardrobeStorageStateScript.new()
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _hand_item_instance: ItemInstance
-var _desk_system: RefCounted = DeskServicePointSystemScript.new()
+var _desk_system: DeskServicePointSystem = DeskServicePointSystemScript.new()
 var _desk_nodes: Array = []
 var _desk_states: Array = []
 var _desk_by_id: Dictionary = {}
 var _desk_by_slot_id: Dictionary = {}
 var _clients: Dictionary = {}
-var _step3_rng := RandomNumberGenerator.new()
+var _client_queue_state: ClientQueueState = ClientQueueStateScript.new()
+var _queue_system: ClientQueueSystem = ClientQueueSystemScript.new()
 
 const DISTANCE_TIE_THRESHOLD := 6.0
 
@@ -131,24 +134,22 @@ func _reset_storage_state() -> void:
 func _initialize_step3() -> void:
 	_clear_spawned_items()
 	_collect_desks()
-	_setup_step3_rng()
 	_setup_step3_desks_and_clients()
 	_seed_step3_hook_tickets()
 	_sync_hook_anchor_tickets_once()
-	_spawn_step3_desk_coats()
-
-func _setup_step3_rng() -> void:
-	_step3_rng.seed = step3_seed
 
 func _setup_step3_desks_and_clients() -> void:
 	_desk_states.clear()
 	_desk_by_id.clear()
 	_desk_by_slot_id.clear()
 	_clients.clear()
+	if _client_queue_state == null:
+		_client_queue_state = ClientQueueStateScript.new()
+	else:
+		_client_queue_state.clear()
 	if _desk_nodes.is_empty():
 		push_warning("Step 3 desks missing; no service points initialized.")
 		return
-	var desk_ids: Array[StringName] = []
 	for index in _desk_nodes.size():
 		var desk_node: Node = _desk_nodes[index]
 		if desk_node == null:
@@ -159,16 +160,13 @@ func _setup_step3_desks_and_clients() -> void:
 		_desk_states.append(desk_state)
 		_desk_by_id[desk_state.desk_id] = desk_state
 		_desk_by_slot_id[desk_state.desk_slot_id] = desk_state
-		desk_ids.append(desk_state.desk_id)
-	var per_desk_queue: Dictionary = {}
-	for desk_id in desk_ids:
-		per_desk_queue[desk_id] = []
 	var colors: Array[Color] = [
 		Color(0.85, 0.35, 0.35),
 		Color(0.35, 0.7, 0.45),
 		Color(0.35, 0.45, 0.9),
 		Color(0.9, 0.75, 0.35),
 	]
+	var client_ids: Array[StringName] = []
 	for i in range(4):
 		var client_id := StringName("Client_%d" % i)
 		var color: Color = colors[i % colors.size()]
@@ -182,18 +180,18 @@ func _setup_step3_desks_and_clients() -> void:
 			ItemInstanceScript.KIND_TICKET,
 			color
 		)
-		var desk_index := _step3_rng.randi_range(0, desk_ids.size() - 1)
-		var desk_id := desk_ids[desk_index]
-		var client := ClientStateScript.new(client_id, coat, ticket, desk_id, StringName("color_%d" % i))
+		var client := ClientStateScript.new(client_id, coat, ticket, StringName(), StringName("color_%d" % i))
 		_clients[client_id] = client
-		var queue: Array = per_desk_queue.get(desk_id, [])
-		queue.append(client_id)
-		per_desk_queue[desk_id] = queue
+		client_ids.append(client_id)
+	_queue_system.enqueue_clients(_client_queue_state, client_ids)
 	for desk_state in _desk_states:
-		var assigned: Array = per_desk_queue.get(desk_state.desk_id, [])
-		desk_state.set_dropoff_queue(assigned)
-		desk_state.set_phase(DeskStateScript.PHASE_DROP_OFF)
-		desk_state.current_client_id = desk_state.pop_next_dropoff()
+		var events := _desk_system.assign_next_client_to_desk(
+			desk_state,
+			_client_queue_state,
+			_clients,
+			_storage_state
+		)
+		_apply_desk_events(events)
 
 func _seed_step3_hook_tickets() -> void:
 	var ticket_slots: Array[WardrobeSlot] = _get_ticket_slots()
@@ -216,15 +214,6 @@ func _sync_hook_anchor_tickets_once() -> void:
 	for node in find_children("*", "HookItem", true, true):
 		if node.has_method("sync_anchor_ticket_color"):
 			node.sync_anchor_ticket_color()
-
-func _spawn_step3_desk_coats() -> void:
-	for desk_state in _desk_states:
-		if desk_state.current_client_id.is_empty():
-			continue
-		var client: RefCounted = _clients.get(desk_state.current_client_id, null)
-		if client == null:
-			continue
-		_place_item_instance_in_slot(desk_state.desk_slot_id, client.get_coat_item())
 
 func _register_storage_slots() -> void:
 	for slot in _slots:
@@ -338,6 +327,7 @@ func _process_desk_events(events: Array) -> void:
 			continue
 		var desk_events: Array = _desk_system.process_interaction_event(
 			desk_state,
+			_client_queue_state,
 			_clients,
 			_storage_state,
 			event_data
@@ -357,8 +347,6 @@ func _apply_desk_events(events: Array) -> void:
 				_debug_desk_event("client_phase_changed", payload)
 			DeskServicePointSystemScript.EVENT_CLIENT_COMPLETED:
 				_debug_desk_event("client_completed", payload)
-			DeskServicePointSystemScript.EVENT_DESK_PHASE_CHANGED:
-				_debug_desk_event("desk_phase_changed", payload)
 			DeskServicePointSystemScript.EVENT_DESK_REJECTED_DELIVERY:
 				_debug_desk_event("desk_rejected_delivery", payload)
 
