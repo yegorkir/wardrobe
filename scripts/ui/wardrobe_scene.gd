@@ -303,6 +303,7 @@ func _find_best_slot() -> WardrobeSlot:
 	var best_slot: WardrobeSlot = null
 	var best_distance := INF
 	var best_dot := -INF
+	var best_name := ""
 	for slot in _slots:
 		var score := score_slot(slot, origin, move_dir)
 		var distance: float = score.get("distance", INF)
@@ -314,12 +315,14 @@ func _find_best_slot() -> WardrobeSlot:
 			best_slot = slot
 			best_distance = distance
 			best_dot = slot_dot
+			best_name = slot_name
 			continue
 		if abs(distance - best_distance) <= DISTANCE_TIE_THRESHOLD:
-			if slot_dot > best_dot + 0.001 or (is_equal_approx(slot_dot, best_dot) and slot_name < best_slot.name):
+			if slot_dot > best_dot + 0.001 or (is_equal_approx(slot_dot, best_dot) and slot_name < best_name):
 				best_slot = slot
 				best_distance = distance
 				best_dot = slot_dot
+				best_name = slot_name
 	return best_slot
 
 func score_slot(slot: WardrobeSlot, origin: Vector2, move_dir: Vector2) -> Dictionary:
@@ -329,7 +332,7 @@ func score_slot(slot: WardrobeSlot, origin: Vector2, move_dir: Vector2) -> Dicti
 	return {
 		"distance": distance,
 		"dot": slot_dot,
-		"name": slot.name,
+		"name": str(slot.name),
 	}
 
 func _validate_world() -> void:
