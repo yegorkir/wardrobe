@@ -47,6 +47,7 @@ var _desk_by_slot_id: Dictionary = {}
 var _clients: Dictionary = {}
 var _client_queue_state: ClientQueueState = ClientQueueStateScript.new()
 var _queue_system: ClientQueueSystem = ClientQueueSystemScript.new()
+var _last_interaction_command: Dictionary = {}
 
 const DISTANCE_TIE_THRESHOLD := 6.0
 
@@ -229,6 +230,15 @@ func _perform_interact() -> void:
 		print("NO ACTION reason=no_slot slot=none")
 		_validate_world()
 		return
+	var command := build_interaction_command(slot)
+	var exec_result := execute_interaction(command, _hand_item_instance)
+	var events: Array = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_EVENTS, [])
+	_hand_item_instance = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_HAND_ITEM)
+	apply_interaction_events(events)
+	log_interaction(exec_result, slot)
+	_validate_world()
+
+func build_interaction_command(slot: WardrobeSlot) -> Dictionary:
 	var slot_id := StringName(slot.get_slot_identifier())
 	var hand_item_instance := _hand_item_instance
 	var slot_item_instance := _storage_state.get_slot_item(slot_id)
@@ -239,29 +249,34 @@ func _perform_interact() -> void:
 		str(hand_item_instance.id) if hand_item_instance else "",
 		str(slot_item_instance.id) if slot_item_instance else ""
 	)
+	_last_interaction_command = command
 	_interaction_tick += 1
-	var exec_result: Dictionary = _interaction_engine.process_command(command, _storage_state, hand_item_instance)
-	var events: Array = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_EVENTS, [])
+	return command
+
+func execute_interaction(command: Dictionary, hand_item: ItemInstance) -> Dictionary:
+	return _interaction_engine.process_command(command, _storage_state, hand_item)
+
+func apply_interaction_events(events: Array) -> void:
 	_event_adapter.emit_events(events)
-	_hand_item_instance = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_HAND_ITEM)
 	_interaction_events.process_desk_events(events)
-	var action: String = str(exec_result.get(WardrobeInteractionEngine.RESULT_KEY_ACTION, PickPutSwapResolverScript.ACTION_NONE))
-	if exec_result.get(WardrobeInteractionEngine.RESULT_KEY_SUCCESS, false):
-		command[WardrobeInteractionCommandScript.KEY_TYPE] = _resolve_command_type(action)
+
+func log_interaction(result: Dictionary, slot: WardrobeSlot) -> void:
+	var action: String = str(result.get(WardrobeInteractionEngine.RESULT_KEY_ACTION, PickPutSwapResolverScript.ACTION_NONE))
+	if result.get(WardrobeInteractionEngine.RESULT_KEY_SUCCESS, false):
+		_last_interaction_command[WardrobeInteractionCommandScript.KEY_TYPE] = _resolve_command_type(action)
 		var slot_label := slot.get_slot_identifier()
 		var held := _player.get_active_hand_item()
 		var item_name := held.item_id if held else (slot.get_item().item_id if slot.get_item() else "none")
 		print("%s item=%s slot=%s" % [action, item_name, slot_label])
-		_record_interaction_event(command, true, slot_label)
+		_record_interaction_event(_last_interaction_command, true, slot_label)
 	else:
 		print(
 			"NO ACTION reason=%s slot=%s" % [
-				exec_result.get(WardrobeInteractionEngine.RESULT_KEY_REASON, "unknown"),
+				result.get(WardrobeInteractionEngine.RESULT_KEY_REASON, "unknown"),
 				slot.get_slot_identifier(),
 			]
 		)
-		_record_interaction_event(command, false, slot.get_slot_identifier())
-	_validate_world()
+		_record_interaction_event(_last_interaction_command, false, slot.get_slot_identifier())
 
 func _record_interaction_event(_command: Dictionary, _success: bool, _slot_id: String) -> void:
 	pass
@@ -284,26 +299,38 @@ func _find_best_slot() -> WardrobeSlot:
 	if radius <= 0.0:
 		return null
 	var origin := _player.global_position
+	var move_dir := _player.get_last_move_dir()
 	var best_slot: WardrobeSlot = null
 	var best_distance := INF
 	var best_dot := -INF
 	for slot in _slots:
-		var distance := origin.distance_to(slot.global_position)
+		var score := score_slot(slot, origin, move_dir)
+		var distance: float = score.get("distance", INF)
+		var slot_name: String = score.get("name", "")
 		if distance > radius:
 			continue
-		var direction := (slot.global_position - origin).normalized()
-		var slot_dot := direction.dot(_player.get_last_move_dir())
+		var slot_dot: float = score.get("dot", -INF)
 		if best_slot == null or distance < best_distance - 0.001:
 			best_slot = slot
 			best_distance = distance
 			best_dot = slot_dot
 			continue
 		if abs(distance - best_distance) <= DISTANCE_TIE_THRESHOLD:
-			if slot_dot > best_dot + 0.001 or (is_equal_approx(slot_dot, best_dot) and slot.name < best_slot.name):
+			if slot_dot > best_dot + 0.001 or (is_equal_approx(slot_dot, best_dot) and slot_name < best_slot.name):
 				best_slot = slot
 				best_distance = distance
 				best_dot = slot_dot
 	return best_slot
+
+func score_slot(slot: WardrobeSlot, origin: Vector2, move_dir: Vector2) -> Dictionary:
+	var distance := origin.distance_to(slot.global_position)
+	var direction := (slot.global_position - origin).normalized()
+	var slot_dot := direction.dot(move_dir)
+	return {
+		"distance": distance,
+		"dot": slot_dot,
+		"name": slot.name,
+	}
 
 func _validate_world() -> void:
 	var issues: Array = []
