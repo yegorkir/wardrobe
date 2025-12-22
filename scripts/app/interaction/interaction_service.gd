@@ -6,7 +6,7 @@ const CommandScript := preload("res://scripts/app/interaction/interaction_comman
 const EngineScript := preload("res://scripts/domain/interaction/interaction_engine.gd")
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const InteractionResult := preload("res://scripts/domain/interaction/interaction_result.gd")
 
 var _engine: WardrobeInteractionDomainEngine = EngineScript.new()
 var _storage_state: WardrobeStorageState = StorageStateScript.new()
@@ -49,10 +49,9 @@ func build_auto_command(slot_id: StringName, slot_item: ItemInstance) -> Diction
 	_interaction_tick += 1
 	return command
 
-func execute_command(command: Dictionary) -> Dictionary:
+func execute_command(command: Dictionary) -> InteractionResult:
 	var result := _engine.process_command(command, _storage_state, _hand_item)
-	var updated_hand: ItemInstance = result.get(EventSchema.RESULT_KEY_HAND_ITEM, _hand_item)
-	_hand_item = updated_hand
+	_hand_item = result.hand_item
 	return result
 
 func get_last_command() -> Dictionary:
