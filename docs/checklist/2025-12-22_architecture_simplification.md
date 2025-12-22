@@ -40,4 +40,4 @@
 - [x] Remove `scripts/domain/interaction/interaction_event_schema.gd`.
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [x] Run `task build-all` for full verification (exports succeeded; CA cert/editor settings warnings).
-- [ ] Commit with an appropriate message.
+- [x] Commit with an appropriate message (`Unify event schema constants`).
