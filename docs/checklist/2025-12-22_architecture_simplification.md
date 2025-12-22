@@ -56,3 +56,10 @@
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [x] Run `task build-all` for full verification (exports succeeded; CA cert/editor settings warnings).
 - [x] Commit with an appropriate message (`Standardize slot identifiers`).
+
+## P2.2 — Debug world validation split
+- [x] Move world integrity validation into a dedicated validator script.
+- [x] Guard validation calls behind `OS.is_debug_build()` in `scripts/ui/wardrobe_scene.gd`.
+- [x] Run `task tests` and address failures (warnings observed, no failures).
+- [x] Run `task build-all` for full verification (exports succeeded; CA cert/editor settings warnings).
+- [x] Commit with an appropriate message (`Split debug world validation`).
