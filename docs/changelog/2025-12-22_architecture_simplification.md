@@ -20,3 +20,11 @@
 - Updated `scripts/ui/wardrobe_scene.gd` to route desk events through dispatcher + presenter.
 - Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
 - Ran `task build-all` (exports succeeded; Godot reported editor settings save errors on macOS).
+
+## P1.1 — RunState value object
+- Added `scripts/domain/run/run_state.gd` for typed run state storage.
+- Updated `scripts/app/shift/shift_service.gd` to use `RunState` instead of dictionaries.
+- Updated `scripts/domain/magic/magic_system.gd` and `scripts/domain/inspection/inspection_system.gd` to accept `RunState`.
+- Updated `tests/unit/magic_system_test.gd` to use `RunState`.
+- Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
+- `task build-all` failed: `web-local` exited with status 134 and Godot reported `Pure virtual function called!` plus editor settings save errors.

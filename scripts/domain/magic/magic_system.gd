@@ -7,6 +7,8 @@ const EMERGENCY_COST_DEBT := "DEBT"
 const EMERGENCY_COST_TIPS := "TIPS"
 const EMERGENCY_COST_SHIFT_CASH := "SHIFT_CASH"
 
+const RunState := preload("res://scripts/domain/run/run_state.gd")
+
 var _config := {}
 
 func setup(config: Dictionary) -> void:
@@ -24,10 +26,8 @@ func setup(config: Dictionary) -> void:
 func get_config() -> Dictionary:
 	return _config.duplicate(true)
 
-func apply_insurance(run_state: Dictionary, ticket_number: int, item_ids: Array) -> Dictionary:
-	var links: Dictionary = run_state.get("magic_links", {})
-	links[ticket_number] = item_ids.duplicate(true)
-	run_state["magic_links"] = links
+func apply_insurance(run_state: RunState, ticket_number: int, item_ids: Array) -> Dictionary:
+	run_state.set_magic_links(ticket_number, item_ids)
 	return {
 		"type": "insurance_link",
 		"ticket_number": ticket_number,
@@ -36,7 +36,7 @@ func apply_insurance(run_state: Dictionary, ticket_number: int, item_ids: Array)
 		"cost": _config["insurance_cost"],
 	}
 
-func request_emergency_locate(_run_state: Dictionary, ticket_number: int) -> Dictionary:
+func request_emergency_locate(_run_state: RunState, ticket_number: int) -> Dictionary:
 	var cost_type: String = _config["emergency_cost_mode"]
 	var cost_value: int = _config["emergency_cost_value"]
 	return {
