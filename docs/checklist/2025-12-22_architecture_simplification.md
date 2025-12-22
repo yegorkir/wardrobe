@@ -7,4 +7,4 @@
 - [x] Add unit tests for the service.
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [x] Run `task build-all` for full verification (exports completed with Godot warnings).
-- [ ] Commit with an appropriate message.
+- [x] Commit with an appropriate message (`Extract interaction service`).
