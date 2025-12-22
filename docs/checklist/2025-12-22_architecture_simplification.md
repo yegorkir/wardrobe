@@ -33,3 +33,11 @@
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [ ] Run `task build-all` for full verification (failed: `Pure virtual function called!`, `web-local` exit 134, editor settings save error).
 - [x] Commit with an appropriate message (`Add RunState value object`).
+
+## P1.2 — Event schema unification
+- [x] Add `scripts/domain/events/event_schema.gd`.
+- [x] Update interaction/desk systems and UI adapters to use unified schema constants.
+- [x] Remove `scripts/domain/interaction/interaction_event_schema.gd`.
+- [x] Run `task tests` and address failures (warnings observed, no failures).
+- [x] Run `task build-all` for full verification (exports succeeded; CA cert/editor settings warnings).
+- [ ] Commit with an appropriate message.

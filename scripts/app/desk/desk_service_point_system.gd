@@ -7,30 +7,9 @@ const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
 
-const EVENT_KEY_TYPE := StringName("type")
-const EVENT_KEY_PAYLOAD := StringName("payload")
-
-const EVENT_DESK_CONSUMED_ITEM := StringName("desk_consumed_item")
-const EVENT_DESK_SPAWNED_ITEM := StringName("desk_spawned_item")
-const EVENT_CLIENT_PHASE_CHANGED := StringName("client_phase_changed")
-const EVENT_CLIENT_COMPLETED := StringName("client_completed")
-const EVENT_DESK_REJECTED_DELIVERY := StringName("desk_rejected_delivery")
-
-const PAYLOAD_DESK_ID := StringName("desk_id")
-const PAYLOAD_ITEM_INSTANCE_ID := StringName("item_instance_id")
-const PAYLOAD_ITEM_KIND := StringName("item_kind")
-const PAYLOAD_REASON_CODE := StringName("reason_code")
-const PAYLOAD_CLIENT_ID := StringName("client_id")
-const PAYLOAD_FROM := StringName("from")
-const PAYLOAD_TO := StringName("to")
-
-const REASON_DROP_OFF_TICKET := StringName("dropoff_ticket_taken")
-const REASON_PICKUP_COAT := StringName("pickup_coat_taken")
-const REASON_CLIENT_AWAY := StringName("client_away")
-const REASON_WRONG_COAT := StringName("wrong_coat")
 
 var _queue_system: ClientQueueSystem = ClientQueueSystemScript.new()
 
@@ -73,8 +52,8 @@ func _handle_dropoff(
 	if slot_item.kind != ItemInstanceScript.KIND_TICKET:
 		return []
 	if current_client.presence == ClientState.PRESENCE_AWAY:
-		return _make_delivery_rejected_event(desk_state, current_client, slot_item, REASON_CLIENT_AWAY)
-	var consume_events := _consume_desk_item(desk_state, storage_state, slot_item, REASON_DROP_OFF_TICKET)
+		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_CLIENT_AWAY)
+	var consume_events := _consume_desk_item(desk_state, storage_state, slot_item, EventSchema.REASON_DROP_OFF_TICKET)
 	if consume_events.is_empty():
 		return []
 	current_client.assign_ticket_item(slot_item)
@@ -97,10 +76,10 @@ func _handle_pickup(
 	if slot_item.kind != ItemInstanceScript.KIND_COAT:
 		return []
 	if current_client.presence == ClientState.PRESENCE_AWAY:
-		return _make_delivery_rejected_event(desk_state, current_client, slot_item, REASON_CLIENT_AWAY)
+		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_CLIENT_AWAY)
 	if slot_item.id != current_client.get_coat_id():
-		return _make_delivery_rejected_event(desk_state, current_client, slot_item, REASON_WRONG_COAT)
-	var consume_events := _consume_desk_item(desk_state, storage_state, slot_item, REASON_PICKUP_COAT)
+		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_WRONG_COAT)
+	var consume_events := _consume_desk_item(desk_state, storage_state, slot_item, EventSchema.REASON_PICKUP_COAT)
 	if consume_events.is_empty():
 		return []
 	var previous_phase := current_client.phase
@@ -108,8 +87,8 @@ func _handle_pickup(
 	_queue_system.remove_client(queue_state, current_client.client_id)
 	var events := consume_events
 	events.append(_make_phase_change_event(current_client, previous_phase))
-	events.append(_make_event(EVENT_CLIENT_COMPLETED, {
-		PAYLOAD_CLIENT_ID: current_client.client_id,
+	events.append(_make_event(EventSchema.EVENT_CLIENT_COMPLETED, {
+		EventSchema.PAYLOAD_CLIENT_ID: current_client.client_id,
 	}))
 	events.append_array(_assign_next_client_to_desk(desk_state, queue_state, clients, storage_state))
 	return events
@@ -155,11 +134,11 @@ func _make_delivery_rejected_event(
 	slot_item: ItemInstance,
 	reason_code: StringName
 ) -> Array:
-	return [_make_event(EVENT_DESK_REJECTED_DELIVERY, {
-		PAYLOAD_DESK_ID: desk_state.desk_id,
-		PAYLOAD_CLIENT_ID: current_client.client_id,
-		PAYLOAD_ITEM_INSTANCE_ID: slot_item.id,
-		PAYLOAD_REASON_CODE: reason_code,
+	return [_make_event(EventSchema.EVENT_DESK_REJECTED_DELIVERY, {
+		EventSchema.PAYLOAD_DESK_ID: desk_state.desk_id,
+		EventSchema.PAYLOAD_CLIENT_ID: current_client.client_id,
+		EventSchema.PAYLOAD_ITEM_INSTANCE_ID: slot_item.id,
+		EventSchema.PAYLOAD_REASON_CODE: reason_code,
 	})]
 
 func _consume_desk_item(
@@ -171,17 +150,17 @@ func _consume_desk_item(
 	var consume_result := storage_state.pick(desk_state.desk_slot_id)
 	if not consume_result.get(StorageStateScript.RESULT_KEY_SUCCESS, false):
 		return []
-	return [_make_event(EVENT_DESK_CONSUMED_ITEM, {
-		PAYLOAD_DESK_ID: desk_state.desk_id,
-		PAYLOAD_ITEM_INSTANCE_ID: slot_item.id,
-		PAYLOAD_REASON_CODE: reason_code,
+	return [_make_event(EventSchema.EVENT_DESK_CONSUMED_ITEM, {
+		EventSchema.PAYLOAD_DESK_ID: desk_state.desk_id,
+		EventSchema.PAYLOAD_ITEM_INSTANCE_ID: slot_item.id,
+		EventSchema.PAYLOAD_REASON_CODE: reason_code,
 	})]
 
 func _make_phase_change_event(client: ClientState, previous_phase: StringName) -> Dictionary:
-	return _make_event(EVENT_CLIENT_PHASE_CHANGED, {
-		PAYLOAD_CLIENT_ID: client.client_id,
-		PAYLOAD_FROM: previous_phase,
-		PAYLOAD_TO: client.phase,
+	return _make_event(EventSchema.EVENT_CLIENT_PHASE_CHANGED, {
+		EventSchema.PAYLOAD_CLIENT_ID: client.client_id,
+		EventSchema.PAYLOAD_FROM: previous_phase,
+		EventSchema.PAYLOAD_TO: client.phase,
 	})
 
 func _get_expected_kind_for_client(client: ClientState) -> StringName:
@@ -214,10 +193,10 @@ func _spawn_item_for_client(
 	var put_result := storage_state.put(desk_state.desk_slot_id, item)
 	if not put_result.get(StorageStateScript.RESULT_KEY_SUCCESS, false):
 		return []
-	return [_make_event(EVENT_DESK_SPAWNED_ITEM, {
-		PAYLOAD_DESK_ID: desk_state.desk_id,
-		PAYLOAD_ITEM_INSTANCE_ID: item.id,
-		PAYLOAD_ITEM_KIND: item.kind,
+	return [_make_event(EventSchema.EVENT_DESK_SPAWNED_ITEM, {
+		EventSchema.PAYLOAD_DESK_ID: desk_state.desk_id,
+		EventSchema.PAYLOAD_ITEM_INSTANCE_ID: item.id,
+		EventSchema.PAYLOAD_ITEM_KIND: item.kind,
 	})]
 
 func _get_current_client(desk_state: DeskState, clients: Dictionary) -> ClientState:
@@ -237,6 +216,6 @@ func _get_client_item(client: ClientState, expected_kind: StringName) -> ItemIns
 
 func _make_event(event_type: StringName, payload: Dictionary) -> Dictionary:
 	return {
-		EVENT_KEY_TYPE: event_type,
-		EVENT_KEY_PAYLOAD: payload.duplicate(true),
+		EventSchema.EVENT_KEY_TYPE: event_type,
+		EventSchema.EVENT_KEY_PAYLOAD: payload.duplicate(true),
 	}

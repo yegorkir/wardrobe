@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 const Adapter := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 var _picked: Array = []
 var _placed: Array = []

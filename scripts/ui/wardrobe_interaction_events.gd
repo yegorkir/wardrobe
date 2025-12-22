@@ -1,7 +1,7 @@
 extends RefCounted
 class_name WardrobeInteractionEventsAdapter
 
-const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 var _desk_by_id: Dictionary = {}
 var _item_nodes: Dictionary = {}
@@ -24,22 +24,22 @@ func configure(
 
 func apply_desk_events(events: Array) -> void:
 	for event_data in events:
-		var event_type: StringName = event_data.get(DeskServicePointSystemScript.EVENT_KEY_TYPE, StringName())
-		var payload: Dictionary = event_data.get(DeskServicePointSystemScript.EVENT_KEY_PAYLOAD, {})
+		var event_type: StringName = event_data.get(EventSchema.EVENT_KEY_TYPE, StringName())
+		var payload: Dictionary = event_data.get(EventSchema.EVENT_KEY_PAYLOAD, {})
 		match event_type:
-			DeskServicePointSystemScript.EVENT_DESK_CONSUMED_ITEM:
+			EventSchema.EVENT_DESK_CONSUMED_ITEM:
 				_apply_desk_consumed(payload)
-			DeskServicePointSystemScript.EVENT_DESK_SPAWNED_ITEM:
+			EventSchema.EVENT_DESK_SPAWNED_ITEM:
 				_apply_desk_spawned(payload)
-			DeskServicePointSystemScript.EVENT_CLIENT_PHASE_CHANGED:
+			EventSchema.EVENT_CLIENT_PHASE_CHANGED:
 				_debug_desk_event("client_phase_changed", payload)
-			DeskServicePointSystemScript.EVENT_CLIENT_COMPLETED:
+			EventSchema.EVENT_CLIENT_COMPLETED:
 				_debug_desk_event("client_completed", payload)
-			DeskServicePointSystemScript.EVENT_DESK_REJECTED_DELIVERY:
+			EventSchema.EVENT_DESK_REJECTED_DELIVERY:
 				_debug_desk_event("desk_rejected_delivery", payload)
 
 func _apply_desk_consumed(payload: Dictionary) -> void:
-	var item_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_ITEM_INSTANCE_ID, "")))
+	var item_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_ITEM_INSTANCE_ID, "")))
 	if item_id == StringName():
 		return
 	var node: ItemNode = _item_nodes.get(item_id, null)
@@ -51,8 +51,8 @@ func _apply_desk_consumed(payload: Dictionary) -> void:
 	node.queue_free()
 
 func _apply_desk_spawned(payload: Dictionary) -> void:
-	var desk_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_DESK_ID, "")))
-	var item_id: StringName = StringName(str(payload.get(DeskServicePointSystemScript.PAYLOAD_ITEM_INSTANCE_ID, "")))
+	var desk_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_DESK_ID, "")))
+	var item_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_ITEM_INSTANCE_ID, "")))
 	if desk_id == StringName() or item_id == StringName():
 		return
 	var desk_state: RefCounted = _desk_by_id.get(desk_id, null)

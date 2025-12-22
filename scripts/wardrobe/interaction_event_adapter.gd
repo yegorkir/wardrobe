@@ -2,7 +2,7 @@ extends RefCounted
 
 class_name WardrobeInteractionEventAdapter
 
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 signal item_picked(slot_id: StringName, item: Dictionary, tick: int)
 signal item_placed(slot_id: StringName, item: Dictionary, tick: int)

@@ -28,3 +28,10 @@
 - Updated `tests/unit/magic_system_test.gd` to use `RunState`.
 - Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
 - `task build-all` failed: `web-local` exited with status 134 and Godot reported `Pure virtual function called!` plus editor settings save errors.
+
+## P1.2 — Event schema unification
+- Added `scripts/domain/events/event_schema.gd` as the shared event schema module.
+- Updated interaction/desk systems and UI adapters to reference the unified schema constants.
+- Removed `scripts/domain/interaction/interaction_event_schema.gd`.
+- Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
+- Ran `task build-all` (exports succeeded; Godot reported editor settings save errors and CA certificate warnings).
