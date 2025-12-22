@@ -42,3 +42,9 @@
 - Updated `scripts/ui/wardrobe_scene.gd` to build and pass the context.
 - Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
 - `task build-all` failed: `web-local` exited with status 134 and Godot reported `Pure virtual function called!`, temp project binary errors, and editor settings save errors.
+
+## P2.1 — Identifier standardization
+- Standardized slot lookup keys to `StringName` in `scripts/ui/wardrobe_scene.gd`.
+- Removed redundant `str(...)` conversions for slot lookup paths.
+- Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
+- Ran `task build-all` (exports succeeded; Godot reported editor settings save errors and temp `project.binary` cleanup warnings).

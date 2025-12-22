@@ -105,13 +105,15 @@ func _collect_slots() -> void:
 		if node is WardrobeSlot:
 			var slot := node as WardrobeSlot
 			_slots.append(slot)
-			_slot_lookup[slot.get_slot_identifier()] = slot
+			var slot_id := StringName(slot.get_slot_identifier())
+			_slot_lookup[slot_id] = slot
 	if _slots.is_empty():
 		for node in find_children("*", "WardrobeSlot", true, true):
 			if node is WardrobeSlot:
 				var slot := node as WardrobeSlot
 				_slots.append(slot)
-				_slot_lookup[slot.get_slot_identifier()] = slot
+				var slot_id := StringName(slot.get_slot_identifier())
+				_slot_lookup[slot_id] = slot
 
 func _collect_desks() -> void:
 	_desk_nodes.clear()
@@ -260,7 +262,7 @@ func log_interaction(result: InteractionResult, slot: WardrobeSlot) -> void:
 		var held := _player.get_active_hand_item()
 		var item_name := held.item_id if held else (slot.get_item().item_id if slot.get_item() else "none")
 		print("%s item=%s slot=%s" % [action, item_name, slot_label])
-		_record_interaction_event(_last_interaction_command, true, slot_label)
+		_record_interaction_event(_last_interaction_command, true, StringName(slot_label))
 	else:
 		print(
 			"NO ACTION reason=%s slot=%s" % [
@@ -268,9 +270,13 @@ func log_interaction(result: InteractionResult, slot: WardrobeSlot) -> void:
 				slot.get_slot_identifier(),
 			]
 		)
-		_record_interaction_event(_last_interaction_command, false, slot.get_slot_identifier())
+		_record_interaction_event(
+			_last_interaction_command,
+			false,
+			StringName(slot.get_slot_identifier())
+		)
 
-func _record_interaction_event(_command: Dictionary, _success: bool, _slot_id: String) -> void:
+func _record_interaction_event(_command: Dictionary, _success: bool, _slot_id: StringName) -> void:
 	pass
 
 func _resolve_command_type(action: String) -> StringName:
@@ -415,7 +421,7 @@ func _instance_from_snapshot(snapshot: Dictionary) -> ItemInstance:
 	return ItemInstanceScript.new(id, kind, color)
 
 func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
+	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
 	var node: ItemNode = slot.take_item() if slot else null
 	var item_id: StringName = item.get("id", StringName())
 	if node == null:
@@ -425,7 +431,7 @@ func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) ->
 	_interaction_service.set_hand_item(_instance_from_snapshot(item))
 
 func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
+	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
 	var node: ItemNode = _player.take_item_from_hand() if _player else null
 	var item_id: StringName = item.get("id", StringName())
 	if node == null:
@@ -440,7 +446,7 @@ func _on_event_item_swapped(
 	outgoing_item: Dictionary,
 	_tick: int
 ) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
+	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
 	var slot_outgoing: ItemNode = slot.take_item() if slot else null
 	var incoming_node: ItemNode = _player.take_item_from_hand() if _player else null
 	if slot and incoming_node:
