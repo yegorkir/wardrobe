@@ -12,6 +12,7 @@
 ## Environment
 - Assume required environment variables (e.g., `GODOT_BIN`) are already set; only mention them if a command fails due to a missing variable so the user can address it.
 - Всегда сначала пробуй выполнить нужную команду, используя текущие значения переменных окружения; выясняй отсутствие/невалидность переменных только после реальной ошибки. Это правило распространяется на **все** переменные окружения, не только `GODOT_BIN`.
+- Always run tests yourself after changes. If running tests is impossible (for example, the command is missing or dependencies are unavailable), report the error explicitly and state what the user should run. If tests fail, determine whether the issue is in the code or in the tests, fix it, and then rerun the tests.
 
 ## Notes / docs
 - For non-trivial tasks, keep a dedicated note under `docs/notes/YYYY-MM-DD_<slug>.md`.
