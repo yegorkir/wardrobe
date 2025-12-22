@@ -24,3 +24,12 @@
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [x] Run `task build-all` for full verification (exports succeeded with editor settings warnings).
 - [x] Commit with an appropriate message (`Split desk event dispatching`).
+
+## P1.1 — RunState value object
+- [x] Add `scripts/domain/run/run_state.gd`.
+- [x] Update `scripts/app/shift/shift_service.gd` to use typed run state.
+- [x] Update magic/inspection systems to accept `RunState`.
+- [x] Update unit tests referencing run state.
+- [x] Run `task tests` and address failures (warnings observed, no failures).
+- [ ] Run `task build-all` for full verification (failed: `Pure virtual function called!`, `web-local` exit 134, editor settings save error).
+- [ ] Commit with an appropriate message.

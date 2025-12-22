@@ -8,6 +8,7 @@ signal shift_ended(summary: Dictionary)
 
 const MagicSystemScript := preload("res://scripts/domain/magic/magic_system.gd")
 const InspectionSystemScript := preload("res://scripts/domain/inspection/inspection_system.gd")
+const RunState := preload("res://scripts/domain/run/run_state.gd")
 
 const MAGIC_DEFAULT_CONFIG := {
 	"insurance_mode": MagicSystemScript.INSURANCE_MODE_FREE,
@@ -28,7 +29,7 @@ const INSPECTION_DEFAULT_CONFIG := {
 var _save_manager
 var _magic_system := MagicSystemScript.new()
 var _inspection_system := InspectionSystemScript.new()
-var _run_state: Dictionary = {}
+var _run_state: RunState
 var _hud_snapshot: Dictionary = {}
 var _last_summary: Dictionary = {}
 var _meta_data: Dictionary = {}
@@ -55,13 +56,13 @@ func start_shift() -> Dictionary:
 func end_shift() -> Dictionary:
 	var inspection_report := _inspection_system.build_inspection_report(
 		_run_state,
-		_run_state.get("shift_index", 1)
+		_run_state.shift_index if _run_state else 1
 	)
 	_last_summary = {
 		"money": _hud_snapshot.get("money", 0),
 		"notes": ["Prototype summary placeholder"],
-		"cleanliness": _run_state.get("cleanliness_or_entropy", 0.0),
-		"inspector_risk": _run_state.get("inspector_risk", 0.0),
+		"cleanliness": _run_state.cleanliness_or_entropy if _run_state else 0.0,
+		"inspector_risk": _run_state.inspector_risk if _run_state else 0.0,
 		"inspection_report": inspection_report,
 	}
 	_meta_data["total_currency"] = _meta_data.get("total_currency", 0) + int(_hud_snapshot.get("money", 0))
@@ -106,26 +107,14 @@ func record_entropy(amount: float) -> void:
 	_inspection_system.record_entropy(_run_state, amount)
 
 func _initialize_run_state() -> void:
-	_run_state = {
-		"shift_index": 0,
-		"wave_index": 0,
-		"cleanliness_or_entropy": 0.0,
-		"inspector_risk": 0.0,
-		"magic_links": {},
-		"shift_payout_debt": 0,
-		"magic_config": _magic_system.get_config(),
-		"inspection_config": _inspection_system.get_config(),
-	}
+	_run_state = RunState.new()
+	_run_state.magic_config = _magic_system.get_config()
+	_run_state.inspection_config = _inspection_system.get_config()
 
 func _prepare_shift_state() -> void:
-	_run_state["shift_index"] = _run_state.get("shift_index", 0) + 1
-	_run_state["wave_index"] = 1
-	_run_state["cleanliness_or_entropy"] = 0.0
-	_run_state["inspector_risk"] = 0.0
-	_run_state["shift_payout_debt"] = 0
-	var links: Dictionary = _run_state.get("magic_links", {})
-	links.clear()
-	_run_state["magic_links"] = links
+	if _run_state == null:
+		_initialize_run_state()
+	_run_state.reset_for_shift()
 
 func _reset_demo_hud() -> void:
 	_hud_snapshot = {
@@ -133,7 +122,7 @@ func _reset_demo_hud() -> void:
 		"time": 180,
 		"money": 42,
 		"magic": 3,
-		"debt": _run_state.get("shift_payout_debt", 0),
+		"debt": _run_state.shift_payout_debt if _run_state else 0,
 	}
 	emit_signal("hud_updated", get_hud_snapshot())
 
@@ -141,8 +130,8 @@ func _process_emergency_cost(event_data: Dictionary) -> void:
 	var cost_type: String = event_data.get("cost_type", "")
 	var value: int = int(event_data.get("cost_value", 0))
 	if cost_type == MagicSystemScript.EMERGENCY_COST_DEBT and value != 0:
-		var debt: int = int(_run_state.get("shift_payout_debt", 0)) + value
-		_run_state["shift_payout_debt"] = debt
+		var debt: int = _run_state.shift_payout_debt + value
+		_run_state.shift_payout_debt = debt
 		_hud_snapshot["debt"] = debt
 		emit_signal("hud_updated", get_hud_snapshot())
 
