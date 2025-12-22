@@ -7,7 +7,7 @@ const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
-const InteractionEngineScript := preload("res://scripts/app/interaction/interaction_engine.gd")
+const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
 const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
 
 const EVENT_KEY_TYPE := StringName("type")
@@ -43,11 +43,11 @@ func process_interaction_event(
 ) -> Array:
 	if desk_state == null or storage_state == null:
 		return []
-	var event_type: StringName = interaction_event.get(InteractionEngineScript.EVENT_KEY_TYPE, StringName())
-	if event_type != InteractionEngineScript.EVENT_ITEM_PLACED and event_type != InteractionEngineScript.EVENT_ITEM_SWAPPED:
+	var event_type: StringName = interaction_event.get(EventSchema.EVENT_KEY_TYPE, StringName())
+	if event_type != EventSchema.EVENT_ITEM_PLACED and event_type != EventSchema.EVENT_ITEM_SWAPPED:
 		return []
-	var payload: Dictionary = interaction_event.get(InteractionEngineScript.EVENT_KEY_PAYLOAD, {})
-	var slot_id: StringName = StringName(str(payload.get(InteractionEngineScript.PAYLOAD_SLOT_ID, "")))
+	var payload: Dictionary = interaction_event.get(EventSchema.EVENT_KEY_PAYLOAD, {})
+	var slot_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_SLOT_ID, "")))
 	if slot_id != desk_state.desk_slot_id:
 		return []
 	var slot_item := storage_state.get_slot_item(desk_state.desk_slot_id)

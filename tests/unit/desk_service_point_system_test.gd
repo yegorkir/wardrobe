@@ -6,7 +6,7 @@ const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
-const InteractionEngine := preload("res://scripts/app/interaction/interaction_engine.gd")
+const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
 
 func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
 	var system := DeskServicePointSystemScript.new()
@@ -106,17 +106,17 @@ func _make_client(id: String, coat_id: String, ticket_id: String) -> ClientState
 
 func _make_put_event(slot_id: StringName) -> Dictionary:
 	return {
-		InteractionEngine.EVENT_KEY_TYPE: InteractionEngine.EVENT_ITEM_PLACED,
-		InteractionEngine.EVENT_KEY_PAYLOAD: {
-			InteractionEngine.PAYLOAD_SLOT_ID: slot_id,
+		EventSchema.EVENT_KEY_TYPE: EventSchema.EVENT_ITEM_PLACED,
+		EventSchema.EVENT_KEY_PAYLOAD: {
+			EventSchema.PAYLOAD_SLOT_ID: slot_id,
 		},
 	}
 
 func _make_swap_event(slot_id: StringName) -> Dictionary:
 	return {
-		InteractionEngine.EVENT_KEY_TYPE: InteractionEngine.EVENT_ITEM_SWAPPED,
-		InteractionEngine.EVENT_KEY_PAYLOAD: {
-			InteractionEngine.PAYLOAD_SLOT_ID: slot_id,
+		EventSchema.EVENT_KEY_TYPE: EventSchema.EVENT_ITEM_SWAPPED,
+		EventSchema.EVENT_KEY_PAYLOAD: {
+			EventSchema.PAYLOAD_SLOT_ID: slot_id,
 		},
 	}
 

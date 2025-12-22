@@ -2,7 +2,7 @@ extends RefCounted
 class_name WardrobeInteractionEventsAdapter
 
 const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
-const WardrobeInteractionEngineScript := preload("res://scripts/app/interaction/interaction_engine.gd")
+const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 
@@ -47,8 +47,8 @@ func process_desk_events(events: Array) -> void:
 	if _desk_states.is_empty():
 		return
 	for event_data in events:
-		var payload: Dictionary = event_data.get(WardrobeInteractionEngineScript.EVENT_KEY_PAYLOAD, {})
-		var slot_id: StringName = StringName(str(payload.get(WardrobeInteractionEngineScript.PAYLOAD_SLOT_ID, "")))
+		var payload: Dictionary = event_data.get(EventSchema.EVENT_KEY_PAYLOAD, {})
+		var slot_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_SLOT_ID, "")))
 		if slot_id == StringName():
 			continue
 		var desk_state: RefCounted = _desk_by_slot_id.get(slot_id, null)

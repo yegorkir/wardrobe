@@ -2,7 +2,8 @@ extends Node2D
 
 const ITEM_SCENE := preload("res://scenes/prefabs/item_node.tscn")
 const WardrobeInteractionCommandScript := preload("res://scripts/app/interaction/interaction_command.gd")
-const WardrobeInteractionEngineScript := preload("res://scripts/app/interaction/interaction_engine.gd")
+const WardrobeInteractionEngineScript := preload("res://scripts/domain/interaction/interaction_engine.gd")
+const InteractionEventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
 const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
 const WardrobeStep3SetupAdapterScript := preload("res://scripts/ui/wardrobe_step3_setup.gd")
@@ -27,7 +28,7 @@ const DeskServicePointScript := preload("res://scripts/wardrobe/desk_service_poi
 @onready var _player: WardrobePlayerController = %Player
 
 var _hud_connected := false
-var _interaction_engine: WardrobeInteractionEngine = WardrobeInteractionEngineScript.new()
+var _interaction_engine: WardrobeInteractionDomainEngine = WardrobeInteractionEngineScript.new()
 var _slots: Array[WardrobeSlot] = []
 var _slot_lookup: Dictionary = {}
 var _spawned_items: Array[ItemNode] = []
@@ -232,8 +233,8 @@ func _perform_interact() -> void:
 		return
 	var command := build_interaction_command(slot)
 	var exec_result := execute_interaction(command, _hand_item_instance)
-	var events: Array = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_EVENTS, [])
-	_hand_item_instance = exec_result.get(WardrobeInteractionEngine.RESULT_KEY_HAND_ITEM)
+	var events: Array = exec_result.get(InteractionEventSchema.RESULT_KEY_EVENTS, [])
+	_hand_item_instance = exec_result.get(InteractionEventSchema.RESULT_KEY_HAND_ITEM)
 	apply_interaction_events(events)
 	log_interaction(exec_result, slot)
 	_validate_world()
@@ -261,8 +262,8 @@ func apply_interaction_events(events: Array) -> void:
 	_interaction_events.process_desk_events(events)
 
 func log_interaction(result: Dictionary, slot: WardrobeSlot) -> void:
-	var action: String = str(result.get(WardrobeInteractionEngine.RESULT_KEY_ACTION, PickPutSwapResolverScript.ACTION_NONE))
-	if result.get(WardrobeInteractionEngine.RESULT_KEY_SUCCESS, false):
+	var action: String = str(result.get(InteractionEventSchema.RESULT_KEY_ACTION, PickPutSwapResolverScript.ACTION_NONE))
+	if result.get(InteractionEventSchema.RESULT_KEY_SUCCESS, false):
 		_last_interaction_command[WardrobeInteractionCommandScript.KEY_TYPE] = _resolve_command_type(action)
 		var slot_label := slot.get_slot_identifier()
 		var held := _player.get_active_hand_item()
@@ -272,7 +273,7 @@ func log_interaction(result: Dictionary, slot: WardrobeSlot) -> void:
 	else:
 		print(
 			"NO ACTION reason=%s slot=%s" % [
-				result.get(WardrobeInteractionEngine.RESULT_KEY_REASON, "unknown"),
+				result.get(InteractionEventSchema.RESULT_KEY_REASON, "unknown"),
 				slot.get_slot_identifier(),
 			]
 		)
