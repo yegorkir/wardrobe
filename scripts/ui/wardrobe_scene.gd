@@ -9,6 +9,7 @@ const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_p
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
 const WardrobeStep3SetupAdapterScript := preload("res://scripts/ui/wardrobe_step3_setup.gd")
 const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardrobe_interaction_events.gd")
+const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
 const WardrobeItemVisualsAdapterScript := preload("res://scripts/ui/wardrobe_item_visuals.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
@@ -38,6 +39,7 @@ var _item_nodes: Dictionary = {}
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
 var _interaction_events: WardrobeInteractionEventsAdapter = WardrobeInteractionEventsAdapterScript.new()
+var _desk_event_dispatcher := DeskEventDispatcherScript.new()
 var _item_visuals: WardrobeItemVisualsAdapter = WardrobeItemVisualsAdapterScript.new()
 var _desk_system: DeskServicePointSystem = DeskServicePointSystemScript.new()
 var _desk_nodes: Array = []
@@ -170,17 +172,21 @@ func _setup_adapters() -> void:
 	if _interaction_events == null:
 		_interaction_events = WardrobeInteractionEventsAdapterScript.new()
 	_interaction_events.configure(
-		_desk_states,
-		_desk_by_slot_id,
 		_desk_by_id,
-		_desk_system,
-		_client_queue_state,
-		_clients,
-		_storage_state,
 		_item_nodes,
 		Callable(self, "_detach_item_node"),
 		Callable(_item_visuals, "spawn_or_move_item_node"),
 		Callable(self, "_find_item_instance")
+	)
+	if _desk_event_dispatcher == null:
+		_desk_event_dispatcher = DeskEventDispatcherScript.new()
+	_desk_event_dispatcher.configure(
+		_desk_states,
+		_desk_by_slot_id,
+		_desk_system,
+		_client_queue_state,
+		_clients,
+		_storage_state
 	)
 	if _step3_setup == null:
 		_step3_setup = WardrobeStep3SetupAdapterScript.new()
@@ -242,7 +248,8 @@ func execute_interaction(command: Dictionary) -> InteractionResult:
 
 func apply_interaction_events(events: Array) -> void:
 	_event_adapter.emit_events(events)
-	_interaction_events.process_desk_events(events)
+	var desk_events: Array = _desk_event_dispatcher.process_interaction_events(events)
+	_interaction_events.apply_desk_events(desk_events)
 
 func log_interaction(result: InteractionResult, slot: WardrobeSlot) -> void:
 	var action: String = result.action

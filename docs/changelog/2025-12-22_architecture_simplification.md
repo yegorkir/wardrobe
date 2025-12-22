@@ -13,3 +13,10 @@
 - Updated interaction unit tests to assert against `InteractionResult` fields.
 - Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
 - `task build-all` failed: Godot reported `Pure virtual function called!` and `web-local` exited with status 134.
+
+## P0.3 — Desk event split (domain vs UI)
+- Added `scripts/ui/desk_event_dispatcher.gd` to isolate desk-domain processing from UI concerns.
+- Simplified `scripts/ui/wardrobe_interaction_events.gd` to presentation-only handling.
+- Updated `scripts/ui/wardrobe_scene.gd` to route desk events through dispatcher + presenter.
+- Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
+- Ran `task build-all` (exports succeeded; Godot reported editor settings save errors on macOS).
