@@ -2,7 +2,7 @@ extends Node2D
 
 const ITEM_SCENE := preload("res://scenes/prefabs/item_node.tscn")
 const WardrobeInteractionCommandScript := preload("res://scripts/app/interaction/interaction_command.gd")
-const WardrobeInteractionEngineScript := preload("res://scripts/domain/interaction/interaction_engine.gd")
+const WardrobeInteractionServiceScript := preload("res://scripts/app/interaction/interaction_service.gd")
 const InteractionEventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
 const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
@@ -28,18 +28,16 @@ const DeskServicePointScript := preload("res://scripts/wardrobe/desk_service_poi
 @onready var _player: WardrobePlayerController = %Player
 
 var _hud_connected := false
-var _interaction_engine: WardrobeInteractionDomainEngine = WardrobeInteractionEngineScript.new()
+var _interaction_service := WardrobeInteractionServiceScript.new()
+var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
 var _slots: Array[WardrobeSlot] = []
 var _slot_lookup: Dictionary = {}
 var _spawned_items: Array[ItemNode] = []
 var _item_nodes: Dictionary = {}
-var _interaction_tick := 0
-var _storage_state: WardrobeStorageState = WardrobeStorageStateScript.new()
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
 var _interaction_events: WardrobeInteractionEventsAdapter = WardrobeInteractionEventsAdapterScript.new()
 var _item_visuals: WardrobeItemVisualsAdapter = WardrobeItemVisualsAdapterScript.new()
-var _hand_item_instance: ItemInstance
 var _desk_system: DeskServicePointSystem = DeskServicePointSystemScript.new()
 var _desk_nodes: Array = []
 var _desk_states: Array = []
@@ -118,15 +116,12 @@ func _collect_desks() -> void:
 			_desk_nodes.append(node)
 
 func _reset_storage_state() -> void:
-	if _storage_state == null:
-		_storage_state = WardrobeStorageStateScript.new()
-	_storage_state.clear()
+	_interaction_service.reset_state()
 	_register_storage_slots()
-	_hand_item_instance = null
 
 func _register_storage_slots() -> void:
 	for slot in _slots:
-		_storage_state.register_slot(StringName(slot.get_slot_identifier()))
+		_interaction_service.register_slot(StringName(slot.get_slot_identifier()))
 
 func _get_ticket_slots() -> Array[WardrobeSlot]:
 	var ticket_slots: Array[WardrobeSlot] = []
@@ -140,7 +135,7 @@ func _place_item_instance_in_slot(slot_id: StringName, instance: ItemInstance) -
 	if instance == null:
 		return
 	if not _storage_state.has_slot(slot_id):
-		_storage_state.register_slot(slot_id)
+		_interaction_service.register_slot(slot_id)
 	if _storage_state.get_slot_item(slot_id) != null:
 		return
 	var put_result := _storage_state.put(slot_id, instance)
@@ -214,11 +209,7 @@ func _clear_spawned_items() -> void:
 			item.queue_free()
 	_spawned_items.clear()
 	_item_nodes.clear()
-	_hand_item_instance = null
-	if _storage_state == null:
-		_storage_state = WardrobeStorageStateScript.new()
-	else:
-		_storage_state.clear()
+	_interaction_service.reset_state()
 	_register_storage_slots()
 func _reset_world() -> void:
 	_step3_setup.initialize_step3()
@@ -232,30 +223,21 @@ func _perform_interact() -> void:
 		_validate_world()
 		return
 	var command := build_interaction_command(slot)
-	var exec_result := execute_interaction(command, _hand_item_instance)
+	var exec_result := execute_interaction(command)
 	var events: Array = exec_result.get(InteractionEventSchema.RESULT_KEY_EVENTS, [])
-	_hand_item_instance = exec_result.get(InteractionEventSchema.RESULT_KEY_HAND_ITEM)
 	apply_interaction_events(events)
 	log_interaction(exec_result, slot)
 	_validate_world()
 
 func build_interaction_command(slot: WardrobeSlot) -> Dictionary:
 	var slot_id := StringName(slot.get_slot_identifier())
-	var hand_item_instance := _hand_item_instance
 	var slot_item_instance := _storage_state.get_slot_item(slot_id)
-	var command := WardrobeInteractionCommandScript.build(
-		WardrobeInteractionCommandScript.TYPE_AUTO,
-		_interaction_tick,
-		slot_id,
-		str(hand_item_instance.id) if hand_item_instance else "",
-		str(slot_item_instance.id) if slot_item_instance else ""
-	)
+	var command: Dictionary = _interaction_service.build_auto_command(slot_id, slot_item_instance)
 	_last_interaction_command = command
-	_interaction_tick += 1
 	return command
 
-func execute_interaction(command: Dictionary, hand_item: ItemInstance) -> Dictionary:
-	return _interaction_engine.process_command(command, _storage_state, hand_item)
+func execute_interaction(command: Dictionary) -> Dictionary:
+	return _interaction_service.execute_command(command)
 
 func apply_interaction_events(events: Array) -> void:
 	_event_adapter.emit_events(events)
@@ -431,7 +413,7 @@ func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) ->
 		node = _item_nodes.get(item_id, null)
 	if node and _player:
 		_player.hold_item(node)
-	_hand_item_instance = _instance_from_snapshot(item)
+	_interaction_service.set_hand_item(_instance_from_snapshot(item))
 
 func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
@@ -441,7 +423,7 @@ func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) ->
 		node = _item_nodes.get(item_id, null)
 	if slot and node:
 		slot.put_item(node)
-	_hand_item_instance = null
+	_interaction_service.clear_hand_item()
 
 func _on_event_item_swapped(
 	slot_id: StringName,
@@ -456,7 +438,7 @@ func _on_event_item_swapped(
 		slot.put_item(incoming_node)
 	if slot_outgoing and _player:
 		_player.hold_item(slot_outgoing)
-	_hand_item_instance = _instance_from_snapshot(outgoing_item)
+	_interaction_service.set_hand_item(_instance_from_snapshot(outgoing_item))
 
 func _on_event_action_rejected(_slot_id: StringName, _reason: StringName, _tick: int) -> void:
 	pass
