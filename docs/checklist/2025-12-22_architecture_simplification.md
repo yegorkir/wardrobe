@@ -48,4 +48,4 @@
 - [x] Update `scripts/ui/wardrobe_scene.gd` to pass the context.
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [x] Run `task build-all` for full verification (exports succeeded; CA cert/editor settings warnings).
-- [ ] Commit with an appropriate message.
+- [x] Commit with an appropriate message (`Add Step 3 setup context`).
