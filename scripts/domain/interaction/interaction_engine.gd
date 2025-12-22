@@ -1,31 +1,12 @@
 extends RefCounted
 
-class_name WardrobeInteractionEngine
+class_name WardrobeInteractionDomainEngine
 
 const ResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
 const CommandScript := preload("res://scripts/app/interaction/interaction_command.gd")
 const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-
-const RESULT_KEY_SUCCESS := "success"
-const RESULT_KEY_REASON := "reason"
-const RESULT_KEY_ACTION := "action"
-const RESULT_KEY_EVENTS := "events"
-const RESULT_KEY_HAND_ITEM := "hand_item"
-
-const EVENT_KEY_TYPE := "type"
-const EVENT_KEY_PAYLOAD := "payload"
-const EVENT_ITEM_PLACED := StringName("item_placed")
-const EVENT_ITEM_PICKED := StringName("item_picked")
-const EVENT_ITEM_SWAPPED := StringName("item_swapped")
-const EVENT_ACTION_REJECTED := StringName("action_rejected")
-
-const PAYLOAD_SLOT_ID := StringName("slot_id")
-const PAYLOAD_ITEM := StringName("item")
-const PAYLOAD_OUTGOING_ITEM := StringName("outgoing_item")
-const PAYLOAD_INCOMING_ITEM := StringName("incoming_item")
-const PAYLOAD_REASON := StringName("reason")
-const PAYLOAD_TICK := StringName("tick")
+const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
 
 const REASON_CONTEXT_MISSING := StringName("context_missing")
 const REASON_PAYLOAD_MISSING := StringName("payload_missing")
@@ -43,8 +24,6 @@ var _resolver := ResolverScript.new()
 func process_command(command: Dictionary, context: Variant, hand_item: ItemInstance = null) -> Dictionary:
 	if context is StorageState:
 		return _process_with_storage(command, context as StorageState, hand_item)
-	if context != null and context.has_method("get_slot"):
-		return _process_with_target(command, context)
 	return _make_result(false, REASON_CONTEXT_MISSING, ResolverScript.ACTION_NONE, [], hand_item)
 
 func _process_with_storage(
@@ -119,10 +98,10 @@ func _execute_pick(storage_state: StorageState, slot_id: StringName, tick: int) 
 		return _reject_with_event(reason, slot_id, null, tick)
 	var picked: ItemInstance = pick_result.get(StorageState.RESULT_KEY_ITEM)
 	var events := [
-		_make_event(EVENT_ITEM_PICKED, {
-			PAYLOAD_SLOT_ID: slot_id,
-			PAYLOAD_ITEM: picked.to_snapshot(),
-			PAYLOAD_TICK: tick,
+		_make_event(EventSchema.EVENT_ITEM_PICKED, {
+			EventSchema.PAYLOAD_SLOT_ID: slot_id,
+			EventSchema.PAYLOAD_ITEM: picked.to_snapshot(),
+			EventSchema.PAYLOAD_TICK: tick,
 		})
 	]
 	return _make_result(true, StorageState.REASON_OK, ResolverScript.ACTION_PICK, events, picked)
@@ -140,10 +119,10 @@ func _execute_put(
 		var reason: StringName = put_result.get(StorageState.RESULT_KEY_REASON, REASON_SLOT_BLOCKED)
 		return _reject_with_event(reason, slot_id, hand_item, tick)
 	var events := [
-		_make_event(EVENT_ITEM_PLACED, {
-			PAYLOAD_SLOT_ID: slot_id,
-			PAYLOAD_ITEM: hand_item.to_snapshot(),
-			PAYLOAD_TICK: tick,
+		_make_event(EventSchema.EVENT_ITEM_PLACED, {
+			EventSchema.PAYLOAD_SLOT_ID: slot_id,
+			EventSchema.PAYLOAD_ITEM: hand_item.to_snapshot(),
+			EventSchema.PAYLOAD_TICK: tick,
 		})
 	]
 	return _make_result(true, StorageState.REASON_OK, ResolverScript.ACTION_PUT, events, null)
@@ -162,11 +141,11 @@ func _execute_swap(
 		return _reject_with_event(reason, slot_id, hand_item, tick)
 	var outgoing: ItemInstance = swap_result.get(StorageState.RESULT_KEY_OUTGOING)
 	var events := [
-		_make_event(EVENT_ITEM_SWAPPED, {
-			PAYLOAD_SLOT_ID: slot_id,
-			PAYLOAD_INCOMING_ITEM: hand_item.to_snapshot(),
-			PAYLOAD_OUTGOING_ITEM: outgoing.to_snapshot(),
-			PAYLOAD_TICK: tick,
+		_make_event(EventSchema.EVENT_ITEM_SWAPPED, {
+			EventSchema.PAYLOAD_SLOT_ID: slot_id,
+			EventSchema.PAYLOAD_INCOMING_ITEM: hand_item.to_snapshot(),
+			EventSchema.PAYLOAD_OUTGOING_ITEM: outgoing.to_snapshot(),
+			EventSchema.PAYLOAD_TICK: tick,
 		})
 	]
 	return _make_result(true, StorageState.REASON_OK, ResolverScript.ACTION_SWAP, events, outgoing)
@@ -178,18 +157,18 @@ func _reject_with_event(
 	tick: int
 ) -> Dictionary:
 	var events := [
-		_make_event(EVENT_ACTION_REJECTED, {
-			PAYLOAD_SLOT_ID: slot_id,
-			PAYLOAD_REASON: reason,
-			PAYLOAD_TICK: tick,
+		_make_event(EventSchema.EVENT_ACTION_REJECTED, {
+			EventSchema.PAYLOAD_SLOT_ID: slot_id,
+			EventSchema.PAYLOAD_REASON: reason,
+			EventSchema.PAYLOAD_TICK: tick,
 		})
 	]
 	return _make_result(false, reason, ResolverScript.ACTION_NONE, events, hand_item)
 
 func _make_event(event_type: StringName, payload: Dictionary) -> Dictionary:
 	return {
-		EVENT_KEY_TYPE: event_type,
-		EVENT_KEY_PAYLOAD: payload.duplicate(true),
+		EventSchema.EVENT_KEY_TYPE: event_type,
+		EventSchema.EVENT_KEY_PAYLOAD: payload.duplicate(true),
 	}
 
 func _make_result(
@@ -200,46 +179,9 @@ func _make_result(
 	hand_item: ItemInstance
 ) -> Dictionary:
 	return {
-		RESULT_KEY_SUCCESS: success,
-		RESULT_KEY_REASON: reason,
-		RESULT_KEY_ACTION: action,
-		RESULT_KEY_EVENTS: events,
-		RESULT_KEY_HAND_ITEM: hand_item,
+		EventSchema.RESULT_KEY_SUCCESS: success,
+		EventSchema.RESULT_KEY_REASON: reason,
+		EventSchema.RESULT_KEY_ACTION: action,
+		EventSchema.RESULT_KEY_EVENTS: events,
+		EventSchema.RESULT_KEY_HAND_ITEM: hand_item,
 	}
-
-# Legacy Node-based interaction path; kept for UI until adapters migrate to domain state.
-func _process_with_target(command: Dictionary, target: Variant) -> Dictionary:
-	if target == null:
-		return _make_result(false, REASON_CONTEXT_MISSING, ResolverScript.ACTION_NONE, [], null)
-	var payload := _read_payload(command)
-	if payload.is_empty():
-		return _make_result(false, REASON_PAYLOAD_MISSING, ResolverScript.ACTION_NONE, [], null)
-	var slot_id := str(payload.get(CommandScript.PAYLOAD_SLOT_ID, ""))
-	var carrier_slot: Variant = target.get_slot(slot_id)
-	if carrier_slot == null:
-		return _make_result(false, REASON_SLOT_MISSING, ResolverScript.ACTION_NONE, [], null)
-	var hand_item_id := str(payload.get(CommandScript.PAYLOAD_HAND_ITEM_ID, ""))
-	var slot_item_id := str(payload.get(CommandScript.PAYLOAD_SLOT_ITEM_ID, ""))
-	var hand_state: Variant = target.get_hand_item(hand_item_id)
-	var slot_state: Variant = target.get_slot_item(carrier_slot, slot_item_id)
-	var resolved := _resolver.resolve(hand_state != null, slot_state != null)
-	if not resolved.get("success", false):
-		var fail := resolved.duplicate(true)
-		fail[RESULT_KEY_ACTION] = resolved.get("action", ResolverScript.ACTION_NONE)
-		return fail
-	var action := str(resolved.get("action", ResolverScript.ACTION_NONE))
-	match action:
-		ResolverScript.ACTION_PICK:
-			var outcome: Dictionary = target.perform_pick(carrier_slot)
-			outcome[RESULT_KEY_ACTION] = action
-			return outcome
-		ResolverScript.ACTION_PUT:
-			var put_outcome: Dictionary = target.perform_put(carrier_slot)
-			put_outcome[RESULT_KEY_ACTION] = action
-			return put_outcome
-		ResolverScript.ACTION_SWAP:
-			var swap_outcome: Dictionary = target.perform_swap(carrier_slot)
-			swap_outcome[RESULT_KEY_ACTION] = action
-			return swap_outcome
-		_:
-			return _make_result(false, REASON_UNKNOWN_ACTION, action, [], null)
