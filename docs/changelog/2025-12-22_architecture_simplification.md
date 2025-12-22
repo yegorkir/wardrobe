@@ -35,3 +35,10 @@
 - Removed `scripts/domain/interaction/interaction_event_schema.gd`.
 - Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
 - Ran `task build-all` (exports succeeded; Godot reported editor settings save errors and CA certificate warnings).
+
+## P1.3 — Step 3 setup context
+- Added `scripts/ui/wardrobe_step3_setup_context.gd` to group Step 3 setup dependencies.
+- Updated `scripts/ui/wardrobe_step3_setup.gd` to accept a context object.
+- Updated `scripts/ui/wardrobe_scene.gd` to build and pass the context.
+- Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
+- `task build-all` failed: `web-local` exited with status 134 and Godot reported `Pure virtual function called!`, temp project binary errors, and editor settings save errors.
