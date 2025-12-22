@@ -3,8 +3,6 @@ extends Node
 
 signal content_event(event_name, payload)
 
-const ContentDefinition := preload("res://scripts/domain/content/content_definition.gd")
-
 var _archetypes: Dictionary = {}
 var _modifiers: Dictionary = {}
 var _waves: Dictionary = {}

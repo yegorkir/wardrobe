@@ -4,9 +4,9 @@ const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_servi
 const DeskStateScript := preload("res://scripts/domain/desk/desk_state.gd")
 const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
-const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
 	var system := DeskServicePointSystemScript.new()
@@ -30,8 +30,8 @@ func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
 	assert_that(desk.current_client_id).is_equal(client_b.client_id)
 	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(client_b.get_coat_id())
 	assert_that(queue.peek_next()).is_equal(client_a.client_id)
-	assert_bool(_has_event(events, DeskServicePointSystemScript.EVENT_DESK_CONSUMED_ITEM)).is_true()
-	assert_bool(_has_event(events, DeskServicePointSystemScript.EVENT_DESK_SPAWNED_ITEM)).is_true()
+	assert_bool(_has_event(events, EventSchema.EVENT_DESK_CONSUMED_ITEM)).is_true()
+	assert_bool(_has_event(events, EventSchema.EVENT_DESK_SPAWNED_ITEM)).is_true()
 
 func test_dropoff_empty_queue_requeues_client_for_pickup() -> void:
 	var system := DeskServicePointSystemScript.new()
@@ -49,7 +49,7 @@ func test_dropoff_empty_queue_requeues_client_for_pickup() -> void:
 	assert_that(desk.current_client_id).is_equal(client_a.client_id)
 	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(client_a.get_ticket_id())
 	assert_that(queue.get_count()).is_equal(0)
-	assert_bool(_has_event(events, DeskServicePointSystemScript.EVENT_DESK_SPAWNED_ITEM)).is_true()
+	assert_bool(_has_event(events, EventSchema.EVENT_DESK_SPAWNED_ITEM)).is_true()
 
 func test_pickup_consumes_correct_coat_and_spawns_next_ticket() -> void:
 	var system := DeskServicePointSystemScript.new()
@@ -74,7 +74,7 @@ func test_pickup_consumes_correct_coat_and_spawns_next_ticket() -> void:
 	assert_that(client_a.phase).is_equal(ClientStateScript.PHASE_DONE)
 	assert_that(desk.current_client_id).is_equal(client_b.client_id)
 	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(client_b.get_ticket_id())
-	assert_bool(_has_event(events, DeskServicePointSystemScript.EVENT_CLIENT_COMPLETED)).is_true()
+	assert_bool(_has_event(events, EventSchema.EVENT_CLIENT_COMPLETED)).is_true()
 
 func test_pickup_rejects_wrong_coat() -> void:
 	var system := DeskServicePointSystemScript.new()
@@ -92,10 +92,10 @@ func test_pickup_rejects_wrong_coat() -> void:
 	var events := system.process_interaction_event(desk, queue, clients, storage, event)
 
 	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(StringName("coat_wrong"))
-	assert_bool(_has_event(events, DeskServicePointSystemScript.EVENT_DESK_REJECTED_DELIVERY)).is_true()
+	assert_bool(_has_event(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)).is_true()
 
-func _make_storage() -> StorageState:
-	var storage := StorageState.new()
+func _make_storage() -> WardrobeStorageState:
+	var storage := StorageStateScript.new()
 	storage.register_slot(StringName("DeskSlot_A"))
 	return storage
 
@@ -122,6 +122,6 @@ func _make_swap_event(slot_id: StringName) -> Dictionary:
 
 func _has_event(events: Array, event_type: StringName) -> bool:
 	for event_data in events:
-		if event_data.get(DeskServicePointSystemScript.EVENT_KEY_TYPE) == event_type:
+		if event_data.get(EventSchema.EVENT_KEY_TYPE) == event_type:
 			return true
 	return false

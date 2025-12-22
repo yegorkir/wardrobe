@@ -1,0 +1,41 @@
+extends GdUnitTestSuite
+
+const InteractionService := preload("res://scripts/app/interaction/interaction_service.gd")
+const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const Resolver := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
+const InteractionResultScript := preload("res://scripts/domain/interaction/interaction_result.gd")
+
+func test_build_auto_command_tracks_hand_and_slot() -> void:
+	var service := InteractionService.new()
+	var storage: WardrobeStorageState = service.get_storage_state()
+	storage.register_slot(StringName("Slot_A"))
+	var slot_item := _make_item("coat_slot")
+	storage.put(StringName("Slot_A"), slot_item)
+	service.set_hand_item(_make_item("coat_hand"))
+
+	var command := service.build_auto_command(StringName("Slot_A"), slot_item)
+	var payload: Dictionary = command.get("payload", {})
+
+	assert_that(payload.get("slot_id")).is_equal(StringName("Slot_A"))
+	assert_that(payload.get("hand_item_id")).is_equal("coat_hand")
+	assert_that(payload.get("slot_item_id")).is_equal("coat_slot")
+
+func test_execute_command_updates_hand_state() -> void:
+	var service := InteractionService.new()
+	var storage: WardrobeStorageState = service.get_storage_state()
+	storage.register_slot(StringName("Slot_A"))
+	storage.put(StringName("Slot_A"), _make_item("coat_slot"))
+
+	var command := service.build_auto_command(StringName("Slot_A"), storage.get_slot_item(StringName("Slot_A")))
+	var result: InteractionResult = service.execute_command(command)
+
+	assert_that(result.success).is_true()
+	assert_that(result.action).is_equal(Resolver.ACTION_PICK)
+	var hand := service.get_hand_item()
+	assert_that(hand).is_not_null()
+	if hand:
+		assert_that(hand.id).is_equal(StringName("coat_slot"))
+
+func _make_item(id: String) -> ItemInstance:
+	return ItemInstanceScript.new(StringName(id), ItemInstance.KIND_COAT)

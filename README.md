@@ -44,6 +44,14 @@ export GODOT_BIN=/Applications/Godot.app/Contents/MacOS/Godot   # поправь
 GODOT_BIN=/path/to/Godot ./addons/gdUnit4/runtest.sh -a ./tests
 ```
 
+Чтобы ускорить локальные прогоны, задайте постоянный каталог пользовательских данных Godot (кэш и импорт). Это уменьшает повторные сканы:
+
+```bash
+GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests
+```
+
+Переменная влияет только на локальный запуск и не затрагивает GitHub Actions.
+
 Коды возврата показывают успешность (0) или наличие предупреждений/ошибок. Отчеты падают в `res://reports/`. Сменить директорию можно флагом `-rd`. За правилами по тестам смотрите `tests/AGENTS.md`.
 
 ## Документация и развитие

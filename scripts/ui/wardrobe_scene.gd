@@ -2,13 +2,16 @@ extends Node2D
 
 const ITEM_SCENE := preload("res://scenes/prefabs/item_node.tscn")
 const WardrobeInteractionCommandScript := preload("res://scripts/app/interaction/interaction_command.gd")
-const WardrobeInteractionEngineScript := preload("res://scripts/domain/interaction/interaction_engine.gd")
-const InteractionEventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const WardrobeInteractionServiceScript := preload("res://scripts/app/interaction/interaction_service.gd")
+const InteractionEventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
 const WardrobeStep3SetupAdapterScript := preload("res://scripts/ui/wardrobe_step3_setup.gd")
+const WardrobeStep3SetupContextScript := preload("res://scripts/ui/wardrobe_step3_setup_context.gd")
 const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardrobe_interaction_events.gd")
+const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
 const WardrobeItemVisualsAdapterScript := preload("res://scripts/ui/wardrobe_item_visuals.gd")
+const WardrobeWorldValidatorScript := preload("res://scripts/ui/wardrobe_world_validator.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
@@ -28,18 +31,18 @@ const DeskServicePointScript := preload("res://scripts/wardrobe/desk_service_poi
 @onready var _player: WardrobePlayerController = %Player
 
 var _hud_connected := false
-var _interaction_engine: WardrobeInteractionDomainEngine = WardrobeInteractionEngineScript.new()
+var _interaction_service := WardrobeInteractionServiceScript.new()
+var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
 var _slots: Array[WardrobeSlot] = []
 var _slot_lookup: Dictionary = {}
 var _spawned_items: Array[ItemNode] = []
 var _item_nodes: Dictionary = {}
-var _interaction_tick := 0
-var _storage_state: WardrobeStorageState = WardrobeStorageStateScript.new()
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
 var _interaction_events: WardrobeInteractionEventsAdapter = WardrobeInteractionEventsAdapterScript.new()
+var _desk_event_dispatcher := DeskEventDispatcherScript.new()
 var _item_visuals: WardrobeItemVisualsAdapter = WardrobeItemVisualsAdapterScript.new()
-var _hand_item_instance: ItemInstance
+var _world_validator := WardrobeWorldValidatorScript.new()
 var _desk_system: DeskServicePointSystem = DeskServicePointSystemScript.new()
 var _desk_nodes: Array = []
 var _desk_states: Array = []
@@ -103,13 +106,15 @@ func _collect_slots() -> void:
 		if node is WardrobeSlot:
 			var slot := node as WardrobeSlot
 			_slots.append(slot)
-			_slot_lookup[slot.get_slot_identifier()] = slot
+			var slot_id := StringName(slot.get_slot_identifier())
+			_slot_lookup[slot_id] = slot
 	if _slots.is_empty():
 		for node in find_children("*", "WardrobeSlot", true, true):
 			if node is WardrobeSlot:
 				var slot := node as WardrobeSlot
 				_slots.append(slot)
-				_slot_lookup[slot.get_slot_identifier()] = slot
+				var slot_id := StringName(slot.get_slot_identifier())
+				_slot_lookup[slot_id] = slot
 
 func _collect_desks() -> void:
 	_desk_nodes.clear()
@@ -118,15 +123,12 @@ func _collect_desks() -> void:
 			_desk_nodes.append(node)
 
 func _reset_storage_state() -> void:
-	if _storage_state == null:
-		_storage_state = WardrobeStorageStateScript.new()
-	_storage_state.clear()
+	_interaction_service.reset_state()
 	_register_storage_slots()
-	_hand_item_instance = null
 
 func _register_storage_slots() -> void:
 	for slot in _slots:
-		_storage_state.register_slot(StringName(slot.get_slot_identifier()))
+		_interaction_service.register_slot(StringName(slot.get_slot_identifier()))
 
 func _get_ticket_slots() -> Array[WardrobeSlot]:
 	var ticket_slots: Array[WardrobeSlot] = []
@@ -140,7 +142,7 @@ func _place_item_instance_in_slot(slot_id: StringName, instance: ItemInstance) -
 	if instance == null:
 		return
 	if not _storage_state.has_slot(slot_id):
-		_storage_state.register_slot(slot_id)
+		_interaction_service.register_slot(slot_id)
 	if _storage_state.get_slot_item(slot_id) != null:
 		return
 	var put_result := _storage_state.put(slot_id, instance)
@@ -174,37 +176,41 @@ func _setup_adapters() -> void:
 	if _interaction_events == null:
 		_interaction_events = WardrobeInteractionEventsAdapterScript.new()
 	_interaction_events.configure(
-		_desk_states,
-		_desk_by_slot_id,
 		_desk_by_id,
-		_desk_system,
-		_client_queue_state,
-		_clients,
-		_storage_state,
 		_item_nodes,
 		Callable(self, "_detach_item_node"),
 		Callable(_item_visuals, "spawn_or_move_item_node"),
 		Callable(self, "_find_item_instance")
 	)
+	if _desk_event_dispatcher == null:
+		_desk_event_dispatcher = DeskEventDispatcherScript.new()
+	_desk_event_dispatcher.configure(
+		_desk_states,
+		_desk_by_slot_id,
+		_desk_system,
+		_client_queue_state,
+		_clients,
+		_storage_state
+	)
 	if _step3_setup == null:
 		_step3_setup = WardrobeStep3SetupAdapterScript.new()
-	_step3_setup.configure(
-		self,
-		Callable(self, "_clear_spawned_items"),
-		Callable(self, "_collect_desks"),
-		_desk_nodes,
-		_desk_states,
-		_desk_by_id,
-		_desk_by_slot_id,
-		_clients,
-		_client_queue_state,
-		_desk_system,
-		_queue_system,
-		_storage_state,
-		Callable(self, "_get_ticket_slots"),
-		Callable(self, "_place_item_instance_in_slot"),
-		Callable(_interaction_events, "apply_desk_events")
-	)
+	var step3_context := WardrobeStep3SetupContextScript.new()
+	step3_context.root = self
+	step3_context.clear_spawned_items = Callable(self, "_clear_spawned_items")
+	step3_context.collect_desks = Callable(self, "_collect_desks")
+	step3_context.desk_nodes = _desk_nodes
+	step3_context.desk_states = _desk_states
+	step3_context.desk_by_id = _desk_by_id
+	step3_context.desk_by_slot_id = _desk_by_slot_id
+	step3_context.clients = _clients
+	step3_context.client_queue_state = _client_queue_state
+	step3_context.desk_system = _desk_system
+	step3_context.queue_system = _queue_system
+	step3_context.storage_state = _storage_state
+	step3_context.get_ticket_slots = Callable(self, "_get_ticket_slots")
+	step3_context.place_item_instance_in_slot = Callable(self, "_place_item_instance_in_slot")
+	step3_context.apply_desk_events = Callable(_interaction_events, "apply_desk_events")
+	_step3_setup.configure(step3_context)
 
 func _clear_spawned_items() -> void:
 	for slot in _slots:
@@ -214,11 +220,7 @@ func _clear_spawned_items() -> void:
 			item.queue_free()
 	_spawned_items.clear()
 	_item_nodes.clear()
-	_hand_item_instance = null
-	if _storage_state == null:
-		_storage_state = WardrobeStorageStateScript.new()
-	else:
-		_storage_state.clear()
+	_interaction_service.reset_state()
 	_register_storage_slots()
 func _reset_world() -> void:
 	_step3_setup.initialize_step3()
@@ -229,57 +231,53 @@ func _perform_interact() -> void:
 	var slot := _find_best_slot()
 	if slot == null:
 		print("NO ACTION reason=no_slot slot=none")
-		_validate_world()
+		_debug_validate_world()
 		return
 	var command := build_interaction_command(slot)
-	var exec_result := execute_interaction(command, _hand_item_instance)
-	var events: Array = exec_result.get(InteractionEventSchema.RESULT_KEY_EVENTS, [])
-	_hand_item_instance = exec_result.get(InteractionEventSchema.RESULT_KEY_HAND_ITEM)
+	var exec_result: InteractionResult = execute_interaction(command)
+	var events: Array = exec_result.events
 	apply_interaction_events(events)
 	log_interaction(exec_result, slot)
-	_validate_world()
+	_debug_validate_world()
 
 func build_interaction_command(slot: WardrobeSlot) -> Dictionary:
 	var slot_id := StringName(slot.get_slot_identifier())
-	var hand_item_instance := _hand_item_instance
 	var slot_item_instance := _storage_state.get_slot_item(slot_id)
-	var command := WardrobeInteractionCommandScript.build(
-		WardrobeInteractionCommandScript.TYPE_AUTO,
-		_interaction_tick,
-		slot_id,
-		str(hand_item_instance.id) if hand_item_instance else "",
-		str(slot_item_instance.id) if slot_item_instance else ""
-	)
+	var command: Dictionary = _interaction_service.build_auto_command(slot_id, slot_item_instance)
 	_last_interaction_command = command
-	_interaction_tick += 1
 	return command
 
-func execute_interaction(command: Dictionary, hand_item: ItemInstance) -> Dictionary:
-	return _interaction_engine.process_command(command, _storage_state, hand_item)
+func execute_interaction(command: Dictionary) -> InteractionResult:
+	return _interaction_service.execute_command(command)
 
 func apply_interaction_events(events: Array) -> void:
 	_event_adapter.emit_events(events)
-	_interaction_events.process_desk_events(events)
+	var desk_events: Array = _desk_event_dispatcher.process_interaction_events(events)
+	_interaction_events.apply_desk_events(desk_events)
 
-func log_interaction(result: Dictionary, slot: WardrobeSlot) -> void:
-	var action: String = str(result.get(InteractionEventSchema.RESULT_KEY_ACTION, PickPutSwapResolverScript.ACTION_NONE))
-	if result.get(InteractionEventSchema.RESULT_KEY_SUCCESS, false):
+func log_interaction(result: InteractionResult, slot: WardrobeSlot) -> void:
+	var action: String = result.action
+	if result.success:
 		_last_interaction_command[WardrobeInteractionCommandScript.KEY_TYPE] = _resolve_command_type(action)
 		var slot_label := slot.get_slot_identifier()
 		var held := _player.get_active_hand_item()
 		var item_name := held.item_id if held else (slot.get_item().item_id if slot.get_item() else "none")
 		print("%s item=%s slot=%s" % [action, item_name, slot_label])
-		_record_interaction_event(_last_interaction_command, true, slot_label)
+		_record_interaction_event(_last_interaction_command, true, StringName(slot_label))
 	else:
 		print(
 			"NO ACTION reason=%s slot=%s" % [
-				result.get(InteractionEventSchema.RESULT_KEY_REASON, "unknown"),
+				result.reason,
 				slot.get_slot_identifier(),
 			]
 		)
-		_record_interaction_event(_last_interaction_command, false, slot.get_slot_identifier())
+		_record_interaction_event(
+			_last_interaction_command,
+			false,
+			StringName(slot.get_slot_identifier())
+		)
 
-func _record_interaction_event(_command: Dictionary, _success: bool, _slot_id: String) -> void:
+func _record_interaction_event(_command: Dictionary, _success: bool, _slot_id: StringName) -> void:
 	pass
 
 func _resolve_command_type(action: String) -> StringName:
@@ -336,31 +334,10 @@ func score_slot(slot: WardrobeSlot, origin: Vector2, move_dir: Vector2) -> Dicti
 		"name": str(slot.name),
 	}
 
-func _validate_world() -> void:
-	var issues: Array = []
-	var item_locations := {}
-	for slot in _slots:
-		var slot_item := slot.get_item()
-		if slot_item:
-			if item_locations.has(slot_item):
-				issues.append(
-					"Item %s duplicated between %s and %s" % [
-						slot_item.item_id,
-						item_locations[slot_item],
-						slot.get_slot_identifier(),
-					]
-				)
-			else:
-				item_locations[slot_item] = slot.get_slot_identifier()
-	var hand_item := _player.get_active_hand_item()
-	if hand_item:
-		if item_locations.has(hand_item):
-			issues.append("Item %s exists in slot and hand" % hand_item.item_id)
-		else:
-			item_locations[hand_item] = "hand"
-	if issues.size() > 0:
-		for issue in issues:
-			push_error("Wardrobe integrity violation: %s" % issue)
+func _debug_validate_world() -> void:
+	if not OS.is_debug_build():
+		return
+	_world_validator.validate(_slots, _player)
 
 func _on_hud_updated(snapshot: Dictionary) -> void:
 	_wave_label.text = "Wave: %s" % snapshot.get("wave", "-")
@@ -424,24 +401,24 @@ func _instance_from_snapshot(snapshot: Dictionary) -> ItemInstance:
 	return ItemInstanceScript.new(id, kind, color)
 
 func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
+	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
 	var node: ItemNode = slot.take_item() if slot else null
 	var item_id: StringName = item.get("id", StringName())
 	if node == null:
 		node = _item_nodes.get(item_id, null)
 	if node and _player:
 		_player.hold_item(node)
-	_hand_item_instance = _instance_from_snapshot(item)
+	_interaction_service.set_hand_item(_instance_from_snapshot(item))
 
 func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
+	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
 	var node: ItemNode = _player.take_item_from_hand() if _player else null
 	var item_id: StringName = item.get("id", StringName())
 	if node == null:
 		node = _item_nodes.get(item_id, null)
 	if slot and node:
 		slot.put_item(node)
-	_hand_item_instance = null
+	_interaction_service.clear_hand_item()
 
 func _on_event_item_swapped(
 	slot_id: StringName,
@@ -449,14 +426,14 @@ func _on_event_item_swapped(
 	outgoing_item: Dictionary,
 	_tick: int
 ) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
+	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
 	var slot_outgoing: ItemNode = slot.take_item() if slot else null
 	var incoming_node: ItemNode = _player.take_item_from_hand() if _player else null
 	if slot and incoming_node:
 		slot.put_item(incoming_node)
 	if slot_outgoing and _player:
 		_player.hold_item(slot_outgoing)
-	_hand_item_instance = _instance_from_snapshot(outgoing_item)
+	_interaction_service.set_hand_item(_instance_from_snapshot(outgoing_item))
 
 func _on_event_action_rejected(_slot_id: StringName, _reason: StringName, _tick: int) -> void:
 	pass
