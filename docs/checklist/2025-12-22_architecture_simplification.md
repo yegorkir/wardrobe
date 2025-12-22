@@ -23,4 +23,4 @@
 - [x] Update `scripts/ui/wardrobe_scene.gd` to use dispatcher + presenter.
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [x] Run `task build-all` for full verification (exports succeeded with editor settings warnings).
-- [ ] Commit with an appropriate message.
+- [x] Commit with an appropriate message (`Split desk event dispatching`).
