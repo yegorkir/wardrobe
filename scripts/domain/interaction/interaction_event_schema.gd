@@ -1,11 +1,5 @@
 extends RefCounted
 
-const RESULT_KEY_SUCCESS := "success"
-const RESULT_KEY_REASON := "reason"
-const RESULT_KEY_ACTION := "action"
-const RESULT_KEY_EVENTS := "events"
-const RESULT_KEY_HAND_ITEM := "hand_item"
-
 const EVENT_KEY_TYPE := StringName("type")
 const EVENT_KEY_PAYLOAD := StringName("payload")
 const EVENT_ITEM_PLACED := StringName("item_placed")

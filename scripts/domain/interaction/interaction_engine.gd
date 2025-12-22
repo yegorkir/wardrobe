@@ -7,6 +7,7 @@ const CommandScript := preload("res://scripts/app/interaction/interaction_comman
 const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
 const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const InteractionResult := preload("res://scripts/domain/interaction/interaction_result.gd")
 
 const REASON_CONTEXT_MISSING := StringName("context_missing")
 const REASON_PAYLOAD_MISSING := StringName("payload_missing")
@@ -21,7 +22,7 @@ const REASON_UNKNOWN_ACTION := StringName("unknown_action")
 
 var _resolver := ResolverScript.new()
 
-func process_command(command: Dictionary, context: Variant, hand_item: ItemInstance = null) -> Dictionary:
+func process_command(command: Dictionary, context: Variant, hand_item: ItemInstance = null) -> InteractionResult:
 	if context is StorageState:
 		return _process_with_storage(command, context as StorageState, hand_item)
 	return _make_result(false, REASON_CONTEXT_MISSING, ResolverScript.ACTION_NONE, [], hand_item)
@@ -30,7 +31,7 @@ func _process_with_storage(
 	command: Dictionary,
 	storage_state: StorageState,
 	hand_item: ItemInstance
-) -> Dictionary:
+) -> InteractionResult:
 	if storage_state == null:
 		return _make_result(false, REASON_CONTEXT_MISSING, ResolverScript.ACTION_NONE, [], hand_item)
 	var payload := _read_payload(command)
@@ -91,7 +92,7 @@ func _validate_expected_item(payload: Dictionary, key: StringName, actual: ItemI
 		return false
 	return actual.id == expected_id
 
-func _execute_pick(storage_state: StorageState, slot_id: StringName, tick: int) -> Dictionary:
+func _execute_pick(storage_state: StorageState, slot_id: StringName, tick: int) -> InteractionResult:
 	var pick_result := storage_state.pick(slot_id)
 	if not pick_result.get(StorageState.RESULT_KEY_SUCCESS, false):
 		var reason: StringName = pick_result.get(StorageState.RESULT_KEY_REASON, REASON_SLOT_EMPTY)
@@ -111,7 +112,7 @@ func _execute_put(
 	slot_id: StringName,
 	hand_item: ItemInstance,
 	tick: int
-) -> Dictionary:
+) -> InteractionResult:
 	if hand_item == null:
 		return _reject_with_event(REASON_HAND_EMPTY, slot_id, hand_item, tick)
 	var put_result := storage_state.put(slot_id, hand_item)
@@ -132,7 +133,7 @@ func _execute_swap(
 	slot_id: StringName,
 	hand_item: ItemInstance,
 	tick: int
-) -> Dictionary:
+) -> InteractionResult:
 	if hand_item == null:
 		return _reject_with_event(REASON_HAND_EMPTY, slot_id, hand_item, tick)
 	var swap_result := storage_state.swap(slot_id, hand_item)
@@ -155,7 +156,7 @@ func _reject_with_event(
 	slot_id: StringName,
 	hand_item: ItemInstance,
 	tick: int
-) -> Dictionary:
+) -> InteractionResult:
 	var events := [
 		_make_event(EventSchema.EVENT_ACTION_REJECTED, {
 			EventSchema.PAYLOAD_SLOT_ID: slot_id,
@@ -177,11 +178,5 @@ func _make_result(
 	action: String,
 	events: Array,
 	hand_item: ItemInstance
-) -> Dictionary:
-	return {
-		EventSchema.RESULT_KEY_SUCCESS: success,
-		EventSchema.RESULT_KEY_REASON: reason,
-		EventSchema.RESULT_KEY_ACTION: action,
-		EventSchema.RESULT_KEY_EVENTS: events,
-		EventSchema.RESULT_KEY_HAND_ITEM: hand_item,
-	}
+) -> InteractionResult:
+	return InteractionResult.new(success, reason, action, events, hand_item)

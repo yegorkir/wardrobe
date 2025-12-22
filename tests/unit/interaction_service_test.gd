@@ -3,8 +3,8 @@ extends GdUnitTestSuite
 const InteractionService := preload("res://scripts/app/interaction/interaction_service.gd")
 const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
 const Resolver := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
+const InteractionResult := preload("res://scripts/domain/interaction/interaction_result.gd")
 
 func test_build_auto_command_tracks_hand_and_slot() -> void:
 	var service := InteractionService.new()
@@ -28,10 +28,10 @@ func test_execute_command_updates_hand_state() -> void:
 	storage.put(StringName("Slot_A"), _make_item("coat_slot"))
 
 	var command := service.build_auto_command(StringName("Slot_A"), storage.get_slot_item(StringName("Slot_A")))
-	var result := service.execute_command(command)
+	var result: InteractionResult = service.execute_command(command)
 
-	assert_that(result.get(EventSchema.RESULT_KEY_SUCCESS, false)).is_true()
-	assert_that(result.get(EventSchema.RESULT_KEY_ACTION, "")).is_equal(Resolver.ACTION_PICK)
+	assert_that(result.success).is_true()
+	assert_that(result.action).is_equal(Resolver.ACTION_PICK)
 	var hand := service.get_hand_item()
 	assert_that(hand).is_not_null()
 	if hand:
