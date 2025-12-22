@@ -250,3 +250,4 @@ Rules:
 	- Assume the code is structurally correct, but be extra vigilant about GDScript syntax and exact API signatures.
 	- Do not hallucinate test results.
 - Note: `--check-only` may be fragile around autoload/plugin singletons; if it fails, verify by opening the project in Godot 4.5 and running the relevant scene.
+- Run tests via Taskfile only: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`.

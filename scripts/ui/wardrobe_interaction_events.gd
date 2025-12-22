@@ -8,6 +8,7 @@ var _item_nodes: Dictionary = {}
 var _detach_item_node: Callable
 var _spawn_or_move_item_node: Callable
 var _find_item_instance: Callable
+var _handlers: Dictionary = {}
 
 func configure(
 	desk_by_id: Dictionary,
@@ -21,22 +22,25 @@ func configure(
 	_detach_item_node = detach_item_node
 	_spawn_or_move_item_node = spawn_or_move_item_node
 	_find_item_instance = find_item_instance
+	_setup_handlers()
 
 func apply_desk_events(events: Array) -> void:
 	for event_data in events:
 		var event_type: StringName = event_data.get(EventSchema.EVENT_KEY_TYPE, StringName())
 		var payload: Dictionary = event_data.get(EventSchema.EVENT_KEY_PAYLOAD, {})
-		match event_type:
-			EventSchema.EVENT_DESK_CONSUMED_ITEM:
-				_apply_desk_consumed(payload)
-			EventSchema.EVENT_DESK_SPAWNED_ITEM:
-				_apply_desk_spawned(payload)
-			EventSchema.EVENT_CLIENT_PHASE_CHANGED:
-				_debug_desk_event("client_phase_changed", payload)
-			EventSchema.EVENT_CLIENT_COMPLETED:
-				_debug_desk_event("client_completed", payload)
-			EventSchema.EVENT_DESK_REJECTED_DELIVERY:
-				_debug_desk_event("desk_rejected_delivery", payload)
+		var handler: Callable = _handlers.get(event_type, Callable())
+		if handler.is_valid():
+			handler.call(payload)
+		else:
+			_debug_desk_event("unhandled", payload)
+
+func _setup_handlers() -> void:
+	_handlers.clear()
+	_handlers[EventSchema.EVENT_DESK_CONSUMED_ITEM] = Callable(self, "_apply_desk_consumed")
+	_handlers[EventSchema.EVENT_DESK_SPAWNED_ITEM] = Callable(self, "_apply_desk_spawned")
+	_handlers[EventSchema.EVENT_CLIENT_PHASE_CHANGED] = Callable(self, "_log_client_phase_changed")
+	_handlers[EventSchema.EVENT_CLIENT_COMPLETED] = Callable(self, "_log_client_completed")
+	_handlers[EventSchema.EVENT_DESK_REJECTED_DELIVERY] = Callable(self, "_log_desk_rejected_delivery")
 
 func _apply_desk_consumed(payload: Dictionary) -> void:
 	var item_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_ITEM_INSTANCE_ID, "")))
@@ -65,6 +69,15 @@ func _apply_desk_spawned(payload: Dictionary) -> void:
 		return
 	if _spawn_or_move_item_node.is_valid():
 		_spawn_or_move_item_node.call(desk_state.desk_slot_id, instance)
+
+func _log_client_phase_changed(payload: Dictionary) -> void:
+	_debug_desk_event("client_phase_changed", payload)
+
+func _log_client_completed(payload: Dictionary) -> void:
+	_debug_desk_event("client_completed", payload)
+
+func _log_desk_rejected_delivery(payload: Dictionary) -> void:
+	_debug_desk_event("desk_rejected_delivery", payload)
 
 func _debug_desk_event(label: String, payload: Dictionary) -> void:
 	print("DeskEvent %s %s" % [label, payload])

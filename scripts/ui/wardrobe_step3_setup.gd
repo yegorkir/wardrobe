@@ -52,15 +52,23 @@ func initialize_step3() -> void:
 	_sync_hook_anchor_tickets_once()
 
 func _setup_step3_desks_and_clients() -> void:
+	_reset_desk_state_collections()
+	if _desk_nodes.is_empty():
+		push_warning("Step 3 desks missing; no service points initialized.")
+		return
+	_build_desk_states()
+	var client_ids := _build_clients()
+	_assign_clients_to_desks(client_ids)
+
+func _reset_desk_state_collections() -> void:
 	_desk_states.clear()
 	_desk_by_id.clear()
 	_desk_by_slot_id.clear()
 	_clients.clear()
 	if _client_queue_state:
 		_client_queue_state.clear()
-	if _desk_nodes.is_empty():
-		push_warning("Step 3 desks missing; no service points initialized.")
-		return
+
+func _build_desk_states() -> void:
 	for index in _desk_nodes.size():
 		var desk_node: Node = _desk_nodes[index]
 		if desk_node == null:
@@ -71,6 +79,8 @@ func _setup_step3_desks_and_clients() -> void:
 		_desk_states.append(desk_state)
 		_desk_by_id[desk_state.desk_id] = desk_state
 		_desk_by_slot_id[desk_state.desk_slot_id] = desk_state
+
+func _build_clients() -> Array[StringName]:
 	var colors: Array[Color] = [
 		Color(0.85, 0.35, 0.35),
 		Color(0.35, 0.7, 0.45),
@@ -81,19 +91,12 @@ func _setup_step3_desks_and_clients() -> void:
 	for i in range(4):
 		var client_id := StringName("Client_%d" % i)
 		var color: Color = colors[i % colors.size()]
-		var coat := ItemInstanceScript.new(
-			StringName("coat_%02d" % i),
-			ItemInstanceScript.KIND_COAT,
-			color
-		)
-		var ticket := ItemInstanceScript.new(
-			StringName("ticket_%02d" % i),
-			ItemInstanceScript.KIND_TICKET,
-			color
-		)
-		var client := ClientStateScript.new(client_id, coat, ticket, StringName(), StringName("color_%d" % i))
+		var client := _make_demo_client(i, client_id, color)
 		_clients[client_id] = client
 		client_ids.append(client_id)
+	return client_ids
+
+func _assign_clients_to_desks(client_ids: Array[StringName]) -> void:
 	_queue_system.enqueue_clients(_client_queue_state, client_ids)
 	for desk_state in _desk_states:
 		var events := _desk_system.assign_next_client_to_desk(
@@ -104,6 +107,25 @@ func _setup_step3_desks_and_clients() -> void:
 		)
 		if _apply_desk_events.is_valid():
 			_apply_desk_events.call(events)
+
+func _make_demo_client(index: int, client_id: StringName, color: Color) -> ClientState:
+	var coat := ItemInstanceScript.new(
+		StringName("coat_%02d" % index),
+		ItemInstanceScript.KIND_COAT,
+		color
+	)
+	var ticket := ItemInstanceScript.new(
+		StringName("ticket_%02d" % index),
+		ItemInstanceScript.KIND_TICKET,
+		color
+	)
+	return ClientStateScript.new(
+		client_id,
+		coat,
+		ticket,
+		StringName(),
+		StringName("color_%d" % index)
+	)
 
 func _seed_step3_hook_tickets() -> void:
 	if not _get_ticket_slots.is_valid():
