@@ -48,3 +48,9 @@
 - Removed redundant `str(...)` conversions for slot lookup paths.
 - Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
 - Ran `task build-all` (exports succeeded; Godot reported editor settings save errors and temp `project.binary` cleanup warnings).
+
+## P2.2 — Debug world validation split
+- Added `scripts/ui/wardrobe_world_validator.gd` to isolate debug-only integrity checks.
+- Replaced inline validation with `_debug_validate_world()` guard in `scripts/ui/wardrobe_scene.gd`.
+- Ran `task tests` (warnings about duplicate global class names and macOS CA certificates from Godot).
+- Ran `task build-all` (exports succeeded; Godot reported editor settings save errors and macOS CA certificate warnings).
