@@ -40,7 +40,23 @@ tasks:
     deps: [_require_godot_bin]
     cmds:
       - chmod +x addons/gdUnit4/runtest.sh
-      - GODOT_BIN="{{.GODOT_BIN}}" ./addons/gdUnit4/runtest.sh -a ./tests
+      - |
+          mkdir -p reports
+          status=0
+          log_file="reports/test_run_$(date +%y%m%d_%H%M%S).log"
+          GODOT_BIN="{{.GODOT_BIN}}" ./addons/gdUnit4/runtest.sh -a ./tests >"$log_file" 2>&1 || status=$?
+          rg -n "(ERROR|WARN|WARNING)|Exit code" "$log_file" || true
+          exit $status
+
+  check-only:
+    deps: [_require_godot_bin]
+    cmds:
+      - |
+          if [ -z "{{.CLI_ARGS}}" ]; then
+            echo "Usage: task check-only -- res://path/to/script.gd"
+            exit 1
+          fi
+          "{{.GODOT_BIN}}" --path . --headless --check-only --script {{.CLI_ARGS}}
 
   save:
     cmds:

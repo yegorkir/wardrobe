@@ -3,12 +3,17 @@ class_name WardrobeInteractionEventsAdapter
 
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
+const UNHANDLED_IGNORE := StringName("ignore")
+const UNHANDLED_WARN := StringName("warn")
+const UNHANDLED_DEBUG := StringName("debug")
+
 var _desk_by_id: Dictionary = {}
 var _item_nodes: Dictionary = {}
 var _detach_item_node: Callable
 var _spawn_or_move_item_node: Callable
 var _find_item_instance: Callable
 var _handlers: Dictionary = {}
+var _unhandled_policy: StringName = UNHANDLED_WARN
 
 func configure(
 	desk_by_id: Dictionary,
@@ -24,6 +29,9 @@ func configure(
 	_find_item_instance = find_item_instance
 	_setup_handlers()
 
+func set_unhandled_policy(policy: StringName) -> void:
+	_unhandled_policy = policy
+
 func apply_desk_events(events: Array) -> void:
 	for event_data in events:
 		var event_type: StringName = event_data.get(EventSchema.EVENT_KEY_TYPE, StringName())
@@ -32,7 +40,7 @@ func apply_desk_events(events: Array) -> void:
 		if handler.is_valid():
 			handler.call(payload)
 		else:
-			_debug_desk_event("unhandled", payload)
+			_handle_unhandled(event_type, payload)
 
 func _setup_handlers() -> void:
 	_handlers.clear()
@@ -78,6 +86,14 @@ func _log_client_completed(payload: Dictionary) -> void:
 
 func _log_desk_rejected_delivery(payload: Dictionary) -> void:
 	_debug_desk_event("desk_rejected_delivery", payload)
+
+func _handle_unhandled(event_type: StringName, payload: Dictionary) -> void:
+	if _unhandled_policy == UNHANDLED_IGNORE:
+		return
+	if _unhandled_policy == UNHANDLED_DEBUG:
+		_debug_desk_event("unhandled:%s" % event_type, payload)
+		return
+	push_warning("Unhandled desk event %s payload=%s" % [event_type, payload])
 
 func _debug_desk_event(label: String, payload: Dictionary) -> void:
 	print("DeskEvent %s %s" % [label, payload])

@@ -9,10 +9,14 @@ const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardro
 const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
 const WardrobeItemVisualsAdapterScript := preload("res://scripts/ui/wardrobe_item_visuals.gd")
 const WardrobeInteractionAdapterScript := preload("res://scripts/ui/wardrobe_interaction_adapter.gd")
+const WardrobeInteractionContextScript := preload("res://scripts/ui/wardrobe_interaction_context.gd")
 const WardrobeWorldSetupAdapterScript := preload("res://scripts/ui/wardrobe_world_setup_adapter.gd")
 const WardrobeHudAdapterScript := preload("res://scripts/ui/wardrobe_hud_adapter.gd")
+const WardrobeInteractionLoggerScript := preload("res://scripts/ui/wardrobe_interaction_logger.gd")
+const WardrobeShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
 
 @export var step3_seed: int = 1337
+@export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
 
 @onready var _wave_label: Label = %WaveValue
 @onready var _time_label: Label = %TimeValue
@@ -34,6 +38,8 @@ var _world_validator := WardrobeWorldValidatorScript.new()
 var _interaction_adapter := WardrobeInteractionAdapterScript.new()
 var _world_adapter := WardrobeWorldSetupAdapterScript.new()
 var _hud_adapter := WardrobeHudAdapterScript.new()
+var _interaction_logger := WardrobeInteractionLoggerScript.new()
+var _shift_log: WardrobeShiftLog = WardrobeShiftLogScript.new()
 
 func _ready() -> void:
 	_hud_adapter.configure(
@@ -67,27 +73,30 @@ func _finish_ready_setup() -> void:
 		_world_adapter.collect_slots()
 		_world_adapter.collect_desks()
 	_world_adapter.reset_storage_state()
-	_interaction_adapter.configure(
-		_player,
-		_interaction_service,
-		_storage_state,
-		_world_adapter.get_slots(),
-		_world_adapter.get_slot_lookup(),
-		_world_adapter.get_item_nodes(),
-		_world_adapter.get_spawned_items(),
-		ITEM_SCENE,
-		_item_visuals,
-		_event_adapter,
-		_interaction_events,
-		_desk_event_dispatcher,
-		_world_adapter.get_desk_states(),
-		_world_adapter.get_desk_by_id(),
-		_world_adapter.get_desk_by_slot_id(),
-		_world_adapter.get_desk_system(),
-		_world_adapter.get_client_queue_state(),
-		_world_adapter.get_clients(),
-		Callable(_world_adapter, "find_item_instance")
-	)
+	var interaction_context := WardrobeInteractionContextScript.new()
+	interaction_context.player = _player
+	interaction_context.interaction_service = _interaction_service
+	interaction_context.storage_state = _storage_state
+	interaction_context.slots = _world_adapter.get_slots()
+	interaction_context.slot_lookup = _world_adapter.get_slot_lookup()
+	interaction_context.item_nodes = _world_adapter.get_item_nodes()
+	interaction_context.spawned_items = _world_adapter.get_spawned_items()
+	interaction_context.item_scene = ITEM_SCENE
+	interaction_context.item_visuals = _item_visuals
+	interaction_context.event_adapter = _event_adapter
+	interaction_context.interaction_events = _interaction_events
+	interaction_context.desk_event_dispatcher = _desk_event_dispatcher
+	interaction_context.desk_states = _world_adapter.get_desk_states()
+	interaction_context.desk_by_id = _world_adapter.get_desk_by_id()
+	interaction_context.desk_by_slot_id = _world_adapter.get_desk_by_slot_id()
+	interaction_context.desk_system = _world_adapter.get_desk_system()
+	interaction_context.client_queue_state = _world_adapter.get_client_queue_state()
+	interaction_context.clients = _world_adapter.get_clients()
+	interaction_context.find_item_instance = Callable(_world_adapter, "find_item_instance")
+	_interaction_logger.configure(Callable(_shift_log, "record"))
+	interaction_context.interaction_logger = _interaction_logger
+	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
+	_interaction_adapter.configure(interaction_context)
 	_world_adapter.initialize_world()
 
 func _unhandled_input(event: InputEvent) -> void:

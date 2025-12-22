@@ -27,3 +27,32 @@
 ## Meta — Test workflow alignment
 - Updated `AGENTS.md` to require `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`.
 - Aligned verification commands in `docs/notes/2025-12-23_wardrobe-refactor-plan.md`.
+
+## Step 6 — Notes naming policy
+- Updated `AGENTS.md` to require all auxiliary notes (analysis/summary/changelog/checklist/etc.) to use `docs/notes/YYYY-MM-DD_<type>_<slug>.md`.
+- Tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (CA certificates warning on macOS, all tests passed).
+
+## Step 7 — Interaction context object
+- Added `scripts/ui/wardrobe_interaction_context.gd` to group dependencies for `WardrobeInteractionAdapter`.
+- Updated `scripts/ui/wardrobe_scene.gd` and `scripts/ui/wardrobe_interaction_adapter.gd` to use the context object.
+- Resolved headless parse errors by removing brittle class-typed references in adapter setup.
+- Tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (CA certificates warning on macOS, all tests passed).
+
+## Step 8 — Interaction logger adapter
+- Added `scripts/ui/wardrobe_interaction_logger.gd` and wired it through the interaction context.
+- Moved interaction logging from `WardrobeInteractionAdapter` into the logger.
+- Tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (CA certificates warning on macOS, all tests passed).
+
+## Step 9 — Taskfile test output filter
+- Updated `task tests` to write raw logs to `reports/test_run_<timestamp>.log` and print only `ERROR/WARN` + exit code.
+- Added `task check-only` for lightweight script parsing.
+- Tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (CA certificates warning on macOS, all tests passed).
+
+## Step 10 — Unhandled desk-event policy
+- Added `unhandled` policy handling to `scripts/ui/wardrobe_interaction_events.gd` with warn/debug/ignore options.
+- Tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (CA certificates warning on macOS, all tests passed).
+
+## Step 11 — ShiftLog sink for interaction logger
+- Wired `scripts/ui/wardrobe_interaction_logger.gd` to `WardrobeShiftLog` and added interaction event payloads.
+- Added `desk_event_unhandled_policy` export to `scripts/ui/wardrobe_scene.gd` and applied it during setup.
+- Tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (CA certificates warning on macOS, all tests passed).

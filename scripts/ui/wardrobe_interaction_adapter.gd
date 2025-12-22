@@ -21,46 +21,35 @@ var _event_adapter: WardrobeInteractionEventAdapter
 var _interaction_events: WardrobeInteractionEventsAdapter
 var _desk_event_dispatcher: DeskEventDispatcher
 var _item_visuals: WardrobeItemVisualsAdapter
+var _interaction_logger
 var _last_interaction_command: Dictionary = {}
 var _event_connected := false
 var _find_item_instance: Callable
 
-func configure(
-	player: WardrobePlayerController,
-	interaction_service: WardrobeInteractionService,
-	storage_state: WardrobeStorageState,
-	slots: Array,
-	slot_lookup: Dictionary,
-	item_nodes: Dictionary,
-	spawned_items: Array,
-	item_scene: PackedScene,
-	item_visuals: WardrobeItemVisualsAdapter,
-	event_adapter: WardrobeInteractionEventAdapter,
-	interaction_events: WardrobeInteractionEventsAdapter,
-	desk_event_dispatcher: DeskEventDispatcher,
-	desk_states: Array,
-	desk_by_id: Dictionary,
-	desk_by_slot_id: Dictionary,
-	desk_system: DeskServicePointSystem,
-	client_queue_state: ClientQueueState,
-	clients: Dictionary,
-	find_item_instance: Callable
-) -> void:
-	_player = player
-	_interaction_service = interaction_service
-	_storage_state = storage_state
-	_slots = slots
-	_slot_lookup = slot_lookup
-	_item_nodes = item_nodes
-	_spawned_items = spawned_items
-	_item_visuals = item_visuals
-	_event_adapter = event_adapter
-	_interaction_events = interaction_events
-	_desk_event_dispatcher = desk_event_dispatcher
-	_find_item_instance = find_item_instance
-	_setup_item_visuals(item_scene)
-	_setup_interaction_events(desk_by_id)
-	_setup_desk_dispatcher(desk_states, desk_by_slot_id, desk_system, client_queue_state, clients)
+func configure(context: RefCounted) -> void:
+	var typed := context
+	_player = typed.player
+	_interaction_service = typed.interaction_service
+	_storage_state = typed.storage_state
+	_slots = typed.slots
+	_slot_lookup = typed.slot_lookup
+	_item_nodes = typed.item_nodes
+	_spawned_items = typed.spawned_items
+	_item_visuals = typed.item_visuals
+	_event_adapter = typed.event_adapter
+	_interaction_events = typed.interaction_events
+	_desk_event_dispatcher = typed.desk_event_dispatcher
+	_find_item_instance = typed.find_item_instance
+	_interaction_logger = typed.interaction_logger
+	_setup_item_visuals(typed.item_scene)
+	_setup_interaction_events(typed.desk_by_id)
+	_setup_desk_dispatcher(
+		typed.desk_states,
+		typed.desk_by_slot_id,
+		typed.desk_system,
+		typed.client_queue_state,
+		typed.clients
+	)
 	_connect_event_adapter()
 
 func perform_interact() -> void:
@@ -97,23 +86,16 @@ func log_interaction(result: InteractionResult, slot: WardrobeSlot) -> void:
 		var slot_label := slot.get_slot_identifier()
 		var held := _player.get_active_hand_item()
 		var item_name := held.item_id if held else (slot.get_item().item_id if slot.get_item() else "none")
-		print("%s item=%s slot=%s" % [action, item_name, slot_label])
-		_record_interaction_event(_last_interaction_command, true, StringName(slot_label))
+		if _interaction_logger:
+			_interaction_logger.record_success(action, StringName(slot_label), item_name, _last_interaction_command)
+		else:
+			print("%s item=%s slot=%s" % [action, item_name, slot_label])
 	else:
-		print(
-			"NO ACTION reason=%s slot=%s" % [
-				result.reason,
-				slot.get_slot_identifier(),
-			]
-		)
-		_record_interaction_event(
-			_last_interaction_command,
-			false,
-			StringName(slot.get_slot_identifier())
-		)
-
-func _record_interaction_event(_command: Dictionary, _success: bool, _slot_id: StringName) -> void:
-	pass
+		var slot_id := StringName(slot.get_slot_identifier())
+		if _interaction_logger:
+			_interaction_logger.record_reject(result.reason, slot_id, _last_interaction_command)
+		else:
+			print("NO ACTION reason=%s slot=%s" % [result.reason, slot_id])
 
 func _resolve_command_type(action: String) -> StringName:
 	match action:

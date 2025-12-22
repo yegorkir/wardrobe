@@ -1,0 +1,23 @@
+extends RefCounted
+class_name WardrobeInteractionContext
+
+var player: WardrobePlayerController
+var interaction_service: WardrobeInteractionService
+var storage_state: WardrobeStorageState
+var slots: Array[WardrobeSlot] = []
+var slot_lookup: Dictionary = {}
+var item_nodes: Dictionary = {}
+var spawned_items: Array = []
+var item_scene: PackedScene
+var item_visuals: WardrobeItemVisualsAdapter
+var event_adapter: WardrobeInteractionEventAdapter
+var interaction_events: WardrobeInteractionEventsAdapter
+var desk_event_dispatcher: DeskEventDispatcher
+var desk_states: Array = []
+var desk_by_id: Dictionary = {}
+var desk_by_slot_id: Dictionary = {}
+var desk_system: DeskServicePointSystem
+var client_queue_state: ClientQueueState
+var clients: Dictionary = {}
+var find_item_instance: Callable
+var interaction_logger

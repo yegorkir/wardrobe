@@ -16,6 +16,7 @@
 
 ## Notes / docs
 - For non-trivial tasks, keep a dedicated note under `docs/notes/YYYY-MM-DD_<slug>.md`.
+- All auxiliary notes (analysis, summary, changelog, checklist, and similar types) must be created as `docs/notes/YYYY-MM-DD_<type>_<slug>.md`.
 - Include short official-doc links in the note for any non-obvious engine behavior or API detail.
 - Update docs (including `gdscript_guidelines.md` if it exists) whenever behavior/contracts change.
 
