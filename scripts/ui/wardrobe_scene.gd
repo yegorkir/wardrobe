@@ -12,6 +12,7 @@ const WardrobeStep3SetupContextScript := preload("res://scripts/ui/wardrobe_step
 const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardrobe_interaction_events.gd")
 const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
 const WardrobeItemVisualsAdapterScript := preload("res://scripts/ui/wardrobe_item_visuals.gd")
+const WardrobeWorldValidatorScript := preload("res://scripts/ui/wardrobe_world_validator.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
@@ -42,6 +43,7 @@ var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.ne
 var _interaction_events: WardrobeInteractionEventsAdapter = WardrobeInteractionEventsAdapterScript.new()
 var _desk_event_dispatcher := DeskEventDispatcherScript.new()
 var _item_visuals: WardrobeItemVisualsAdapter = WardrobeItemVisualsAdapterScript.new()
+var _world_validator := WardrobeWorldValidatorScript.new()
 var _desk_system: DeskServicePointSystem = DeskServicePointSystemScript.new()
 var _desk_nodes: Array = []
 var _desk_states: Array = []
@@ -230,14 +232,14 @@ func _perform_interact() -> void:
 	var slot := _find_best_slot()
 	if slot == null:
 		print("NO ACTION reason=no_slot slot=none")
-		_validate_world()
+		_debug_validate_world()
 		return
 	var command := build_interaction_command(slot)
 	var exec_result: InteractionResult = execute_interaction(command)
 	var events: Array = exec_result.events
 	apply_interaction_events(events)
 	log_interaction(exec_result, slot)
-	_validate_world()
+	_debug_validate_world()
 
 func build_interaction_command(slot: WardrobeSlot) -> Dictionary:
 	var slot_id := StringName(slot.get_slot_identifier())
@@ -333,31 +335,10 @@ func score_slot(slot: WardrobeSlot, origin: Vector2, move_dir: Vector2) -> Dicti
 		"name": str(slot.name),
 	}
 
-func _validate_world() -> void:
-	var issues: Array = []
-	var item_locations := {}
-	for slot in _slots:
-		var slot_item := slot.get_item()
-		if slot_item:
-			if item_locations.has(slot_item):
-				issues.append(
-					"Item %s duplicated between %s and %s" % [
-						slot_item.item_id,
-						item_locations[slot_item],
-						slot.get_slot_identifier(),
-					]
-				)
-			else:
-				item_locations[slot_item] = slot.get_slot_identifier()
-	var hand_item := _player.get_active_hand_item()
-	if hand_item:
-		if item_locations.has(hand_item):
-			issues.append("Item %s exists in slot and hand" % hand_item.item_id)
-		else:
-			item_locations[hand_item] = "hand"
-	if issues.size() > 0:
-		for issue in issues:
-			push_error("Wardrobe integrity violation: %s" % issue)
+func _debug_validate_world() -> void:
+	if not OS.is_debug_build():
+		return
+	_world_validator.validate(_slots, _player)
 
 func _on_hud_updated(snapshot: Dictionary) -> void:
 	_wave_label.text = "Wave: %s" % snapshot.get("wave", "-")
