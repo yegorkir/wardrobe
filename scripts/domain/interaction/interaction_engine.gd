@@ -31,32 +31,46 @@ func _process_with_storage(
 ) -> InteractionResult:
 	if storage_state == null:
 		return _make_result(false, REASON_CONTEXT_MISSING, ResolverScript.ACTION_NONE, [], hand_item)
+	var tick := _read_tick(command)
 	var payload := _read_payload(command)
 	if payload.is_empty():
 		return _make_result(false, REASON_PAYLOAD_MISSING, ResolverScript.ACTION_NONE, [], hand_item)
 	var slot_id_variant: Variant = payload.get(CommandScript.PAYLOAD_SLOT_ID, "")
 	var slot_id := StringName(str(slot_id_variant))
-	if slot_id == StringName():
-		return _reject_with_event(REASON_SLOT_MISSING, slot_id, hand_item, _read_tick(command))
-	if not storage_state.has_slot(slot_id):
-		return _reject_with_event(REASON_SLOT_MISSING, slot_id, hand_item, _read_tick(command))
 	var slot_item := storage_state.get_slot_item(slot_id)
-	if not _validate_expected_item(payload, CommandScript.PAYLOAD_SLOT_ITEM_ID, slot_item):
-		return _reject_with_event(REASON_SLOT_MISMATCH, slot_id, hand_item, _read_tick(command))
-	if not _validate_expected_item(payload, CommandScript.PAYLOAD_HAND_ITEM_ID, hand_item):
-		return _reject_with_event(REASON_HAND_MISMATCH, slot_id, hand_item, _read_tick(command))
+	var validation := _validate_request(storage_state, payload, slot_id, slot_item, hand_item, tick)
+	if validation != null:
+		return validation
 	var desired_action := _resolve_action(command, hand_item != null, slot_item != null)
 	match desired_action:
 		ResolverScript.ACTION_PICK:
-			return _execute_pick(storage_state, slot_id, _read_tick(command))
+			return _execute_pick(storage_state, slot_id, tick)
 		ResolverScript.ACTION_PUT:
-			return _execute_put(storage_state, slot_id, hand_item, _read_tick(command))
+			return _execute_put(storage_state, slot_id, hand_item, tick)
 		ResolverScript.ACTION_SWAP:
-			return _execute_swap(storage_state, slot_id, hand_item, _read_tick(command))
+			return _execute_swap(storage_state, slot_id, hand_item, tick)
 		ResolverScript.ACTION_NONE:
-			return _reject_with_event(REASON_NOTHING_TO_DO, slot_id, hand_item, _read_tick(command))
+			return _reject_with_event(REASON_NOTHING_TO_DO, slot_id, hand_item, tick)
 		_:
-			return _reject_with_event(REASON_UNKNOWN_ACTION, slot_id, hand_item, _read_tick(command))
+			return _reject_with_event(REASON_UNKNOWN_ACTION, slot_id, hand_item, tick)
+
+func _validate_request(
+	storage_state: WardrobeStorageState,
+	payload: Dictionary,
+	slot_id: StringName,
+	slot_item: ItemInstance,
+	hand_item: ItemInstance,
+	tick: int
+) -> InteractionResult:
+	if slot_id == StringName():
+		return _reject_with_event(REASON_SLOT_MISSING, slot_id, hand_item, tick)
+	if not storage_state.has_slot(slot_id):
+		return _reject_with_event(REASON_SLOT_MISSING, slot_id, hand_item, tick)
+	if not _validate_expected_item(payload, CommandScript.PAYLOAD_SLOT_ITEM_ID, slot_item):
+		return _reject_with_event(REASON_SLOT_MISMATCH, slot_id, hand_item, tick)
+	if not _validate_expected_item(payload, CommandScript.PAYLOAD_HAND_ITEM_ID, hand_item):
+		return _reject_with_event(REASON_HAND_MISMATCH, slot_id, hand_item, tick)
+	return null
 
 func _read_payload(command: Dictionary) -> Dictionary:
 	var payload_variant: Variant = command.get(CommandScript.KEY_PAYLOAD, {})

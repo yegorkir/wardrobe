@@ -8,3 +8,4 @@ reports/
 *.uid
 docs/notes/
 .idea/
+.godot_test_home_persist/

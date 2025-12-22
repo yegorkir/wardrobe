@@ -16,6 +16,7 @@
 
 ## Notes / docs
 - For non-trivial tasks, keep a dedicated note under `docs/notes/YYYY-MM-DD_<slug>.md`.
+- All auxiliary notes (analysis, summary, changelog, checklist, and similar types) must be created as `docs/notes/YYYY-MM-DD_<type>_<slug>.md`.
 - Include short official-doc links in the note for any non-obvious engine behavior or API detail.
 - Update docs (including `gdscript_guidelines.md` if it exists) whenever behavior/contracts change.
 
@@ -250,3 +251,4 @@ Rules:
 	- Assume the code is structurally correct, but be extra vigilant about GDScript syntax and exact API signatures.
 	- Do not hallucinate test results.
 - Note: `--check-only` may be fragile around autoload/plugin singletons; if it fails, verify by opening the project in Godot 4.5 and running the relevant scene.
+- Run tests via Taskfile only: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`.
