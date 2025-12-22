@@ -177,7 +177,7 @@ func _consume_desk_item(
 		PAYLOAD_REASON_CODE: reason_code,
 	})]
 
-func _make_phase_change_event(client: ClientState, previous_phase: int) -> Dictionary:
+func _make_phase_change_event(client: ClientState, previous_phase: StringName) -> Dictionary:
 	return _make_event(EVENT_CLIENT_PHASE_CHANGED, {
 		PAYLOAD_CLIENT_ID: client.client_id,
 		PAYLOAD_FROM: previous_phase,
