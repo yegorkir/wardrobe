@@ -15,4 +15,4 @@
 - [x] Update unit tests for typed results.
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [ ] Run `task build-all` for full verification (failed: `Pure virtual function called!`, `web-local` exit 134).
-- [ ] Commit with an appropriate message.
+- [x] Commit with an appropriate message (`Add interaction result value object`).
