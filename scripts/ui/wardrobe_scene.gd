@@ -8,6 +8,7 @@ const InteractionResult := preload("res://scripts/domain/interaction/interaction
 const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
 const WardrobeStep3SetupAdapterScript := preload("res://scripts/ui/wardrobe_step3_setup.gd")
+const WardrobeStep3SetupContextScript := preload("res://scripts/ui/wardrobe_step3_setup_context.gd")
 const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardrobe_interaction_events.gd")
 const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
 const WardrobeItemVisualsAdapterScript := preload("res://scripts/ui/wardrobe_item_visuals.gd")
@@ -190,23 +191,23 @@ func _setup_adapters() -> void:
 	)
 	if _step3_setup == null:
 		_step3_setup = WardrobeStep3SetupAdapterScript.new()
-	_step3_setup.configure(
-		self,
-		Callable(self, "_clear_spawned_items"),
-		Callable(self, "_collect_desks"),
-		_desk_nodes,
-		_desk_states,
-		_desk_by_id,
-		_desk_by_slot_id,
-		_clients,
-		_client_queue_state,
-		_desk_system,
-		_queue_system,
-		_storage_state,
-		Callable(self, "_get_ticket_slots"),
-		Callable(self, "_place_item_instance_in_slot"),
-		Callable(_interaction_events, "apply_desk_events")
-	)
+	var step3_context := WardrobeStep3SetupContextScript.new()
+	step3_context.root = self
+	step3_context.clear_spawned_items = Callable(self, "_clear_spawned_items")
+	step3_context.collect_desks = Callable(self, "_collect_desks")
+	step3_context.desk_nodes = _desk_nodes
+	step3_context.desk_states = _desk_states
+	step3_context.desk_by_id = _desk_by_id
+	step3_context.desk_by_slot_id = _desk_by_slot_id
+	step3_context.clients = _clients
+	step3_context.client_queue_state = _client_queue_state
+	step3_context.desk_system = _desk_system
+	step3_context.queue_system = _queue_system
+	step3_context.storage_state = _storage_state
+	step3_context.get_ticket_slots = Callable(self, "_get_ticket_slots")
+	step3_context.place_item_instance_in_slot = Callable(self, "_place_item_instance_in_slot")
+	step3_context.apply_desk_events = Callable(_interaction_events, "apply_desk_events")
+	_step3_setup.configure(step3_context)
 
 func _clear_spawned_items() -> void:
 	for slot in _slots:

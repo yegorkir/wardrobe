@@ -25,38 +25,22 @@ var _get_ticket_slots: Callable
 var _place_item_instance_in_slot: Callable
 var _apply_desk_events: Callable
 
-func configure(
-	root: Node,
-	clear_spawned_items: Callable,
-	collect_desks: Callable,
-	desk_nodes: Array,
-	desk_states: Array,
-	desk_by_id: Dictionary,
-	desk_by_slot_id: Dictionary,
-	clients: Dictionary,
-	client_queue_state: ClientQueueState,
-	desk_system: DeskServicePointSystem,
-	queue_system: ClientQueueSystem,
-	storage_state: WardrobeStorageState,
-	get_ticket_slots: Callable,
-	place_item_instance_in_slot: Callable,
-	apply_desk_events: Callable
-) -> void:
-	_root = root
-	_clear_spawned_items = clear_spawned_items
-	_collect_desks = collect_desks
-	_desk_nodes = desk_nodes
-	_desk_states = desk_states
-	_desk_by_id = desk_by_id
-	_desk_by_slot_id = desk_by_slot_id
-	_clients = clients
-	_client_queue_state = client_queue_state
-	_desk_system = desk_system
-	_queue_system = queue_system
-	_storage_state = storage_state
-	_get_ticket_slots = get_ticket_slots
-	_place_item_instance_in_slot = place_item_instance_in_slot
-	_apply_desk_events = apply_desk_events
+func configure(context: RefCounted) -> void:
+	_root = context.root
+	_clear_spawned_items = context.clear_spawned_items
+	_collect_desks = context.collect_desks
+	_desk_nodes = context.desk_nodes
+	_desk_states = context.desk_states
+	_desk_by_id = context.desk_by_id
+	_desk_by_slot_id = context.desk_by_slot_id
+	_clients = context.clients
+	_client_queue_state = context.client_queue_state
+	_desk_system = context.desk_system
+	_queue_system = context.queue_system
+	_storage_state = context.storage_state
+	_get_ticket_slots = context.get_ticket_slots
+	_place_item_instance_in_slot = context.place_item_instance_in_slot
+	_apply_desk_events = context.apply_desk_events
 
 func initialize_step3() -> void:
 	if _clear_spawned_items.is_valid():
