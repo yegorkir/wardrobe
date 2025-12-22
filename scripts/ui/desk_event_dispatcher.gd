@@ -3,7 +3,7 @@ extends RefCounted
 class_name DeskEventDispatcher
 
 const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 

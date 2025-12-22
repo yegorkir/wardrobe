@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
 const InteractionEngine := preload("res://scripts/domain/interaction/interaction_engine.gd")
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const Command := preload("res://scripts/app/interaction/interaction_command.gd")
 const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")

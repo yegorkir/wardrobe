@@ -3,7 +3,7 @@ extends Node2D
 const ITEM_SCENE := preload("res://scenes/prefabs/item_node.tscn")
 const WardrobeInteractionCommandScript := preload("res://scripts/app/interaction/interaction_command.gd")
 const WardrobeInteractionServiceScript := preload("res://scripts/app/interaction/interaction_service.gd")
-const InteractionEventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const InteractionEventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const InteractionResult := preload("res://scripts/domain/interaction/interaction_result.gd")
 const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")

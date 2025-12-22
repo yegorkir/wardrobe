@@ -6,7 +6,7 @@ const ResolverScript := preload("res://scripts/app/interaction/pick_put_swap_res
 const CommandScript := preload("res://scripts/app/interaction/interaction_command.gd")
 const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-const EventSchema := preload("res://scripts/domain/interaction/interaction_event_schema.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const InteractionResult := preload("res://scripts/domain/interaction/interaction_result.gd")
 
 const REASON_CONTEXT_MISSING := StringName("context_missing")
