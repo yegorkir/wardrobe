@@ -16,7 +16,7 @@ jobs:
       GODOT_BIN: /usr/local/bin/godot
     steps:
       - uses: actions/checkout@v4
-      - uses: extractions/setup-just@v3
+      - uses: arduino/setup-task@v2
 
       - name: Install Godot 4.5
         run: |
@@ -30,9 +30,7 @@ jobs:
         run: godot --headless --path . --import
 
       - name: Run tests
-        run: |
-          chmod +x addons/gdUnit4/runtest.sh
-          ./addons/gdUnit4/runtest.sh -a ./tests
+        run: task tests
 
   build:
     name: Builds
@@ -42,7 +40,7 @@ jobs:
     needs: tests
     steps:
       - uses: actions/checkout@v4
-      - uses: extractions/setup-just@v3
+      - uses: arduino/setup-task@v2
 
       - name: Install Godot 4.5
         run: |
@@ -55,8 +53,16 @@ jobs:
       - name: Warm up Godot import cache
         run: godot --headless --path . --import
 
+      - name: Install Godot export templates (Web)
+        run: |
+          curl -L --retry 5 --retry-delay 2 --retry-connrefused --fail \
+            -o Godot_v4.5-stable_export_templates.tpz \
+            https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/4.5.stable
+          unzip -q Godot_v4.5-stable_export_templates.tpz -d ~/.local/share/godot/export_templates/4.5.stable
+
       - name: Build web (itch)
-        run: just web
+        run: task web
 #      - name: Build linux
 #        run: just linux
 #      - name: Build win
@@ -72,7 +78,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v4
         with:
-          path: builds/current/web-itch
+          path: builds/current/web_itch
 
   deploy:
     if: github.ref == 'refs/heads/main'
@@ -91,4 +97,3 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-

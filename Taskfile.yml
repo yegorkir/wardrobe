@@ -1,0 +1,49 @@
+version: "3"
+
+tasks:
+  _require_godot_bin:
+    internal: true
+    preconditions:
+      - sh: test -n "{{.GODOT_BIN}}"
+        msg: "GODOT_BIN is required (export GODOT_BIN=/path/to/Godot)"
+
+  web:
+    deps: [_require_godot_bin]
+    cmds:
+      - rm -rf builds/current/web_itch
+      - mkdir -p builds/current/web_itch
+      - '"{{.GODOT_BIN}}" --headless --export-release "Web" builds/current/web_itch/index.html'
+      - rm -f builds/current/web_itch.zip
+      - cd builds/current && zip -r "web_itch.zip" "web_itch"
+
+  web-local:
+    deps: [_require_godot_bin]
+    cmds:
+      - rm -rf builds/current/web_local
+      - mkdir -p builds/current/web_local
+      - '"{{.GODOT_BIN}}" --headless --export-debug "Web (local)" builds/current/web_local/index.html'
+
+  mac-debug:
+    deps: [_require_godot_bin]
+    cmds:
+      - rm -rf builds/current/macos
+      - mkdir -p builds/current/macos
+      - '"{{.GODOT_BIN}}" --headless --export-debug "macOS" builds/current/macos/Wardrobe.app'
+
+  build-all:
+    deps:
+      - web
+      - web-local
+      - mac-debug
+
+  tests:
+    deps: [_require_godot_bin]
+    cmds:
+      - chmod +x addons/gdUnit4/runtest.sh
+      - GODOT_BIN="{{.GODOT_BIN}}" ./addons/gdUnit4/runtest.sh -a ./tests
+
+  save:
+    cmds:
+      - mkdir -p builds/archive
+      - cd builds/current && zip -r "../archive/build_$(date +%y%m%d_%H%M%S).zip" .
+      - rm -rf builds/current/*
