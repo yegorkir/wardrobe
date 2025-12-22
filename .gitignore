@@ -7,4 +7,5 @@
 reports/
 *.uid
 docs/notes/
+.godot_test_home_persist/
 .idea/
