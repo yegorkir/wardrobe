@@ -3,10 +3,10 @@ extends GdUnitTestSuite
 const InteractionEngine := preload("res://scripts/domain/interaction/interaction_engine.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const Command := preload("res://scripts/app/interaction/interaction_command.gd")
-const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
-const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
+const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const Resolver := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
-const InteractionResult := preload("res://scripts/domain/interaction/interaction_result.gd")
+const InteractionResultScript := preload("res://scripts/domain/interaction/interaction_result.gd")
 
 func test_pick_updates_hand_and_emits_event() -> void:
 	var engine := InteractionEngine.new()
@@ -110,10 +110,10 @@ func test_rejects_slot_mismatch_without_mutation() -> void:
 	var payload: Dictionary = events[0].get(EventSchema.EVENT_KEY_PAYLOAD, {})
 	assert_that(payload.get(EventSchema.PAYLOAD_SLOT_ID)).is_equal(StringName("Slot_A"))
 
-func _make_storage() -> StorageState:
-	var storage := StorageState.new()
+func _make_storage() -> WardrobeStorageState:
+	var storage := StorageStateScript.new()
 	storage.register_slot(StringName("Slot_A"))
 	return storage
 
 func _make_item(id: String) -> ItemInstance:
-	return ItemInstance.new(StringName(id), ItemInstance.KIND_COAT)
+	return ItemInstanceScript.new(StringName(id), ItemInstance.KIND_COAT)

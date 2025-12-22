@@ -2,8 +2,6 @@ extends RefCounted
 
 class_name WardrobeStorageState
 
-const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-
 const RESULT_KEY_SUCCESS := "success"
 const RESULT_KEY_REASON := "reason"
 const RESULT_KEY_ITEM := "item"

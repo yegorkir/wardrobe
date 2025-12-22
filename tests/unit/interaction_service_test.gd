@@ -1,14 +1,14 @@
 extends GdUnitTestSuite
 
 const InteractionService := preload("res://scripts/app/interaction/interaction_service.gd")
-const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
-const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
+const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const Resolver := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
-const InteractionResult := preload("res://scripts/domain/interaction/interaction_result.gd")
+const InteractionResultScript := preload("res://scripts/domain/interaction/interaction_result.gd")
 
 func test_build_auto_command_tracks_hand_and_slot() -> void:
 	var service := InteractionService.new()
-	var storage: StorageState = service.get_storage_state()
+	var storage: WardrobeStorageState = service.get_storage_state()
 	storage.register_slot(StringName("Slot_A"))
 	var slot_item := _make_item("coat_slot")
 	storage.put(StringName("Slot_A"), slot_item)
@@ -23,7 +23,7 @@ func test_build_auto_command_tracks_hand_and_slot() -> void:
 
 func test_execute_command_updates_hand_state() -> void:
 	var service := InteractionService.new()
-	var storage: StorageState = service.get_storage_state()
+	var storage: WardrobeStorageState = service.get_storage_state()
 	storage.register_slot(StringName("Slot_A"))
 	storage.put(StringName("Slot_A"), _make_item("coat_slot"))
 
@@ -38,4 +38,4 @@ func test_execute_command_updates_hand_state() -> void:
 		assert_that(hand.id).is_equal(StringName("coat_slot"))
 
 func _make_item(id: String) -> ItemInstance:
-	return ItemInstance.new(StringName(id), ItemInstance.KIND_COAT)
+	return ItemInstanceScript.new(StringName(id), ItemInstance.KIND_COAT)

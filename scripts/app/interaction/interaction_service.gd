@@ -6,8 +6,6 @@ const CommandScript := preload("res://scripts/app/interaction/interaction_comman
 const EngineScript := preload("res://scripts/domain/interaction/interaction_engine.gd")
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
-const InteractionResult := preload("res://scripts/domain/interaction/interaction_result.gd")
-
 var _engine: WardrobeInteractionDomainEngine = EngineScript.new()
 var _storage_state: WardrobeStorageState = StorageStateScript.new()
 var _hand_item: ItemInstance

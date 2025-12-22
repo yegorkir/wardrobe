@@ -3,8 +3,6 @@ extends RefCounted
 const MODE_PER_SHIFT := "PER_SHIFT"
 const MODE_INTERVAL := "INTERVAL"
 
-const RunState := preload("res://scripts/domain/run/run_state.gd")
-
 var _config := {}
 
 func setup(config: Dictionary) -> void:

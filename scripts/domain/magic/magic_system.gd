@@ -7,8 +7,6 @@ const EMERGENCY_COST_DEBT := "DEBT"
 const EMERGENCY_COST_TIPS := "TIPS"
 const EMERGENCY_COST_SHIFT_CASH := "SHIFT_CASH"
 
-const RunState := preload("res://scripts/domain/run/run_state.gd")
-
 var _config := {}
 
 func setup(config: Dictionary) -> void:

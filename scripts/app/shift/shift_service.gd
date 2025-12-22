@@ -8,8 +8,6 @@ signal shift_ended(summary: Dictionary)
 
 const MagicSystemScript := preload("res://scripts/domain/magic/magic_system.gd")
 const InspectionSystemScript := preload("res://scripts/domain/inspection/inspection_system.gd")
-const RunState := preload("res://scripts/domain/run/run_state.gd")
-
 const MAGIC_DEFAULT_CONFIG := {
 	"insurance_mode": MagicSystemScript.INSURANCE_MODE_FREE,
 	"emergency_cost_mode": MagicSystemScript.EMERGENCY_COST_DEBT,

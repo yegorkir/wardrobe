@@ -1,10 +1,10 @@
 extends GdUnitTestSuite
 
-const WardrobeStorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
-const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
+const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 
 func test_put_into_empty_slot() -> void:
-	var state := WardrobeStorageState.new()
+	var state := WardrobeStorageStateScript.new()
 	state.register_slot(StringName("Slot_A"))
 	var item := _make_item("coat_1", ItemInstance.KIND_COAT)
 	var result := state.put(StringName("Slot_A"), item)
@@ -12,7 +12,7 @@ func test_put_into_empty_slot() -> void:
 	assert_that(state.get_slot_item(StringName("Slot_A"))).is_equal(item)
 
 func test_put_rejects_missing_slot() -> void:
-	var state := WardrobeStorageState.new()
+	var state := WardrobeStorageStateScript.new()
 	var item := _make_item("coat_1", ItemInstance.KIND_COAT)
 	var result := state.put(StringName("Unknown"), item)
 	assert_bool(result.get(WardrobeStorageState.RESULT_KEY_SUCCESS, true)).is_false()
@@ -21,7 +21,7 @@ func test_put_rejects_missing_slot() -> void:
 	)
 
 func test_put_rejects_occupied_slot() -> void:
-	var state := WardrobeStorageState.new()
+	var state := WardrobeStorageStateScript.new()
 	state.register_slot(StringName("Slot_A"))
 	state.put(StringName("Slot_A"), _make_item("coat_1", ItemInstance.KIND_COAT))
 	var result := state.put(StringName("Slot_A"), _make_item("coat_2", ItemInstance.KIND_COAT))
@@ -31,7 +31,7 @@ func test_put_rejects_occupied_slot() -> void:
 	)
 
 func test_pick_and_empty_slot() -> void:
-	var state := WardrobeStorageState.new()
+	var state := WardrobeStorageStateScript.new()
 	state.register_slot(StringName("Slot_A"))
 	state.put(StringName("Slot_A"), _make_item("coat_1", ItemInstance.KIND_COAT))
 	var result := state.pick(StringName("Slot_A"))
@@ -40,7 +40,7 @@ func test_pick_and_empty_slot() -> void:
 	assert_that(state.get_slot_item(StringName("Slot_A"))).is_null()
 
 func test_pick_rejects_empty_slot() -> void:
-	var state := WardrobeStorageState.new()
+	var state := WardrobeStorageStateScript.new()
 	state.register_slot(StringName("Slot_A"))
 	var result := state.pick(StringName("Slot_A"))
 	assert_bool(result.get(WardrobeStorageState.RESULT_KEY_SUCCESS, true)).is_false()
@@ -49,7 +49,7 @@ func test_pick_rejects_empty_slot() -> void:
 	)
 
 func test_swap_exchanges_items() -> void:
-	var state := WardrobeStorageState.new()
+	var state := WardrobeStorageStateScript.new()
 	state.register_slot(StringName("Slot_A"))
 	state.put(StringName("Slot_A"), _make_item("coat_slot", ItemInstance.KIND_COAT))
 	var incoming := _make_item("coat_hand", ItemInstance.KIND_COAT)
@@ -62,7 +62,7 @@ func test_swap_exchanges_items() -> void:
 	assert_that(state.get_slot_item(StringName("Slot_A"))).is_equal(incoming)
 
 func test_snapshot_contains_slot_items() -> void:
-	var state := WardrobeStorageState.new()
+	var state := WardrobeStorageStateScript.new()
 	state.register_slot(StringName("Slot_A"))
 	state.register_slot(StringName("Slot_B"))
 	state.put(StringName("Slot_A"), _make_item("coat_1", ItemInstance.KIND_COAT))
@@ -74,4 +74,4 @@ func test_snapshot_contains_slot_items() -> void:
 	assert_that(slots.get(StringName("Slot_B"))).is_null()
 
 func _make_item(id: String, kind: StringName) -> ItemInstance:
-	return ItemInstance.new(StringName(id), kind)
+	return ItemInstanceScript.new(StringName(id), kind)

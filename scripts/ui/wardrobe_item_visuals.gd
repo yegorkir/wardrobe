@@ -37,7 +37,7 @@ func configure(
 	_detach_item_node = detach_item_node
 
 func spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(str(slot_id), null)
+	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
 	if slot == null or instance == null:
 		return
 	var node: ItemNode = _item_nodes.get(instance.id, null)

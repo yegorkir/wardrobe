@@ -4,7 +4,7 @@ const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_servi
 const DeskStateScript := preload("res://scripts/domain/desk/desk_state.gd")
 const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
-const StorageState := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
@@ -94,8 +94,8 @@ func test_pickup_rejects_wrong_coat() -> void:
 	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(StringName("coat_wrong"))
 	assert_bool(_has_event(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)).is_true()
 
-func _make_storage() -> StorageState:
-	var storage := StorageState.new()
+func _make_storage() -> WardrobeStorageState:
+	var storage := StorageStateScript.new()
 	storage.register_slot(StringName("DeskSlot_A"))
 	return storage
 
