@@ -49,3 +49,10 @@
 - [x] Run `task tests` and address failures (warnings observed, no failures).
 - [x] Run `task build-all` for full verification (exports succeeded; CA cert/editor settings warnings).
 - [x] Commit with an appropriate message (`Add Step 3 setup context`).
+
+## P2.1 — Identifier standardization
+- [x] Standardize slot identifiers to `StringName` in `scripts/ui/wardrobe_scene.gd`.
+- [x] Remove redundant `str(...)` conversions in slot lookup.
+- [x] Run `task tests` and address failures (warnings observed, no failures).
+- [x] Run `task build-all` for full verification (exports succeeded; CA cert/editor settings warnings).
+- [x] Commit with an appropriate message (`Standardize slot identifiers`).
