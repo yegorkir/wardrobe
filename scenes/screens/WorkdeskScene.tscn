@@ -1,0 +1,115 @@
+[gd_scene load_steps=5 format=3 uid="uid://c6kv1r1uwxk7g"]
+
+[ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://b1vy45o0cbxlk" path="res://scenes/prefabs/StorageCabinetLayout_Simple.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://d1grh7s2x1u1k" path="res://scenes/prefabs/DeskServicePoint.tscn" id="3"]
+[ext_resource type="Script" uid="uid://c1jb2jnhticws" path="res://scripts/wardrobe/cursor_hand.gd" id="4"]
+
+[node name="WorkdeskScene" type="Node2D"]
+script = ExtResource("1")
+
+[node name="StorageHall" type="Node2D" parent="."]
+position = Vector2(0, 40)
+
+[node name="CabinetsGrid" type="Node2D" parent="StorageHall"]
+position = Vector2(180, 465)
+
+[node name="Cabinet_L0_R0" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+cabinet_id = &"Cab_L0_R0"
+
+[node name="Cabinet_L1_R0" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(300, 0)
+cabinet_id = &"Cab_L1_R0"
+
+[node name="Cabinet_L0_R1" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(0, 200)
+cabinet_id = &"Cab_L0_R1"
+
+[node name="Cabinet_L1_R1" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(300, 200)
+cabinet_id = &"Cab_L1_R1"
+
+[node name="Cabinet_L0_R2" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(0, 400)
+cabinet_id = &"Cab_L0_R2"
+
+[node name="Cabinet_L1_R2" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(300, 400)
+cabinet_id = &"Cab_L1_R2"
+
+[node name="CurtainsColumn" type="Node2D" parent="StorageHall"]
+position = Vector2(40, 600)
+
+[node name="BulbsColumn" type="Node2D" parent="StorageHall"]
+position = Vector2(650, 600)
+
+[node name="ServiceZone" type="Node2D" parent="."]
+position = Vector2(0, 720)
+
+[node name="ServiceSlots" type="Node2D" parent="ServiceZone"]
+position = Vector2(240, 445)
+
+[node name="Desk_A" parent="ServiceZone/ServiceSlots" instance=ExtResource("3")]
+desk_id = &"Desk_A"
+desk_slot_id = &"DeskSlot_0"
+
+[node name="Desk_B" parent="ServiceZone/ServiceSlots" instance=ExtResource("3")]
+position = Vector2(220, 0)
+desk_id = &"Desk_B"
+desk_slot_id = &"DeskSlot_1"
+
+[node name="HandRoot" type="Node2D" parent="."]
+z_index = 1000
+z_as_relative = false
+
+[node name="CursorHand" type="Node2D" parent="HandRoot"]
+unique_name_in_owner = true
+script = ExtResource("4")
+
+[node name="HUDLayer" type="CanvasLayer" parent="."]
+
+[node name="HUDContainer" type="MarginContainer" parent="HUDLayer"]
+unique_name_in_owner = true
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 170.0
+mouse_filter = 2
+
+[node name="HUDPanel" type="PanelContainer" parent="HUDLayer/HUDContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="HUDLayer/HUDContainer/HUDPanel"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="WaveValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Wave: -"
+
+[node name="TimeValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Time: -"
+
+[node name="MoneyValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Money: -"
+
+[node name="MagicValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Magic: -"
+
+[node name="DebtValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Debt: -"
+
+[node name="EndShiftButton" type="Button" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "End Shift (debug)"
