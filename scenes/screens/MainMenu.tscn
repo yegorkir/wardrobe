@@ -23,9 +23,13 @@ anchor_bottom = 1.0
 text = "Magical Wardrobe"
 horizontal_alignment = 1
 
-[node name="StartButton" type="Button" parent="MarginContainer/VBox"]
+[node name="StartWorkdeskButton" type="Button" parent="MarginContainer/VBox"]
 unique_name_in_owner = true
-text = "Start Run"
+text = "Start Run (Workdesk)"
+
+[node name="StartWardrobeButton" type="Button" parent="MarginContainer/VBox"]
+unique_name_in_owner = true
+text = "Start Run (Wardrobe)"
 
 [node name="QuitButton" type="Button" parent="MarginContainer/VBox"]
 unique_name_in_owner = true
