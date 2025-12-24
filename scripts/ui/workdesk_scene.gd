@@ -6,6 +6,7 @@ const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/i
 const WardrobeWorldValidatorScript := preload("res://scripts/ui/wardrobe_world_validator.gd")
 const WardrobeStep3SetupAdapterScript := preload("res://scripts/ui/wardrobe_step3_setup.gd")
 const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardrobe_interaction_events.gd")
+const WorkdeskDeskEventsBridgeScript := preload("res://scripts/ui/workdesk_desk_events_bridge.gd")
 const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
 const WardrobeItemVisualsAdapterScript := preload("res://scripts/ui/wardrobe_item_visuals.gd")
 const WardrobeDragDropAdapterScript := preload("res://scripts/ui/wardrobe_dragdrop_adapter.gd")
@@ -14,6 +15,7 @@ const WardrobeWorldSetupAdapterScript := preload("res://scripts/ui/wardrobe_worl
 const WardrobeHudAdapterScript := preload("res://scripts/ui/wardrobe_hud_adapter.gd")
 const WardrobeInteractionLoggerScript := preload("res://scripts/ui/wardrobe_interaction_logger.gd")
 const WardrobeShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
+const WorkdeskClientsUIAdapterScript := preload("res://scripts/ui/workdesk_clients_ui_adapter.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -31,7 +33,9 @@ var _interaction_service := WardrobeInteractionServiceScript.new()
 var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
-var _interaction_events: WardrobeInteractionEventsAdapter = WardrobeInteractionEventsAdapterScript.new()
+var _interaction_events_target: WardrobeInteractionEventsAdapter = WardrobeInteractionEventsAdapterScript.new()
+var _interaction_events_bridge: WorkdeskDeskEventsBridge = WorkdeskDeskEventsBridgeScript.new()
+var _interaction_events: WardrobeInteractionEventsAdapter = _interaction_events_bridge
 var _desk_event_dispatcher := DeskEventDispatcherScript.new()
 var _item_visuals: WardrobeItemVisualsAdapter = WardrobeItemVisualsAdapterScript.new()
 var _world_validator := WardrobeWorldValidatorScript.new()
@@ -40,6 +44,17 @@ var _world_adapter := WardrobeWorldSetupAdapterScript.new()
 var _hud_adapter := WardrobeHudAdapterScript.new()
 var _interaction_logger := WardrobeInteractionLoggerScript.new()
 var _shift_log: WardrobeShiftLog = WardrobeShiftLogScript.new()
+var _clients_ui: WorkdeskClientsUIAdapter = WorkdeskClientsUIAdapterScript.new()
+
+var _wave_time_left := 60.0
+var _wave_failed := false
+var _shift_finished := false
+var _served_clients := 0
+var _total_clients := 0
+var _patience_by_client_id: Dictionary = {}
+var _patience_max_by_client_id: Dictionary = {}
+var _desk_states_by_id: Dictionary = {}
+var _clients_ready := false
 
 func _ready() -> void:
 	_hud_adapter.configure(
@@ -58,6 +73,7 @@ func _ready() -> void:
 	call_deferred("_finish_ready_setup")
 
 func _finish_ready_setup() -> void:
+	_interaction_events_bridge.configure_bridge(Callable(self, "_on_client_completed"))
 	_world_adapter.configure(
 		self,
 		_interaction_service,
@@ -98,6 +114,7 @@ func _finish_ready_setup() -> void:
 	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
 	_dragdrop_adapter.configure(interaction_context, _cursor_hand, Callable(self, "_debug_validate_world"))
 	_world_adapter.initialize_world()
+	_setup_clients_ui()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_reset"):
@@ -132,6 +149,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(_delta: float) -> void:
 	_dragdrop_adapter.update_drag_watchdog()
+	_tick_wave_and_patience(_delta)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
@@ -144,3 +162,88 @@ func _debug_validate_world() -> void:
 	if not OS.is_debug_build():
 		return
 	_world_validator.validate(_world_adapter.get_slots(), null)
+
+func _setup_clients_ui() -> void:
+	_clients_ready = false
+	_wave_time_left = 60.0
+	_wave_failed = false
+	_shift_finished = false
+	_served_clients = 0
+	_patience_by_client_id.clear()
+	_patience_max_by_client_id.clear()
+	_desk_states_by_id.clear()
+	var clients_by_id: Dictionary = _world_adapter.get_clients()
+	var desk_states: Array = _world_adapter.get_desk_states()
+	for desk_state in desk_states:
+		if desk_state == null:
+			continue
+		_desk_states_by_id[desk_state.desk_id] = desk_state
+	var patience_max := 30.0
+	for client_id in clients_by_id.keys():
+		_patience_by_client_id[client_id] = patience_max
+		_patience_max_by_client_id[client_id] = patience_max
+	_total_clients = clients_by_id.size()
+	var desks_by_id: Dictionary = {}
+	for desk_node in _world_adapter.get_desk_nodes():
+		if desk_node == null:
+			continue
+		var desk_id: StringName = desk_node.desk_id
+		var client_visual := desk_node.get_node_or_null("ClientVisual") as CanvasItem
+		var patience_bg := desk_node.get_node_or_null("PatienceBarBg") as Control
+		var patience_fill := desk_node.get_node_or_null("PatienceBarBg/PatienceBarFill") as Control
+		if client_visual == null or patience_bg == null or patience_fill == null:
+			push_warning("Desk %s missing client UI nodes; clients UI disabled for this desk." % desk_id)
+			continue
+		var desk_view := WorkdeskClientsUIAdapterScript.DeskClientView.new()
+		desk_view.configure(client_visual, patience_bg, patience_fill)
+		desks_by_id[desk_id] = desk_view
+	_clients_ui.configure(
+		desks_by_id,
+		_desk_states_by_id,
+		_patience_by_client_id,
+		_patience_max_by_client_id,
+		clients_by_id
+	)
+	_clients_ui.refresh()
+	_clients_ready = true
+
+func _tick_wave_and_patience(delta: float) -> void:
+	if not _clients_ready or _shift_finished:
+		return
+	if _wave_failed:
+		return
+	_wave_time_left -= delta
+	if _wave_time_left <= 0.0 and _served_clients < _total_clients:
+		_fail_wave()
+		return
+	for desk_state in _desk_states_by_id.values():
+		if desk_state == null:
+			continue
+		var client_id: StringName = desk_state.current_client_id
+		if client_id == StringName():
+			continue
+		var patience_left := float(_patience_by_client_id.get(client_id, 0.0))
+		patience_left = maxf(patience_left - delta, 0.0)
+		_patience_by_client_id[client_id] = patience_left
+		if patience_left <= 0.0:
+			_fail_wave()
+			return
+	_clients_ui.refresh()
+
+func _fail_wave() -> void:
+	if _shift_finished:
+		return
+	_wave_failed = true
+	_end_shift()
+
+func _on_client_completed() -> void:
+	_served_clients += 1
+	if _total_clients > 0 and _served_clients >= _total_clients:
+		_end_shift()
+
+func _end_shift() -> void:
+	if _shift_finished:
+		return
+	_shift_finished = true
+	if _run_manager:
+		_run_manager.end_shift()
