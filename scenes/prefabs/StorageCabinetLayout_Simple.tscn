@@ -1,0 +1,63 @@
+[gd_scene load_steps=5 format=3 uid="uid://b1vy45o0cbxlk"]
+
+[ext_resource type="Script" uid="uid://dj1bcacnq58ve" path="res://scripts/wardrobe/storage_cabinet_layout.gd" id="1"]
+[ext_resource type="Script" uid="uid://cio6mjjwij4eb" path="res://scripts/wardrobe/slot.gd" id="2"]
+[ext_resource type="Texture2D" uid="uid://dfp2x8jbfnx2f" path="res://assets/sprites/wardrobe.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://ckyaef5gy7qrw" path="res://assets/sprites/placeholder/slot.png" id="4"]
+
+[node name="StorageCabinetLayout_Simple" type="Node2D"]
+script = ExtResource("1")
+
+[node name="CabinetSprite" type="Sprite2D" parent="."]
+position = Vector2(-80, -120)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("3")
+centered = false
+
+[node name="Slots" type="Node2D" parent="."]
+
+[node name="Pos0" type="Node2D" parent="Slots"]
+position = Vector2(-29, -63)
+
+[node name="SlotA" type="Node2D" parent="Slots/Pos0"]
+position = Vector2(-16, 0)
+script = ExtResource("2")
+
+[node name="SlotSprite" type="Sprite2D" parent="Slots/Pos0/SlotA"]
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("4")
+
+[node name="ItemAnchor" type="Node2D" parent="Slots/Pos0/SlotA"]
+
+[node name="SlotB" type="Node2D" parent="Slots/Pos0"]
+position = Vector2(16, 0)
+script = ExtResource("2")
+
+[node name="SlotSprite" type="Sprite2D" parent="Slots/Pos0/SlotB"]
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("4")
+
+[node name="ItemAnchor" type="Node2D" parent="Slots/Pos0/SlotB"]
+
+[node name="Pos1" type="Node2D" parent="Slots"]
+position = Vector2(-28, 9)
+
+[node name="SlotA" type="Node2D" parent="Slots/Pos1"]
+position = Vector2(-16, 0)
+script = ExtResource("2")
+
+[node name="SlotSprite" type="Sprite2D" parent="Slots/Pos1/SlotA"]
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("4")
+
+[node name="ItemAnchor" type="Node2D" parent="Slots/Pos1/SlotA"]
+
+[node name="SlotB" type="Node2D" parent="Slots/Pos1"]
+position = Vector2(16, 0)
+script = ExtResource("2")
+
+[node name="SlotSprite" type="Sprite2D" parent="Slots/Pos1/SlotB"]
+scale = Vector2(0.3, 0.3)
+texture = ExtResource("4")
+
+[node name="ItemAnchor" type="Node2D" parent="Slots/Pos1/SlotB"]
