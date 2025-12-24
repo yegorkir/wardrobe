@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://b1vy45o0cbxlk" path="res://scenes/prefabs/StorageCabinetLayout_Simple.tscn" id="2"]
-[ext_resource type="PackedScene" uid="uid://d1grh7s2x1u1k" path="res://scenes/prefabs/DeskServicePoint.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://3dnx2k5f03thl" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
 [ext_resource type="Script" uid="uid://c1jb2jnhticws" path="res://scripts/wardrobe/cursor_hand.gd" id="4"]
 
 [node name="WorkdeskScene" type="Node2D"]
