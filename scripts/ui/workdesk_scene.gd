@@ -100,7 +100,6 @@ func _finish_ready_setup() -> void:
 	_world_adapter.initialize_world()
 
 func _unhandled_input(event: InputEvent) -> void:
-	print(event)
 	if event.is_action_pressed("debug_reset"):
 		_world_adapter.reset_world()
 		get_viewport().set_input_as_handled()
