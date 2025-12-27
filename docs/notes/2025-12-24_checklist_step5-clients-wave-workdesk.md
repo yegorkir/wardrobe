@@ -8,3 +8,7 @@
 - [x] Record implementation notes and changelog/checklist entries for Step 5.
 - [x] Run tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (log shows an audio init error line but exit code 0).
 - [x] Run build: `task build-all` (macOS editor settings save errors reported, exit code 0).
+- [x] Route EndShift button handling through WorkdeskScene for drag-safe orchestration.
+- [x] Add drag-safety helpers to the drag/drop adapter.
+- [x] Cancel active drag before ending a shift; defer manual EndShift when a drag is active.
+- [x] Run tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (log shows an audio init error line but exit code 0).

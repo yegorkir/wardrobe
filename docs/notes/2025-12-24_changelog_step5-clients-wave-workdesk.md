@@ -10,3 +10,7 @@
 - Fixed build parser errors by removing the duplicate `EventSchema` constant in the bridge and adding explicit typing for client coat colors.
 - Re-ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (exit code 0; log contains an audio init error line).
 - Ran `task build-all`; build produced macOS editor settings save errors but completed with exit code 0.
+- Routed EndShift handling through WorkdeskScene by providing a custom handler in `scripts/ui/wardrobe_hud_adapter.gd` and wiring it in `scripts/ui/workdesk_scene.gd`.
+- Added drag-safety helpers (`has_active_drag`, `force_cancel_drag`) to `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Ensured EndShift cancels active drag and defers manual shift end when a drag is in progress, while auto end uses the same safe path in `scripts/ui/workdesk_scene.gd`.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (exit code 0; log contains an audio init error line).

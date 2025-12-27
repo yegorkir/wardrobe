@@ -61,10 +61,11 @@ func _ready() -> void:
 		_run_manager,
 		_wave_label,
 		_time_label,
-		_money_label,
-		_magic_label,
-		_debt_label,
-		_end_shift_button
+	_money_label,
+	_magic_label,
+	_debt_label,
+	_end_shift_button,
+	Callable(self, "_on_end_shift_pressed")
 	)
 	_hud_adapter.setup_hud()
 	if _cursor_hand == null:
@@ -234,16 +235,30 @@ func _fail_wave() -> void:
 	if _shift_finished:
 		return
 	_wave_failed = true
-	_end_shift()
+	_finish_shift_safe()
 
 func _on_client_completed() -> void:
 	_served_clients += 1
 	if _total_clients > 0 and _served_clients >= _total_clients:
-		_end_shift()
+		_finish_shift_safe()
 
-func _end_shift() -> void:
+func _on_end_shift_pressed() -> void:
+	if _shift_finished:
+		return
+	var was_dragging := _dragdrop_adapter.has_active_drag()
+	_cancel_drag_for_shift_end()
+	if was_dragging:
+		return
+	_finish_shift_safe()
+
+func _finish_shift_safe() -> void:
 	if _shift_finished:
 		return
 	_shift_finished = true
+	_cancel_drag_for_shift_end()
 	if _run_manager:
 		_run_manager.end_shift()
+
+func _cancel_drag_for_shift_end() -> void:
+	if _dragdrop_adapter:
+		_dragdrop_adapter.force_cancel_drag()
