@@ -88,11 +88,19 @@ func update_drag_watchdog() -> void:
 	if not Input.is_mouse_button_pressed(MouseButton.MOUSE_BUTTON_LEFT):
 		cancel_drag()
 
+func has_active_drag() -> bool:
+	if _drag_active:
+		return true
+	return _cursor_hand != null and _cursor_hand.get_active_hand_item() != null
+
 func cancel_drag() -> void:
 	_drag_active = false
 	_set_hover_slot(null)
 	if _cursor_hand:
 		_cursor_hand.set_preview_small(false)
+
+func force_cancel_drag() -> void:
+	cancel_drag()
 
 func build_interaction_command(slot: WardrobeSlot) -> Dictionary:
 	var slot_id := StringName(slot.get_slot_identifier())
