@@ -1,0 +1,29 @@
+# Changelog: drag-release-logging
+
+- Added debug logs for item drag enter/exit state transitions in `scripts/wardrobe/item_node.gd`.
+- Added debug logging and a toggle for hand pickup/release events in `scripts/wardrobe/cursor_hand.gd`.
+- Added drag/drop flow logs for pointer down/up, watchdog cancellation, and pick/drop outcomes in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Added helper accessors in `scripts/ui/wardrobe_dragdrop_adapter.gd` to include hover slot and hand item IDs in logs.
+- Adjusted spacing in `scripts/ui/wardrobe_dragdrop_adapter.gd` to keep function boundaries readable.
+- Logged pointer-up events even when drag is already inactive in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Enabled debug logging on cursor hand and item prefab nodes in `scenes/screens/WorkdeskScene.tscn` and `scenes/prefabs/item_node.tscn`.
+- Forced drag/drop adapter debug logging during workdesk setup in `scripts/ui/workdesk_scene.gd`.
+- Added floor selection API in `scripts/wardrobe/surface/surface_registry.gd` and routed drag/drop floor choice through it.
+- Implemented item transfer FSM with one-way rise and floor landing in `scripts/wardrobe/item_node.gd`.
+- Added shelfed collision profile and applied it on shelf placement in `scripts/wardrobe/item_node.gd` and `scripts/ui/shelf_surface_adapter.gd`.
+- Ensured floor surfaces are one-way in `scripts/ui/floor_zone_adapter.gd`.
+- Added shelfed mask in `scripts/wardrobe/config/physics_layers.gd`.
+- Fixed indentation causing parse errors in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Added X-filtered, deterministic floor selection fallback in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Added explicit Rect2 typing for floor bounds to satisfy GDScript inference in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Added explicit float typing in floor selection to avoid Variant inference in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Simplified transfer landing to snap and zero velocity once supported on target floor in `scripts/wardrobe/item_node.gd`.
+- Removed shadowing warning in `scripts/wardrobe/item_node.gd` transfer landing helper.
+- Suppressed hit-driven wake impulses during floor transfer in `scripts/wardrobe/item_node.gd`.
+- Disabled reject-fall on drag/drop floor drops to allow stabilization via transfer in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Added periodic unstable position logging in `scripts/wardrobe/item_node.gd`.
+- Logged unstable item positions every frame in `scripts/wardrobe/item_node.gd`.
+- Logged transfer phase state every frame to diagnose floor fall behavior in `scripts/wardrobe/item_node.gd`.
+- Forced transfer landing after a short grace window if support ray never hits in `scripts/wardrobe/item_node.gd`.
+- Expanded floor-transfer miss analysis with new log evidence and option set in `docs/notes/2026-01-02_analysis_floor-transfer-miss.md`.
+- Added analysis and plan notes for unifying collision-aligned surface Y in `docs/notes/2026-01-02_analysis_surface_collision_y.md` and `docs/notes/2026-01-02_plan_surface_collision_y.md`.

@@ -16,7 +16,7 @@ func _assign_slot_ids() -> void:
 		return
 	var positions: Array[Node] = []
 	for child in _slots_root.get_children():
-		if child is Node:
+		if child is Node and _has_slot_pair(child):
 			positions.append(child)
 	positions.sort_custom(Callable(self, "_compare_positions"))
 	var index := 0
@@ -24,8 +24,6 @@ func _assign_slot_ids() -> void:
 		var slot_a := pos.get_node_or_null("SlotA") as WardrobeSlot
 		var slot_b := pos.get_node_or_null("SlotB") as WardrobeSlot
 		if slot_a == null or slot_b == null:
-			push_warning("StorageCabinetLayout %s missing SlotA/SlotB in %s" % [cabinet_id, pos.name])
-			index += 1
 			continue
 		var prefix := "%s_P%d" % [String(cabinet_id), index]
 		slot_a.slot_id = "%s_SlotA" % prefix
@@ -34,3 +32,8 @@ func _assign_slot_ids() -> void:
 
 func _compare_positions(a: Node, b: Node) -> bool:
 	return String(a.name) < String(b.name)
+
+func _has_slot_pair(node: Node) -> bool:
+	if node == null:
+		return false
+	return node.get_node_or_null("SlotA") is WardrobeSlot and node.get_node_or_null("SlotB") is WardrobeSlot

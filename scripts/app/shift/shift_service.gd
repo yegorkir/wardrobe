@@ -8,6 +8,10 @@ signal shift_ended(summary: Dictionary)
 
 const MagicSystemScript := preload("res://scripts/domain/magic/magic_system.gd")
 const InspectionSystemScript := preload("res://scripts/domain/inspection/inspection_system.gd")
+const LandingServiceScript := preload("res://scripts/app/wardrobe/landing/landing_service.gd")
+const LandingOutcomeScript := preload("res://scripts/app/wardrobe/landing/landing_outcome.gd")
+const ShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
+const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const MAGIC_DEFAULT_CONFIG := {
 	"insurance_mode": MagicSystemScript.INSURANCE_MODE_FREE,
 	"emergency_cost_mode": MagicSystemScript.EMERGENCY_COST_DEBT,
@@ -27,6 +31,8 @@ const INSPECTION_DEFAULT_CONFIG := {
 var _save_manager
 var _magic_system := MagicSystemScript.new()
 var _inspection_system := InspectionSystemScript.new()
+var _landing_service := LandingServiceScript.new()
+var _shift_log: WardrobeShiftLog = ShiftLogScript.new()
 var _run_state: RunState
 var _hud_snapshot: Dictionary = {}
 var _last_summary: Dictionary = {}
@@ -46,6 +52,7 @@ func setup(
 	_reset_demo_hud()
 
 func start_shift() -> Dictionary:
+	_shift_log.clear()
 	_prepare_shift_state()
 	_reset_demo_hud()
 	emit_signal("shift_started", get_hud_snapshot())
@@ -103,6 +110,13 @@ func request_emergency_locate(ticket_number: int) -> Dictionary:
 
 func record_entropy(amount: float) -> void:
 	_inspection_system.record_entropy(_run_state, amount)
+
+func record_item_landed(payload: Dictionary) -> LandingOutcomeScript:
+	_shift_log.record(EventSchema.EVENT_ITEM_LANDED, payload)
+	return _landing_service.record_item_landed(payload)
+
+func get_shift_log() -> WardrobeShiftLog:
+	return _shift_log
 
 func _initialize_run_state() -> void:
 	_run_state = RunState.new()

@@ -1,6 +1,7 @@
 extends GdUnitTestSuite
 
 const WardrobeScene := preload("res://scenes/screens/WardrobeScene.tscn")
+const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
 func test_wardrobe_scene_reacts_to_hud_updates() -> void:
 	var run_manager := get_node_or_null("/root/RunManager") as RunManagerBase
 	assert_that(run_manager).is_not_null()
@@ -26,8 +27,8 @@ func test_wardrobe_scene_seeds_items() -> void:
 	assert_that(desk_slot_b).is_not_null()
 	assert_bool(desk_slot_a.has_item()).is_true()
 	assert_bool(desk_slot_b.has_item()).is_true()
-	assert_int(desk_slot_a.get_item().item_type).is_equal(ItemNode.ItemType.COAT)
-	assert_int(desk_slot_b.get_item().item_type).is_equal(ItemNode.ItemType.COAT)
+	assert_bool(_is_dropoff_item_type(desk_slot_a.get_item().item_type)).is_true()
+	assert_bool(_is_dropoff_item_type(desk_slot_b.get_item().item_type)).is_true()
 	var hook_slot := _find_slot_by_id(wardrobe, "Board_A_Hook_0_SlotA")
 	assert_that(hook_slot).is_not_null()
 	assert_bool(hook_slot.has_item()).is_true()
@@ -46,3 +47,6 @@ func _find_slot_by_id(root: Node, slot_id: String) -> WardrobeSlot:
 			if slot.get_slot_identifier() == slot_id:
 				return slot
 	return null
+
+func _is_dropoff_item_type(item_type: int) -> bool:
+	return item_type in WardrobeItemConfigScript.DEMO_ITEM_TYPES_BY_CLIENT

@@ -1,0 +1,34 @@
+# Changelog: Physics placement gate + terminal reject
+
+- Added SSOT layer/mask/group configuration in `scripts/wardrobe/config/physics_layers.gd` and wired it into item/shelf/floor adapters.
+- Consolidated `ItemNode` geometry helpers (AABB, bottom Y, snap) and routed legacy bottom helpers through the new API.
+- Switched pass-through to floor-only collision masks and added explicit reject-fall state handling in `scripts/wardrobe/item_node.gd`.
+- Introduced `SurfaceRegistry` autoload with floor/shelf registration, bounds-aware floor selection, and registry cleanup helpers.
+- Registered shelf/floor adapters in the registry during `_ready()`/`_exit_tree()` and applied SSOT layers to `SurfaceBody`/`DropArea` nodes.
+- Added `PhysicsPlacementGate` decision helper and refactored overlap handling to use ALLOW/ALLOW_NUDGE/REJECT decisions in `scripts/ui/wardrobe_physics_tick_adapter.gd`.
+- Implemented terminal reject fall-through: reject now selects floor by `surface_y`, enables pass-through, and skips further overlap resolution while falling.
+- Limited overlap nudges to the active item only to respect stable immunity (no neighbor impulses).
+- Updated drag/drop adapter to use registry-based floor lookup, SSOT pick query mask, and bottom-Y-based pass-through thresholds.
+- Synced prefab/scene collision layers for item pick areas, shelf bodies, and floor bodies.
+- Added integration tests for ItemNode geometry contracts and physics layer SSOT expectations.
+- Renamed the autoload class to avoid `SurfaceRegistry` name conflicts and adjusted adapters to resolve the registry via `SceneTree` where needed.
+- Fixed GDScript typing/inference issues in registry usage and overlap decision logic after headless parse checks.
+- Added `WardrobeSurface2D` base type and switched shelf/floor adapters plus registry storage to typed surfaces.
+- Centralized registry lookup via `SurfaceRegistryService.resolve(...)` to avoid scattered `/root/...` calls.
+- Added `ItemNode` surface ownership helpers and used them to remove items without group scans.
+- Tightened pass-through restore threshold to align with floor contact using bottom Y + epsilon.
+- Switched surface adapters to extend the base surface script directly and aligned method signatures with the base contract.
+- Tightened SurfaceRegistry typing around `WardrobeSurface2D` and removed dynamic type checks where possible.
+- Formalized `WardrobeSurface2D` as the single surface contract (typed arrays in registry, ItemNode-typed methods) and removed unsafe-method access.
+- Replaced scene-based registry lookups with a single autoload accessor (`SurfaceRegistryService.get_autoload()`).
+- Added `PhysicsGateResult` value object and updated overlap decision flow to use typed results instead of dictionaries.
+- Switched SurfaceRegistry typing to a preload-backed `WardrobeSurface2D` alias to keep headless parsing stable.
+- Aligned tick adapter enum assignments with explicit `as` casting to remove enum/int warnings.
+- Added `ItemNode.DropReason` state and store `last_drop_reason` for reject-driven gameplay effects.
+- Enforced REJECT collision profile via floor-only mask and verified through a functional test fixture.
+- Added functional test scene + suite to validate reject fall does not allow item-item collisions (`tests/functional/test_reject_no_item_contacts.gd`).
+- Removed item-item collisions from the default mask and introduced `MASK_ITEMS_QUERY` for overlap queries only.
+- Routed drop-to-floor pass-through through `start_reject_fall()` to align drop reason/state with reject behavior.
+- Made reject-fall idempotent to avoid repeated profile toggles.
+- Guarded drag-drop floor drops to avoid re-triggering when an item is already in reject fall.
+- Fixed `ItemNode` reject-falling state naming to avoid method/field collisions during parse.

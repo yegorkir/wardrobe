@@ -16,9 +16,14 @@ const WardrobeHudAdapterScript := preload("res://scripts/ui/wardrobe_hud_adapter
 const WardrobeInteractionLoggerScript := preload("res://scripts/ui/wardrobe_interaction_logger.gd")
 const WardrobeShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
 const WorkdeskClientsUIAdapterScript := preload("res://scripts/ui/workdesk_clients_ui_adapter.gd")
+const ShelfSurfaceAdapterScript := preload("res://scripts/ui/shelf_surface_adapter.gd")
+const FloorZoneAdapterScript := preload("res://scripts/ui/floor_zone_adapter.gd")
+const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
+@export var debug_no_fail_wave: bool = false
+@export var debug_logs_enabled: bool = false
 
 @onready var _wave_label: Label = %WaveValue
 @onready var _time_label: Label = %TimeValue
@@ -27,13 +32,13 @@ const WorkdeskClientsUIAdapterScript := preload("res://scripts/ui/workdesk_clien
 @onready var _debt_label: Label = %DebtValue
 @onready var _end_shift_button: Button = %EndShiftButton
 @onready var _cursor_hand: CursorHand = %CursorHand
+@onready var _physics_tick: Node = %WardrobePhysicsTick
 @onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
 
 var _interaction_service := WardrobeInteractionServiceScript.new()
 var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
-var _interaction_events_target: WardrobeInteractionEventsAdapter = WardrobeInteractionEventsAdapterScript.new()
 var _interaction_events_bridge: WorkdeskDeskEventsBridge = WorkdeskDeskEventsBridgeScript.new()
 var _interaction_events: WardrobeInteractionEventsAdapter = _interaction_events_bridge
 var _desk_event_dispatcher := DeskEventDispatcherScript.new()
@@ -45,6 +50,9 @@ var _hud_adapter := WardrobeHudAdapterScript.new()
 var _interaction_logger := WardrobeInteractionLoggerScript.new()
 var _shift_log: WardrobeShiftLog = WardrobeShiftLogScript.new()
 var _clients_ui: WorkdeskClientsUIAdapter = WorkdeskClientsUIAdapterScript.new()
+var _shelf_surfaces: Array = []
+var _floor_zone: FloorZoneAdapter
+var _floor_zones: Array = []
 
 var _wave_time_left := 60.0
 var _wave_failed := false
@@ -57,6 +65,7 @@ var _desk_states_by_id: Dictionary = {}
 var _clients_ready := false
 
 func _ready() -> void:
+	DebugFlags.set_enabled(debug_logs_enabled)
 	_hud_adapter.configure(
 		_run_manager,
 		_wave_label,
@@ -100,6 +109,7 @@ func _finish_ready_setup() -> void:
 	interaction_context.spawned_items = _world_adapter.get_spawned_items()
 	interaction_context.item_scene = ITEM_SCENE
 	interaction_context.item_visuals = _item_visuals
+	interaction_context.physics_tick = _physics_tick
 	interaction_context.event_adapter = _event_adapter
 	interaction_context.interaction_events = _interaction_events
 	interaction_context.desk_event_dispatcher = _desk_event_dispatcher
@@ -114,6 +124,8 @@ func _finish_ready_setup() -> void:
 	interaction_context.interaction_logger = _interaction_logger
 	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
 	_dragdrop_adapter.configure(interaction_context, _cursor_hand, Callable(self, "_debug_validate_world"))
+	_collect_surface_targets()
+	_dragdrop_adapter.configure_surface_targets(_shelf_surfaces, _floor_zone)
 	_world_adapter.initialize_world()
 	_setup_clients_ui()
 
@@ -208,13 +220,38 @@ func _setup_clients_ui() -> void:
 	_clients_ui.refresh()
 	_clients_ready = true
 
+func _collect_surface_targets() -> void:
+	_shelf_surfaces.clear()
+	for node in get_tree().get_nodes_in_group(ShelfSurfaceAdapter.SHELF_GROUP):
+		if node is ShelfSurfaceAdapter:
+			_shelf_surfaces.append(node)
+	if _shelf_surfaces.is_empty():
+		for node in find_children("*", "ShelfSurfaceAdapter", true, true):
+			if node is ShelfSurfaceAdapter:
+				_shelf_surfaces.append(node)
+	_floor_zones.clear()
+	_floor_zone = null
+	for node in get_tree().get_nodes_in_group(FloorZoneAdapter.FLOOR_GROUP):
+		if node is FloorZoneAdapter:
+			_floor_zones.append(node)
+			if _floor_zone == null:
+				_floor_zone = node
+	if _floor_zone == null:
+		for node in find_children("*", "FloorZoneAdapter", true, true):
+			if node is FloorZoneAdapter:
+				_floor_zones.append(node)
+				if _floor_zone == null:
+					_floor_zone = node
+	if _floor_zone == null:
+		push_warning("FloorZone adapter missing; surface drops will be ignored.")
+
 func _tick_wave_and_patience(delta: float) -> void:
 	if not _clients_ready or _shift_finished:
 		return
 	if _wave_failed:
 		return
 	_wave_time_left -= delta
-	if _wave_time_left <= 0.0 and _served_clients < _total_clients:
+	if _wave_time_left <= 0.0 and _served_clients < _total_clients and not debug_no_fail_wave:
 		_fail_wave()
 		return
 	for desk_state in _desk_states_by_id.values():
@@ -226,7 +263,7 @@ func _tick_wave_and_patience(delta: float) -> void:
 		var patience_left := float(_patience_by_client_id.get(client_id, 0.0))
 		patience_left = maxf(patience_left - delta, 0.0)
 		_patience_by_client_id[client_id] = patience_left
-		if patience_left <= 0.0:
+		if patience_left <= 0.0 and not debug_no_fail_wave:
 			_fail_wave()
 			return
 	_clients_ui.refresh()
