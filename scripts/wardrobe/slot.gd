@@ -23,6 +23,9 @@ func put_item(item: ItemNode) -> bool:
 	if not can_put(item):
 		return false
 	_held_item = item
+	item.freeze = true
+	item.collision_layer = 0
+	item.collision_mask = 0
 	if item.get_parent():
 		item.reparent(_item_anchor)
 	else:

@@ -8,6 +8,7 @@ const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.
 const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_service_point_system.gd")
 const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
 
 var _root: Node
 var _clear_spawned_items: Callable
@@ -109,9 +110,12 @@ func _assign_clients_to_desks(client_ids: Array[StringName]) -> void:
 			_apply_desk_events.call(events)
 
 func _make_demo_client(index: int, client_id: StringName, color: Color) -> ClientState:
+	var item_type := WardrobeItemConfigScript.get_demo_item_type_for_client(index)
+	var item_id := WardrobeItemConfigScript.build_client_item_id(item_type, index)
+	var item_kind := WardrobeItemConfigScript.get_kind_for_item_type(item_type)
 	var coat := ItemInstanceScript.new(
-		StringName("coat_%02d" % index),
-		ItemInstanceScript.KIND_COAT,
+		item_id,
+		item_kind,
 		color
 	)
 	var ticket := ItemInstanceScript.new(
