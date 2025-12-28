@@ -7,6 +7,7 @@ signal run_state_changed(state_name)
 signal hud_updated(snapshot)
 
 const ShiftServiceScript := preload("res://scripts/app/shift/shift_service.gd")
+const LandingOutcomeScript := preload("res://scripts/app/wardrobe/landing/landing_outcome.gd")
 
 const SCREEN_MAIN_MENU := "main_menu"
 const SCREEN_WARDROBE := "wardrobe"
@@ -89,6 +90,12 @@ func request_emergency_locate(ticket_number: int) -> Dictionary:
 
 func record_entropy(amount: float) -> void:
 	_shift_service.record_entropy(amount)
+
+func record_item_landed(payload: Dictionary) -> LandingOutcomeScript:
+	return _shift_service.record_item_landed(payload)
+
+func get_shift_log() -> WardrobeShiftLog:
+	return _shift_service.get_shift_log()
 
 func _configure_input_map() -> void:
 	_ensure_action_with_events("tap", _create_tap_events())

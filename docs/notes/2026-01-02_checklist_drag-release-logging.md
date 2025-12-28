@@ -1,0 +1,29 @@
+# Checklist: drag-release-logging
+
+- [x] Reviewed drag/drop flow and identified hand, item, and adapter logging touchpoints.
+- [x] Added `debug_log` gate and logging for hand pickup/release events.
+- [x] Added logging for pointer down/up, watchdog cancel, and pick/drop outcomes.
+- [x] Logged item drag enter/exit state transitions.
+- [x] Ensured pointer-up logs emit even when drag is inactive.
+- [x] Enabled debug logging on cursor hand and item prefab nodes.
+- [x] Forced drag/drop adapter debug logging during workdesk setup.
+- [x] Implemented floor selection via SurfaceRegistry and drag/drop fallback updates.
+- [x] Added transfer FSM to ItemNode with one-way rise and landing criteria.
+- [x] Added shelfed collision profile and applied on shelf placement.
+- [x] Enabled one-way collision on floor surfaces.
+- [x] Fixed indentation parse error in drag/drop adapter.
+- [x] Added X-filtered floor selection fallback for floor zones.
+- [x] Fixed GDScript type inference warning in floor selection helper.
+- [x] Fixed additional float inference warning in floor selection helper.
+- [x] Stabilized floor transfer landing by snapping and zeroing velocity.
+- [x] Removed transfer landing warning about shadowed names.
+- [x] Prevented transfer items from receiving wake impulses on contact.
+- [x] Removed reject-fall from drag/drop floor drops to allow stabilizing.
+- [x] Added periodic unstable position logging for items.
+- [x] Adjusted unstable logging to emit every frame while not stable.
+- [x] Added per-frame transfer phase logging for floor falls.
+- [x] Added forced transfer landing fallback to stop endless falls.
+- [x] Updated floor-transfer miss analysis with new log evidence and option set.
+- [x] Added analysis and plan notes for collision-aligned surface Y changes.
+- [x] Run `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (warnings reported in log scan).
+- [x] Launch Godot: `"$GODOT_BIN" --path .`.

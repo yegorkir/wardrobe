@@ -1,0 +1,23 @@
+# 2025-12-28 — Changelog: Step 6.1 shelf in cabinet
+
+- Added scalable item config in `scripts/ui/wardrobe_item_config.gd` for size/placement flags and deterministic demo item distribution.
+- Expanded `ItemNode` with new item types, pick-box sizing, and half-height helpers in `scripts/wardrobe/item_node.gd`.
+- Updated `scripts/ui/wardrobe_item_visuals.gd` to resolve item types via config and apply per-type pick sizes.
+- Enforced HANG/LAY rules in `scripts/ui/wardrobe_dragdrop_adapter.gd` using config-derived flags.
+- Added `scenes/prefabs/shelf_surface.tscn` and wired it into `scenes/prefabs/StorageCabinetLayout_Simple.tscn` (replacing Pos1 hooks).
+- Updated `scripts/ui/shelf_surface_adapter.gd` and `scripts/ui/floor_zone_adapter.gd` to align item bottoms with DropLine and support auto shelf width.
+- Made `scripts/wardrobe/storage_cabinet_layout.gd` ignore non-slot nodes in `Slots`.
+- Removed standalone shelf surface from `scenes/screens/WorkdeskScene.tscn`.
+- Updated `tests/functional/wardrobe_scene_test.gd` to accept new demo item types.
+- Wired new BOTTLE/CHEST/HAT sprites in `scripts/ui/wardrobe_item_visuals.gd`.
+- Tuned pick-box sizes in `scripts/ui/wardrobe_item_config.gd` based on sprite dimensions.
+- Resized BOTTLE/CHEST/HAT sprites to match target in-game sizes and updated pick-box sizes accordingly.
+- Made `scripts/ui/floor_zone_adapter.gd` resilient to FloorZone child reparenting by resolving DropLine/ItemsRoot under DropArea.
+- Aligned CabinetsGrid positions in `scenes/screens/WorkdeskScene.tscn`, added shelf debug logging, and made `scripts/ui/shelf_surface_adapter.gd` resolve moved children.
+- Updated floor drop routing to pick the FloorZone under the cursor when multiple zones exist (`scripts/ui/wardrobe_dragdrop_adapter.gd`, `scripts/ui/workdesk_scene.gd`).
+- Changed floor drop routing to select the nearest FloorZone below the item by Y, and documented the out-of-range case in `docs/backlog/2025-12-28_floorzone_drop_outside_range.md`.
+- Fixed GDScript typing for floor-zone selection deltas in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Fixed surface-item picking/removal to consider all floor zones in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Added detailed shelf drop math logging in `scripts/ui/shelf_surface_adapter.gd` when `debug_log` is enabled.
+- Switched shelf/floor placement math and pick sizing to use sprite dimensions instead of `pick_size_px` (`scripts/wardrobe/item_node.gd`, `scripts/ui/wardrobe_item_visuals.gd`, `scripts/ui/shelf_surface_adapter.gd`, `scripts/ui/floor_zone_adapter.gd`, `scripts/ui/wardrobe_dragdrop_adapter.gd`).
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (exit code 0; log contains an audio init error line).

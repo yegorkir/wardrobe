@@ -18,6 +18,8 @@
 - **Always run tests yourself after any change** (including refactors).
 - **Run tests via Taskfile only**:
   - `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`
+- **After tests, launch Godot once to validate runtime startup**:
+  - `"$GODOT_BIN" --path .`
 - Do not suggest or document any other test runner command in this repo.
 - If tests cannot be run (e.g., `task` missing, Taskfile target missing, Godot not available), explicitly report:
   1) the exact error output,

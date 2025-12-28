@@ -1,12 +1,26 @@
-[gd_scene load_steps=5 format=3 uid="uid://c6kv1r1uwxk7g"]
+[gd_scene load_steps=9 format=3 uid="uid://c6kv1r1uwxk7g"]
 
 [ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://b1vy45o0cbxlk" path="res://scenes/prefabs/StorageCabinetLayout_Simple.tscn" id="2"]
-[ext_resource type="PackedScene" uid="uid://3dnx2k5f03thl" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
+[ext_resource type="PackedScene" uid="uid://bbsuw6pn2oo58" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
 [ext_resource type="Script" uid="uid://c1jb2jnhticws" path="res://scripts/wardrobe/cursor_hand.gd" id="4"]
+[ext_resource type="Script" uid="uid://ce2nlf0hgoh2r" path="res://scripts/ui/wardrobe_physics_tick_adapter.gd" id="5"]
+[ext_resource type="Script" uid="uid://bpqv5b0mctves" path="res://scripts/ui/floor_zone_adapter.gd" id="6"]
+
+[sub_resource type="RectangleShape2D" id="3"]
+size = Vector2(720, 6)
+
+[sub_resource type="RectangleShape2D" id="2"]
+size = Vector2(720, 54)
 
 [node name="WorkdeskScene" type="Node2D"]
 script = ExtResource("1")
+debug_no_fail_wave = true
+debug_logs_enabled = true
+
+[node name="WardrobePhysicsTick" type="Node2D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("5")
 
 [node name="StorageHall" type="Node2D" parent="."]
 position = Vector2(0, 40)
@@ -14,37 +28,92 @@ position = Vector2(0, 40)
 [node name="CabinetsGrid" type="Node2D" parent="StorageHall"]
 position = Vector2(180, 465)
 
-[node name="Cabinet_L0_R0" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-cabinet_id = &"Cab_L0_R0"
+[node name="Cabinet_100" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(-53, -140)
+cabinet_id = &"Cab_100"
 
-[node name="Cabinet_L1_R0" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(300, 0)
-cabinet_id = &"Cab_L1_R0"
+[node name="Cabinet_010" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(176, -140)
+cabinet_id = &"Cab_010"
 
-[node name="Cabinet_L0_R1" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(0, 200)
-cabinet_id = &"Cab_L0_R1"
+[node name="Cabinet_001" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(413, -140)
+cabinet_id = &"Cab_001"
 
-[node name="Cabinet_L1_R1" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(300, 200)
-cabinet_id = &"Cab_L1_R1"
+[node name="Cabinet_200" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(-53, 360)
+cabinet_id = &"Cab_200"
 
-[node name="Cabinet_L0_R2" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(0, 400)
-cabinet_id = &"Cab_L0_R2"
+[node name="Cabinet_020" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(176, 360)
+cabinet_id = &"Cab_020"
 
-[node name="Cabinet_L1_R2" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(300, 400)
-cabinet_id = &"Cab_L1_R2"
+[node name="Cabinet_002" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(413, 360)
+cabinet_id = &"Cab_002"
 
 [node name="CurtainsColumn" type="Node2D" parent="StorageHall"]
-position = Vector2(40, 600)
+position = Vector2(40, 655)
 
 [node name="BulbsColumn" type="Node2D" parent="StorageHall"]
-position = Vector2(650, 600)
+position = Vector2(650, 655)
+
+[node name="FloorZone1" type="Node2D" parent="StorageHall"]
+position = Vector2(0, 567.26)
+script = ExtResource("6")
+
+[node name="SurfaceBody" type="StaticBody2D" parent="StorageHall/FloorZone1"]
+collision_layer = 8
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone1/SurfaceBody"]
+position = Vector2(360, 0)
+shape = SubResource("3")
+
+[node name="DropArea" type="Area2D" parent="StorageHall/FloorZone1"]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone1/DropArea"]
+position = Vector2(360, 0)
+shape = SubResource("2")
+
+[node name="SurfaceRef" type="Node2D" parent="StorageHall/FloorZone1"]
+position = Vector2(360, 0)
+
+[node name="FloorZone" type="Node2D" parent="StorageHall/FloorZone1/DropArea"]
+
+[node name="ItemsRoot" type="Node2D" parent="StorageHall/FloorZone1/DropArea"]
+
+[node name="FloorZone2" type="Node2D" parent="StorageHall"]
+position = Vector2(0, 1055)
+script = ExtResource("6")
+
+[node name="SurfaceBody" type="StaticBody2D" parent="StorageHall/FloorZone2"]
+collision_layer = 8
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone2/SurfaceBody"]
+position = Vector2(360, 0)
+shape = SubResource("3")
+
+[node name="DropArea" type="Area2D" parent="StorageHall/FloorZone2"]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone2/DropArea"]
+position = Vector2(360, 0)
+shape = SubResource("2")
+
+[node name="SurfaceRef" type="Node2D" parent="StorageHall/FloorZone2"]
+position = Vector2(360, 0)
+
+[node name="FloorZone" type="Node2D" parent="StorageHall/FloorZone2/DropArea"]
+
+[node name="ItemsRoot" type="Node2D" parent="StorageHall/FloorZone2/DropArea"]
 
 [node name="ServiceZone" type="Node2D" parent="."]
-position = Vector2(0, 720)
+position = Vector2(0, 775)
 
 [node name="ServiceSlots" type="Node2D" parent="ServiceZone"]
 position = Vector2(240, 445)
