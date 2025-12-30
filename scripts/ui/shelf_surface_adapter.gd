@@ -1,10 +1,22 @@
+@tool
 extends Node2D
 class_name ShelfSurfaceAdapter
 
 const SHELF_GROUP := "wardrobe_shelves"
 
 @export var shelf_id: StringName = &"Shelf_1"
-@export var shelf_length_px: float = 240.0
+@export var shelf_length_px: float = 240.0:
+	set(value):
+		_shelf_length_px = value
+		_sync_from_editor()
+	get:
+		return _shelf_length_px
+@export var drop_area_height_px: float = 64.0:
+	set(value):
+		_drop_area_height_px = value
+		_sync_from_editor()
+	get:
+		return _drop_area_height_px
 @export var auto_from_cabinet: bool = true
 @export var visual_bar_height_px: float = 4.0
 @export var drop_y_offset_px: float = 0.0
@@ -25,12 +37,15 @@ var _surface_right: Node2D
 var _items_by_id: Dictionary = {}
 var _warned_missing_surface_ref := false
 var _warned_missing_surface_shape := false
+var _syncing_from_editor := false
+var _shelf_length_px: float = 240.0
+var _drop_area_height_px: float = 64.0
 
 func _ready() -> void:
 	add_to_group(SHELF_GROUP)
 	_resolve_children()
-	_sync_drop_area()
-	_sync_visual_bar()
+	_pull_drop_area_height()
+	_sync_from_editor()
 	_debug_validate_alignment()
 	if _items_root:
 		_items_root.y_sort_enabled = true
@@ -119,6 +134,8 @@ func _sync_drop_area() -> void:
 	var rect_shape := _drop_shape.shape as RectangleShape2D
 	if rect_shape == null:
 		return
+	var original_size := rect_shape.size
+	var original_bottom := _drop_shape.position.y + original_size.y * 0.5
 	var target_width := shelf_length_px
 	if target_width <= 0.0 and auto_from_cabinet:
 		var sprite := _find_cabinet_sprite()
@@ -127,6 +144,9 @@ func _sync_drop_area() -> void:
 	if target_width > 0.0:
 		shelf_length_px = target_width
 		rect_shape.size = Vector2(target_width, rect_shape.size.y)
+	if drop_area_height_px > 0.0:
+		rect_shape.size = Vector2(rect_shape.size.x, drop_area_height_px)
+		_drop_shape.position.y = original_bottom - rect_shape.size.y * 0.5
 		_sync_surface_shape_width(target_width)
 		if _surface_left and _surface_right:
 			var marker_y := 0.0
@@ -184,6 +204,26 @@ func _resolve_children() -> void:
 		_drop_line = _drop_area.find_child("DropLine", true, false) as Node2D
 	if _visual_bar == null and _drop_area:
 		_visual_bar = _drop_area.find_child("VisualBar", true, false) as ColorRect
+
+func _pull_drop_area_height() -> void:
+	if _drop_shape == null:
+		return
+	var rect_shape := _drop_shape.shape as RectangleShape2D
+	if rect_shape == null:
+		return
+	if drop_area_height_px <= 0.0:
+		drop_area_height_px = rect_shape.size.y
+
+func _sync_from_editor() -> void:
+	if _syncing_from_editor:
+		return
+	if not is_inside_tree():
+		return
+	_syncing_from_editor = true
+	_resolve_children()
+	_sync_drop_area()
+	_sync_visual_bar()
+	_syncing_from_editor = false
 
 func _debug_validate_alignment() -> void:
 	if not debug_log:
