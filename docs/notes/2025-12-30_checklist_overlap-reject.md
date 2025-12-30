@@ -1,0 +1,27 @@
+# Checklist: Overlap Reject + Push Budget
+
+- [x] Locate overlap resolution path and confirm current impulse-only behavior (`scripts/ui/wardrobe_physics_tick_adapter.gd`).
+- [x] Define overlap metrics (AABB intersection area ratio, per-item push estimate, total push, affected count).
+- [x] Add reject rules for big overlaps (push budget, affected count, area ratio, bounds safety).
+- [x] Implement small-overlap push with scaled impulse and log planned push distance.
+- [x] Implement reject flow: release item, clear shelf/floor registry, drop to nearest floor zone.
+- [x] Add debug logs for metrics + decision + push planning to support tuning.
+- [x] Write task note and include Godot 4.5 reference links.
+- [x] Fix GDScript shadowing warnings introduced during overlap metric helpers.
+- [x] Run `task tests` and review warnings/errors.
+- [x] Launch Godot once to validate runtime startup.
+- [x] Add fall-based floor drop helper and route overlap rejects through it.
+- [x] Fix stability bounds to keep items stable when COG remains above shelf.
+- [x] Align shelf clamp and overlap-bound checks with COG-based bounds.
+- [x] Add mass-aware overlap pushes based on item mass ratios.
+- [x] Add default item mass mapping by `ItemType` when `item_mass` is unset.
+- [x] Clamp shelf placement by COG (offset-aware) to avoid snapping near edges.
+- [x] Remove reverse impulses so only the moved item gets overlap push; neighbors move via contact wake.
+- [x] Add per-item overlap cooldown to prevent repeated micro-pushes.
+- [x] Ignore tiny overlap distances to avoid sub-pixel resolve jitter.
+- [x] Wake overlapping neighbors when applying overlap impulse to allow chain pushes.
+- [x] Bump tiny-overlap threshold to reduce residual rollback.
+- [x] Wake neighbors even when overlap is skipped due to cooldown/tiny threshold.
+- [x] Ensure reject logic still runs during overlap cooldown to prevent delayed drops.
+- [x] Remove neighbor cooldown to restore springy motion while keeping self cooldown.
+- [x] Raise tiny-overlap ignore threshold to 1.0px to suppress micro rollbacks.

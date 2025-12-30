@@ -8,6 +8,7 @@ var _money_label: Label
 var _magic_label: Label
 var _debt_label: Label
 var _end_shift_button: Button
+var _end_shift_handler: Callable = Callable()
 var _hud_connected := false
 var _button_connected := false
 
@@ -18,7 +19,8 @@ func configure(
 	money_label: Label,
 	magic_label: Label,
 	debt_label: Label,
-	end_shift_button: Button
+	end_shift_button: Button,
+	end_shift_handler: Callable = Callable()
 ) -> void:
 	_run_manager = run_manager
 	_wave_label = wave_label
@@ -27,6 +29,7 @@ func configure(
 	_magic_label = magic_label
 	_debt_label = debt_label
 	_end_shift_button = end_shift_button
+	_end_shift_handler = end_shift_handler
 
 func setup_hud() -> void:
 	if _run_manager:
@@ -36,7 +39,8 @@ func setup_hud() -> void:
 	else:
 		push_warning("RunManager singleton not found; HUD will not update.")
 	if _end_shift_button and not _button_connected:
-		_end_shift_button.pressed.connect(_on_end_shift_pressed)
+		var handler := _get_end_shift_handler()
+		_end_shift_button.pressed.connect(handler)
 		_button_connected = true
 
 func teardown_hud() -> void:
@@ -44,7 +48,8 @@ func teardown_hud() -> void:
 		_run_manager.hud_updated.disconnect(_on_hud_updated)
 		_hud_connected = false
 	if _end_shift_button and _button_connected:
-		_end_shift_button.pressed.disconnect(_on_end_shift_pressed)
+		var handler := _get_end_shift_handler()
+		_end_shift_button.pressed.disconnect(handler)
 		_button_connected = false
 
 func _on_hud_updated(snapshot: Dictionary) -> void:
@@ -64,3 +69,8 @@ func _on_end_shift_pressed() -> void:
 		_run_manager.end_shift()
 	else:
 		push_warning("Cannot end shift: RunManager singleton missing.")
+
+func _get_end_shift_handler() -> Callable:
+	if _end_shift_handler.is_valid():
+		return _end_shift_handler
+	return Callable(self, "_on_end_shift_pressed")

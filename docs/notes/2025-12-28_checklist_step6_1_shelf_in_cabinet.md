@@ -1,0 +1,21 @@
+# 2025-12-28 — Checklist: Step 6.1 shelf in cabinet
+
+- [x] Create shelf prefab and place it into `StorageCabinetLayout_Simple.tscn` in place of Pos1 hooks.
+- [x] Add item placement config for sizes/flags and deterministic client distribution.
+- [x] Expand item types and visuals to support BOTTLE/CHEST/HAT.
+- [x] Connect new item sprites in visuals adapter.
+- [x] Tune pick-box sizes to match new sprite dimensions.
+- [x] Resize new item sprites to the intended in-game sizes.
+- [x] Make FloorZone adapter tolerate DropLine/ItemsRoot moved under DropArea.
+- [x] Align CabinetsGrid layout and add shelf debug logging with resilient child lookup.
+- [x] Route drops to the FloorZone under the cursor when multiple zones exist.
+- [x] Route drops to the nearest FloorZone below the item by Y and document the out-of-range case.
+- [x] Fix GDScript typing for floor-zone selection deltas.
+- [x] Ensure surface-item pick/remove checks all floor zones.
+- [x] Add detailed shelf drop math logging behind debug flag.
+- [x] Use sprite dimensions for placement and pick sizing (remove reliance on pick_size_px).
+- [x] Enforce HANG/LAY rules for hooks and shelves in drag/drop adapter.
+- [x] Align item bottoms to DropLine for shelf/floor placement.
+- [x] Make slot ID assignment skip non-slot nodes.
+- [x] Remove old WorkdeskScene shelf and update tests for new demo item types.
+- [x] Run tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (log shows an audio init error line, exit code 0).

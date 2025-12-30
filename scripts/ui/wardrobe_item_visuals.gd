@@ -2,6 +2,7 @@ extends RefCounted
 class_name WardrobeItemVisualsAdapter
 
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
 const ITEM_TEXTURE_PATHS := {
 	ItemNode.ItemType.COAT: [
 		"res://assets/sprites/item_coat.png",
@@ -14,6 +15,18 @@ const ITEM_TEXTURE_PATHS := {
 	ItemNode.ItemType.ANCHOR_TICKET: [
 		"res://assets/sprites/item_anchor_ticket.png",
 		"res://assets/sprites/placeholder/item_anchor_ticket.png",
+	],
+	ItemNode.ItemType.BOTTLE: [
+		"res://assets/sprites/item_bottle.png",
+		"res://assets/sprites/placeholder/item_coat.png",
+	],
+	ItemNode.ItemType.CHEST: [
+		"res://assets/sprites/item_chest.png",
+		"res://assets/sprites/placeholder/item_coat.png",
+	],
+	ItemNode.ItemType.HAT: [
+		"res://assets/sprites/item_hat.png",
+		"res://assets/sprites/placeholder/item_coat.png",
 	],
 }
 
@@ -44,7 +57,7 @@ func spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> voi
 	if node == null:
 		node = _item_scene.instantiate() as ItemNode
 		node.item_id = str(instance.id)
-		node.item_type = resolve_item_type_from_kind(instance.kind)
+		node.item_type = resolve_item_type(instance)
 		apply_item_visuals(node, instance.color)
 		_item_nodes[instance.id] = node
 		_spawned_items.append(node)
@@ -64,6 +77,8 @@ func apply_item_visuals(item: ItemNode, tint: Variant) -> void:
 			sprite.modulate = Color.WHITE
 		else:
 			sprite.modulate = parse_color(tint)
+	item.configure_pick_box_from_sprite()
+	item.refresh_physics_shape_from_sprite()
 
 func get_item_texture(item_type: int) -> Texture2D:
 	var paths: Array = ITEM_TEXTURE_PATHS.get(item_type, ITEM_TEXTURE_PATHS[ItemNode.ItemType.COAT])
@@ -75,22 +90,12 @@ func get_item_texture(item_type: int) -> Texture2D:
 	return null
 
 func resolve_kind_from_item_type(item_type: int) -> StringName:
-	match item_type:
-		ItemNode.ItemType.TICKET:
-			return ItemInstanceScript.KIND_TICKET
-		ItemNode.ItemType.ANCHOR_TICKET:
-			return ItemInstanceScript.KIND_ANCHOR_TICKET
-		_:
-			return ItemInstanceScript.KIND_COAT
+	return WardrobeItemConfigScript.get_kind_for_item_type(item_type)
 
-func resolve_item_type_from_kind(kind: StringName) -> ItemNode.ItemType:
-	match kind:
-		ItemInstanceScript.KIND_TICKET:
-			return ItemNode.ItemType.TICKET
-		ItemInstanceScript.KIND_ANCHOR_TICKET:
-			return ItemNode.ItemType.ANCHOR_TICKET
-		_:
-			return ItemNode.ItemType.COAT
+func resolve_item_type(instance: ItemInstance) -> ItemNode.ItemType:
+	if instance == null:
+		return ItemNode.ItemType.COAT
+	return WardrobeItemConfigScript.resolve_item_type(instance.id, instance.kind)
 
 func parse_color(value: Variant) -> Color:
 	match typeof(value):

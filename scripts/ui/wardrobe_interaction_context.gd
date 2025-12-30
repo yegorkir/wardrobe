@@ -10,6 +10,7 @@ var item_nodes: Dictionary = {}
 var spawned_items: Array = []
 var item_scene: PackedScene
 var item_visuals: WardrobeItemVisualsAdapter
+var physics_tick
 var event_adapter: WardrobeInteractionEventAdapter
 var interaction_events: WardrobeInteractionEventsAdapter
 var desk_event_dispatcher: DeskEventDispatcher
