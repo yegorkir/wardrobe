@@ -15,5 +15,9 @@
 - [x] Introduce `WardrobeSurface2D` base contract and update shelf/floor adapters + registry types.
 - [x] Add ItemNode surface ownership helpers to remove items without group scans.
 - [x] Align pass-through restore threshold with floor contact (bottom Y + epsilon).
+- [x] Enforce `WardrobeSurface2D` as the only registry contract with ItemNode-typed methods and typed arrays.
+- [x] Switch all registry access to the autoload accessor (`SurfaceRegistryService.get_autoload()`).
+- [x] Replace overlap decision dictionaries with `PhysicsGateResult` (typed decision/reason).
+- [x] Fix enum assignment warnings in the tick adapter with explicit casts.
 - [x] Run `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`.
 - [x] Launch Godot with `"$GODOT_BIN" --path .`.

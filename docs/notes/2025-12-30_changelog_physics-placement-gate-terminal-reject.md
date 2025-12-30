@@ -18,4 +18,9 @@
 - Added `ItemNode` surface ownership helpers and used them to remove items without group scans.
 - Tightened pass-through restore threshold to align with floor contact using bottom Y + epsilon.
 - Switched surface adapters to extend the base surface script directly and aligned method signatures with the base contract.
-- Updated SurfaceRegistry to use `is_class("WardrobeSurface2D")` checks to avoid global-type resolution issues in headless runs.
+- Tightened SurfaceRegistry typing around `WardrobeSurface2D` and removed dynamic type checks where possible.
+- Formalized `WardrobeSurface2D` as the single surface contract (typed arrays in registry, ItemNode-typed methods) and removed unsafe-method access.
+- Replaced scene-based registry lookups with a single autoload accessor (`SurfaceRegistryService.get_autoload()`).
+- Added `PhysicsGateResult` value object and updated overlap decision flow to use typed results instead of dictionaries.
+- Switched SurfaceRegistry typing to a preload-backed `WardrobeSurface2D` alias to keep headless parsing stable.
+- Aligned tick adapter enum assignments with explicit `as` casting to remove enum/int warnings.

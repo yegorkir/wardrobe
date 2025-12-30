@@ -3,7 +3,7 @@ extends "res://scripts/wardrobe/surface/wardrobe_surface_2d.gd"
 class_name ShelfSurfaceAdapter
 
 const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
-const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
+const SurfaceRegistry := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 const WardrobeSurface2DScript := preload("res://scripts/wardrobe/surface/wardrobe_surface_2d.gd")
 
 const SHELF_GROUP := PhysicsLayers.GROUP_SHELVES
@@ -70,13 +70,11 @@ func register_item(item: ItemNode) -> void:
 	_items_by_id[StringName(item.item_id)] = item
 	item.set_current_surface(self)
 
-func remove_item(item: Node) -> void:
+func remove_item(item: ItemNode) -> void:
 	if item == null:
 		return
-	if item is ItemNode:
-		var typed := item as ItemNode
-		_items_by_id.erase(StringName(typed.item_id))
-		typed.clear_current_surface()
+	_items_by_id.erase(StringName(item.item_id))
+	item.clear_current_surface()
 
 func is_point_inside(global_point: Vector2) -> bool:
 	var rect := _get_drop_rect_local()
@@ -253,8 +251,8 @@ func _unregister_surface() -> void:
 		return
 	registry.unregister_shelf(self)
 
-func _resolve_surface_registry() -> Node:
-	return SurfaceRegistryScript.resolve(self)
+func _resolve_surface_registry() -> SurfaceRegistry:
+	return SurfaceRegistry.get_autoload()
 
 func _pull_drop_area_height() -> void:
 	if _drop_shape == null:

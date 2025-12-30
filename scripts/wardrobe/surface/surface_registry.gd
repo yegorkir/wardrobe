@@ -1,42 +1,40 @@
 class_name SurfaceRegistryService
 extends Node
 
-const WardrobeSurface2DScript := preload("res://scripts/wardrobe/surface/wardrobe_surface_2d.gd")
+const WardrobeSurface2D := preload("res://scripts/wardrobe/surface/wardrobe_surface_2d.gd")
 
-var _floors: Array = []
-var _shelves: Array = []
+var _floors: Array[WardrobeSurface2D] = []
+var _shelves: Array[WardrobeSurface2D] = []
 
-static func resolve(node_owner: Node) -> SurfaceRegistryService:
-	if node_owner == null:
-		return null
-	var tree := node_owner.get_tree()
+static func get_autoload() -> SurfaceRegistryService:
+	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null:
 		return null
 	return tree.root.get_node_or_null("SurfaceRegistry") as SurfaceRegistryService
 
-func register_floor(surface: Node) -> void:
+func register_floor(surface: WardrobeSurface2D) -> void:
 	_add_unique(_floors, surface)
 
-func unregister_floor(surface: Node) -> void:
+func unregister_floor(surface: WardrobeSurface2D) -> void:
 	_remove_existing(_floors, surface)
 
-func register_shelf(surface: Node) -> void:
+func register_shelf(surface: WardrobeSurface2D) -> void:
 	_add_unique(_shelves, surface)
 
-func unregister_shelf(surface: Node) -> void:
+func unregister_shelf(surface: WardrobeSurface2D) -> void:
 	_remove_existing(_shelves, surface)
 
-func get_floors() -> Array:
+func get_floors() -> Array[WardrobeSurface2D]:
 	return _floors.duplicate()
 
-func get_shelves() -> Array:
+func get_shelves() -> Array[WardrobeSurface2D]:
 	return _shelves.duplicate()
 
-func get_floor_below(item_x: float, item_bottom_y: float) -> Node:
-	var best: Node = null
+func get_floor_below(item_x: float, item_bottom_y: float) -> WardrobeSurface2D:
+	var best: WardrobeSurface2D = null
 	var best_delta := INF
 	for surface in _floors:
-		if surface == null or not is_instance_valid(surface) or not surface.is_class("WardrobeSurface2D"):
+		if surface == null or not is_instance_valid(surface):
 			continue
 		var surface_y: float = surface.get_surface_y_global()
 		var delta: float = surface_y - item_bottom_y
@@ -53,32 +51,32 @@ func remove_item_from_all(item: ItemNode) -> void:
 	if item == null:
 		return
 	if item.current_surface != null and is_instance_valid(item.current_surface):
-		var surface := item.current_surface
-		if surface.is_class("WardrobeSurface2D"):
+		var surface := item.current_surface as WardrobeSurface2D
+		if surface != null:
 			surface.remove_item(item)
 		item.clear_current_surface()
 		return
 	for shelf in _shelves:
-		if shelf != null and shelf.is_class("WardrobeSurface2D"):
+		if shelf != null:
 			shelf.remove_item(item)
 	for floor_node in _floors:
-		if floor_node != null and floor_node.is_class("WardrobeSurface2D"):
+		if floor_node != null:
 			floor_node.remove_item(item)
 	item.clear_current_surface()
 
-func _add_unique(store: Array, surface: Node) -> void:
-	if surface == null or not surface.is_class("WardrobeSurface2D"):
+func _add_unique(store: Array, surface: WardrobeSurface2D) -> void:
+	if surface == null:
 		return
 	if store.has(surface):
 		return
 	store.append(surface)
 
-func _remove_existing(store: Array, surface: Node) -> void:
+func _remove_existing(store: Array, surface: WardrobeSurface2D) -> void:
 	if surface == null:
 		return
 	store.erase(surface)
 
-func _is_x_within_surface_bounds(surface: Node, item_x: float) -> bool:
+func _is_x_within_surface_bounds(surface: WardrobeSurface2D, item_x: float) -> bool:
 	var bounds: Rect2 = surface.get_surface_bounds_global()
 	if bounds.size == Vector2.ZERO:
 		return true

@@ -12,7 +12,7 @@ const ShelfSurfaceAdapterScript := preload("res://scripts/ui/shelf_surface_adapt
 const FloorZoneAdapterScript := preload("res://scripts/ui/floor_zone_adapter.gd")
 const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
 const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
-const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
+const SurfaceRegistry := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 
 const HOVER_DISTANCE_SQ := 64.0 * 64.0
 const HOVER_TIE_EPSILON := 0.001
@@ -44,7 +44,7 @@ var _hover_slot_original_modulate := Color.WHITE
 var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
-var _surface_registry
+var _surface_registry: SurfaceRegistry
 @export var debug_log: bool = false
 func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Callable = Callable()) -> void:
 	var typed := context
@@ -64,7 +64,7 @@ func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Cal
 	_cursor_hand = cursor_hand
 	_physics_tick = typed.physics_tick
 	_validate_world = validate_world
-	_surface_registry = SurfaceRegistryScript.resolve(_cursor_hand)
+	_surface_registry = SurfaceRegistry.get_autoload()
 	_cache_slots()
 	_setup_item_visuals(typed.item_scene)
 	_setup_interaction_events(typed.desk_by_id)
@@ -351,9 +351,7 @@ func _remove_item_from_surfaces(item: ItemNode) -> void:
 		return
 	if item.current_surface != null and is_instance_valid(item.current_surface):
 		var surface := item.current_surface
-		if surface.has_method("remove_item"):
-			surface.call("remove_item", item)
-		item.clear_current_surface()
+		surface.remove_item(item)
 		return
 	for shelf in _shelf_surfaces:
 		if shelf is ShelfSurfaceAdapter:

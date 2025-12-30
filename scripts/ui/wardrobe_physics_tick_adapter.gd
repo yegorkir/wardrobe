@@ -2,8 +2,9 @@ extends Node2D
 class_name WardrobePhysicsTickAdapter
 
 const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
-const PhysicsPlacementGateScript := preload("res://scripts/wardrobe/physics/physics_placement_gate.gd")
-const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
+const PhysicsPlacementGate := preload("res://scripts/wardrobe/physics/physics_placement_gate.gd")
+const PhysicsGateResult := preload("res://scripts/wardrobe/physics/physics_gate_result.gd")
+const SurfaceRegistry := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 
 const TORQUE_BASE := 5.0
 const Y_SNAP_EPSILON := 2.0
@@ -26,12 +27,12 @@ var _pending_stability_checks: Array[Dictionary] = []
 var _drag_probe_item: ItemNode
 var _drag_probe_supported := false
 var _overlap_cooldowns: Dictionary = {}
-var _placement_gate
-var _surface_registry
+var _placement_gate: PhysicsPlacementGate
+var _surface_registry: SurfaceRegistry
 
 func _ready() -> void:
 	add_to_group(PhysicsLayers.GROUP_TICK)
-	_placement_gate = PhysicsPlacementGateScript.new(
+	_placement_gate = PhysicsPlacementGate.new(
 		OVERLAP_MAX_AFFECTED,
 		OVERLAP_MAX_AREA_RATIO,
 		OVERLAP_MAX_PUSH_PER_ITEM_PX,
@@ -39,7 +40,7 @@ func _ready() -> void:
 		OVERLAP_MIN_PUSH_PX,
 		OVERLAP_IGNORE_PX
 	)
-	_surface_registry = SurfaceRegistryScript.resolve(self)
+	_surface_registry = SurfaceRegistry.get_autoload()
 
 func enqueue_drop_check(item: ItemNode, preferred_surface: Node = null) -> void:
 	if item == null:
@@ -112,22 +113,27 @@ func _run_stability_check(
 		var dir := _resolve_overlap_push_dir(item, overlap_hits, bounds)
 		var metrics := _compute_overlap_metrics(item, overlap_hits)
 		var would_push := _would_push_out_of_bounds(item, bounds, dir, float(metrics.get("max_push_px", 0.0)))
-		var decision: Dictionary = _placement_gate.decide_overlap(metrics, would_push)
-		var reason := String(decision.get("reason", ""))
+		var result: PhysicsGateResult = _placement_gate.decide_overlap(metrics, would_push)
+		var reason := StringName()
+		if result != null:
+			reason = result.reason
 		if _is_in_overlap_cooldown(item):
-			if int(decision.get("decision", PhysicsPlacementGateScript.Decision.ALLOW)) == PhysicsPlacementGateScript.Decision.REJECT:
-				_log_overlap_metrics(item, metrics, reason)
+			if result != null and result.decision == PhysicsPlacementGate.Decision.REJECT:
+				_log_overlap_metrics(item, metrics, String(reason))
 				_reject_big_overlap(item)
 				_log_debug("overlap item=%s resolve" % item.item_id)
 				return
 			_log_debug("overlap skip item=%s cooldown" % item.item_id)
 			return
-		if reason != "":
-			_log_overlap_metrics(item, metrics, reason)
-		match int(decision.get("decision", PhysicsPlacementGateScript.Decision.ALLOW)):
-			PhysicsPlacementGateScript.Decision.REJECT:
+		if reason != StringName():
+			_log_overlap_metrics(item, metrics, String(reason))
+		var decision := PhysicsPlacementGate.Decision.ALLOW
+		if result != null:
+			decision = result.decision as PhysicsPlacementGate.Decision
+		match decision:
+			PhysicsPlacementGate.Decision.REJECT:
 				_reject_big_overlap(item)
-			PhysicsPlacementGateScript.Decision.ALLOW_NUDGE:
+			PhysicsPlacementGate.Decision.ALLOW_NUDGE:
 				_apply_small_overlap_push(item, dir, metrics)
 				_set_overlap_cooldown(item)
 			_:
