@@ -13,3 +13,9 @@
 - Added integration tests for ItemNode geometry contracts and physics layer SSOT expectations.
 - Renamed the autoload class to avoid `SurfaceRegistry` name conflicts and adjusted adapters to resolve the registry via `SceneTree` where needed.
 - Fixed GDScript typing/inference issues in registry usage and overlap decision logic after headless parse checks.
+- Added `WardrobeSurface2D` base type and switched shelf/floor adapters plus registry storage to typed surfaces.
+- Centralized registry lookup via `SurfaceRegistryService.resolve(...)` to avoid scattered `/root/...` calls.
+- Added `ItemNode` surface ownership helpers and used them to remove items without group scans.
+- Tightened pass-through restore threshold to align with floor contact using bottom Y + epsilon.
+- Switched surface adapters to extend the base surface script directly and aligned method signatures with the base contract.
+- Updated SurfaceRegistry to use `is_class("WardrobeSurface2D")` checks to avoid global-type resolution issues in headless runs.

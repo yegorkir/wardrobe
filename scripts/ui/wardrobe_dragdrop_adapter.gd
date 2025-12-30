@@ -64,7 +64,7 @@ func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Cal
 	_cursor_hand = cursor_hand
 	_physics_tick = typed.physics_tick
 	_validate_world = validate_world
-	_surface_registry = _resolve_surface_registry()
+	_surface_registry = SurfaceRegistryScript.resolve(_cursor_hand)
 	_cache_slots()
 	_setup_item_visuals(typed.item_scene)
 	_setup_interaction_events(typed.desk_by_id)
@@ -291,8 +291,8 @@ func _resolve_floor_pass_through_y(item: ItemNode, floor_zone: FloorZoneAdapter)
 	if item == null or floor_zone == null:
 		return INF
 	var surface_y := floor_zone.get_surface_y_global()
-	var pass_through_y := surface_y - PASS_THROUGH_MARGIN_PX
-	if pass_through_y <= item.get_bottom_y_global():
+	var pass_through_y := surface_y
+	if pass_through_y <= item.get_bottom_y_global() - PASS_THROUGH_MARGIN_PX:
 		return INF
 	return pass_through_y
 
@@ -349,6 +349,12 @@ func _is_surface_item(item: ItemNode) -> bool:
 func _remove_item_from_surfaces(item: ItemNode) -> void:
 	if item == null:
 		return
+	if item.current_surface != null and is_instance_valid(item.current_surface):
+		var surface := item.current_surface
+		if surface.has_method("remove_item"):
+			surface.call("remove_item", item)
+		item.clear_current_surface()
+		return
 	for shelf in _shelf_surfaces:
 		if shelf is ShelfSurfaceAdapter:
 			shelf.remove_item(item)
@@ -402,12 +408,6 @@ func _get_world_space_state() -> PhysicsDirectSpaceState2D:
 	if _cursor_hand and _cursor_hand.is_inside_tree():
 		return _cursor_hand.get_world_2d().direct_space_state
 	return null
-
-func _resolve_surface_registry() -> Node:
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null:
-		return null
-	return tree.root.get_node_or_null("SurfaceRegistry")
 
 func _update_hover(cursor_pos: Vector2) -> void:
 	var best_slot: WardrobeSlot = null

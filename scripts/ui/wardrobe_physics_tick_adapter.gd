@@ -39,7 +39,7 @@ func _ready() -> void:
 		OVERLAP_MIN_PUSH_PX,
 		OVERLAP_IGNORE_PX
 	)
-	_surface_registry = get_node_or_null("/root/SurfaceRegistry")
+	_surface_registry = SurfaceRegistryScript.resolve(self)
 
 func enqueue_drop_check(item: ItemNode, preferred_surface: Node = null) -> void:
 	if item == null:
@@ -354,10 +354,8 @@ func _reject_big_overlap(item: ItemNode) -> void:
 	_remove_item_from_surface_registries(item)
 	var floor_zone := _get_floor_below_item(item)
 	if floor_zone != null:
-		var surface_y_var: Variant = floor_zone.call("get_surface_y_global")
-		if typeof(surface_y_var) == TYPE_FLOAT:
-			var pass_through_y := float(surface_y_var) - REJECT_PASS_THROUGH_MARGIN_PX
-			item.start_reject_fall(pass_through_y)
+		var pass_through_y: float = floor_zone.get_surface_y_global()
+		item.start_reject_fall(pass_through_y)
 		if floor_zone.has_method("drop_item_with_fall"):
 			floor_zone.call("drop_item_with_fall", item, item.global_position)
 		elif floor_zone.has_method("drop_item"):

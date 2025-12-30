@@ -11,5 +11,9 @@
 - [x] Update drag/drop floor selection to use registry and bottom-Y-based thresholds.
 - [x] Sync collision layers/masks in relevant prefabs/scenes with SSOT.
 - [x] Add integration tests for layers and geometry contracts.
+- [x] Centralize SurfaceRegistry access via a single helper and remove direct `/root` lookups.
+- [x] Introduce `WardrobeSurface2D` base contract and update shelf/floor adapters + registry types.
+- [x] Add ItemNode surface ownership helpers to remove items without group scans.
+- [x] Align pass-through restore threshold with floor contact (bottom Y + epsilon).
 - [x] Run `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`.
 - [x] Launch Godot with `"$GODOT_BIN" --path .`.

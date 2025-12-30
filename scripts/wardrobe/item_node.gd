@@ -61,6 +61,9 @@ var _pass_through_restore_layer := 0
 var _pass_through_restore_mask := 0
 var _pick_default_size := Vector2.ZERO
 var _reject_falling := false
+var current_surface: Node
+
+const PASS_THROUGH_RESTORE_EPS := 0.5
 
 func _ready() -> void:
 	contact_monitor = true
@@ -80,7 +83,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if _pass_through_active:
-		if get_bottom_y_global() >= _pass_through_until_y:
+		if get_bottom_y_global() >= _pass_through_until_y - PASS_THROUGH_RESTORE_EPS:
 			_restore_pass_through()
 	if freeze or _is_dragging:
 		_settle_time = 0.0
@@ -428,3 +431,12 @@ func is_reject_falling() -> bool:
 
 func is_pass_through_active() -> bool:
 	return _pass_through_active
+
+func can_register_on_surface() -> bool:
+	return not _reject_falling
+
+func set_current_surface(surface: Node) -> void:
+	current_surface = surface
+
+func clear_current_surface() -> void:
+	current_surface = null

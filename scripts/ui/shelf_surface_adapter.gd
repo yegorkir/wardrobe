@@ -1,9 +1,10 @@
 @tool
-extends Node2D
+extends "res://scripts/wardrobe/surface/wardrobe_surface_2d.gd"
 class_name ShelfSurfaceAdapter
 
 const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
 const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
+const WardrobeSurface2DScript := preload("res://scripts/wardrobe/surface/wardrobe_surface_2d.gd")
 
 const SHELF_GROUP := PhysicsLayers.GROUP_SHELVES
 
@@ -67,11 +68,15 @@ func register_item(item: ItemNode) -> void:
 	if item == null:
 		return
 	_items_by_id[StringName(item.item_id)] = item
+	item.set_current_surface(self)
 
-func remove_item(item: ItemNode) -> void:
+func remove_item(item: Node) -> void:
 	if item == null:
 		return
-	_items_by_id.erase(StringName(item.item_id))
+	if item is ItemNode:
+		var typed := item as ItemNode
+		_items_by_id.erase(StringName(typed.item_id))
+		typed.clear_current_surface()
 
 func is_point_inside(global_point: Vector2) -> bool:
 	var rect := _get_drop_rect_local()
@@ -95,7 +100,7 @@ func get_drop_rect_global() -> Rect2:
 func place_item(item: ItemNode, drop_global_pos: Vector2) -> void:
 	if item == null:
 		return
-	if item.is_reject_falling():
+	if not item.can_register_on_surface():
 		return
 	remove_item(item)
 	_items_by_id[StringName(item.item_id)] = item
@@ -120,6 +125,7 @@ func place_item(item: ItemNode, drop_global_pos: Vector2) -> void:
 	item.global_position = Vector2(target_x, item.global_position.y)
 	item.snap_bottom_to_y(get_surface_y_global())
 	item.z_index = int(item.global_position.y)
+	item.set_current_surface(self)
 	_debug_validate_item_alignment(item)
 	log_debug("place item=%s pos=%.1f,%.1f" % [item.item_id, item.global_position.x, item.global_position.y])
 
@@ -247,8 +253,8 @@ func _unregister_surface() -> void:
 		return
 	registry.unregister_shelf(self)
 
-func _resolve_surface_registry():
-	return get_node_or_null("/root/SurfaceRegistry")
+func _resolve_surface_registry() -> Node:
+	return SurfaceRegistryScript.resolve(self)
 
 func _pull_drop_area_height() -> void:
 	if _drop_shape == null:
