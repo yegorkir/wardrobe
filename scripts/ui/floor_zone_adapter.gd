@@ -1,7 +1,10 @@
 extends Node2D
 class_name FloorZoneAdapter
 
-const FLOOR_GROUP := "wardrobe_floor_zones"
+const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
+const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
+
+const FLOOR_GROUP := PhysicsLayers.GROUP_FLOORS
 
 @export var scatter_step_px: int = 2
 @export var scatter_bucket: int = 17
@@ -25,8 +28,13 @@ var _warned_missing_surface_shape := false
 func _ready() -> void:
 	add_to_group(FLOOR_GROUP)
 	_resolve_children()
+	_apply_physics_layers()
 	if _items_root:
 		_items_root.y_sort_enabled = true
+	_register_surface()
+
+func _exit_tree() -> void:
+	_unregister_surface()
 
 func contains_item(item: ItemNode) -> bool:
 	if item == null:
@@ -126,6 +134,29 @@ func _resolve_children() -> void:
 		_items_root = _drop_area.find_child("ItemsRoot", true, false) as Node2D
 	if _drop_line == null and _drop_area:
 		_drop_line = _drop_area.find_child("DropLine", true, false) as Node2D
+
+func _apply_physics_layers() -> void:
+	if _surface_body:
+		_surface_body.collision_layer = PhysicsLayers.LAYER_FLOOR_BIT
+		_surface_body.collision_mask = PhysicsLayers.LAYER_ITEM_BIT
+	if _drop_area:
+		_drop_area.collision_layer = PhysicsLayers.LAYER_PICK_AREA_BIT
+		_drop_area.collision_mask = 0
+
+func _register_surface() -> void:
+	var registry = _resolve_surface_registry()
+	if registry == null:
+		return
+	registry.register_floor(self)
+
+func _unregister_surface() -> void:
+	var registry = _resolve_surface_registry()
+	if registry == null:
+		return
+	registry.unregister_floor(self)
+
+func _resolve_surface_registry():
+	return get_node_or_null("/root/SurfaceRegistry")
 
 func get_surface_y_global() -> float:
 	if _surface_ref:

@@ -1,6 +1,8 @@
 class_name ItemNode
 extends RigidBody2D
 
+const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
+
 enum ItemType {
 	COAT,
 	TICKET,
@@ -31,8 +33,8 @@ const SETTLE_ANGULAR_THRESHOLD := 0.4
 const SETTLE_REQUIRED_TIME := 1.0
 const SUPPORT_RAY_LENGTH := 48.0
 const SETTLE_GRACE_FRAMES := 2
-const DEFAULT_COLLISION_LAYER := 1 << 1
-const DEFAULT_COLLISION_MASK := 1 | (1 << 1)
+const DEFAULT_COLLISION_LAYER := PhysicsLayers.LAYER_ITEM_BIT
+const DEFAULT_COLLISION_MASK := PhysicsLayers.MASK_ITEM_DEFAULT
 const PASS_THROUGH_PICK_SCALE := 1.6
 
 @export var item_id: String = ""
@@ -58,6 +60,7 @@ var _pass_through_until_y := 0.0
 var _pass_through_restore_layer := 0
 var _pass_through_restore_mask := 0
 var _pick_default_size := Vector2.ZERO
+var _reject_falling := false
 
 func _ready() -> void:
 	contact_monitor = true
@@ -77,7 +80,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	if _pass_through_active:
-		if global_position.y >= _pass_through_until_y:
+		if get_bottom_y_global() >= _pass_through_until_y:
 			_restore_pass_through()
 	if freeze or _is_dragging:
 		_settle_time = 0.0
@@ -177,26 +180,34 @@ func get_physics_shape_query() -> Dictionary:
 	}
 
 func get_global_bottom_y() -> float:
+	return get_bottom_y_global()
+
+func get_collider_aabb_global() -> Rect2:
 	if _physics_shape == null or _physics_shape.shape == null:
-		return global_position.y + get_visual_half_height()
-	if _physics_shape.shape is RectangleShape2D:
-		var rect := _physics_shape.shape as RectangleShape2D
-		return _physics_shape.global_position.y + rect.size.y * 0.5
-	if _physics_shape.shape is CircleShape2D:
-		var circle := _physics_shape.shape as CircleShape2D
-		return _physics_shape.global_position.y + circle.radius
+		return _get_sprite_aabb()
+	var shape := _physics_shape.shape as Shape2D
+	var shape_transform := _physics_shape.global_transform
+	return _get_shape_aabb(shape, shape_transform)
+
+func get_bottom_y_global() -> float:
+	var rect := get_collider_aabb_global()
+	if rect.size != Vector2.ZERO:
+		return rect.position.y + rect.size.y
 	return global_position.y + get_visual_half_height()
 
 func snap_to_surface(hit_position: Vector2, epsilon: float) -> void:
 	if not freeze:
 		return
-	var bottom_y := get_global_bottom_y()
+	var bottom_y := get_bottom_y_global()
 	var delta := hit_position.y - bottom_y
 	if abs(delta) <= epsilon:
 		global_position.y += delta
 
+func snap_bottom_to_y(target_y: float) -> void:
+	global_position.y += target_y - get_bottom_y_global()
+
 func force_snap_bottom_to_y(target_y: float) -> void:
-	global_position.y += target_y - get_global_bottom_y()
+	snap_bottom_to_y(target_y)
 
 func enter_drag_mode() -> void:
 	_is_dragging = true
@@ -219,12 +230,19 @@ func exit_drag_mode() -> void:
 	_settle_grace_frames = SETTLE_GRACE_FRAMES
 
 func enable_pass_through_until_y(target_y: float) -> void:
+	_start_pass_through(target_y, false)
+
+func start_reject_fall(target_y: float) -> void:
+	_start_pass_through(target_y, true)
+
+func _start_pass_through(target_y: float, reject: bool) -> void:
 	_pass_through_active = true
+	_reject_falling = reject
 	_pass_through_until_y = target_y
 	_pass_through_restore_layer = collision_layer
 	_pass_through_restore_mask = collision_mask
-	collision_layer = 0
-	collision_mask = 0
+	collision_layer = DEFAULT_COLLISION_LAYER
+	collision_mask = PhysicsLayers.MASK_FLOOR_ONLY
 	_expand_pick_area()
 
 func _restore_pass_through() -> void:
@@ -233,18 +251,26 @@ func _restore_pass_through() -> void:
 	collision_layer = _pass_through_restore_layer
 	collision_mask = _pass_through_restore_mask
 	_restore_pick_area()
+	if _reject_falling:
+		_reject_falling = false
+		_state = State.SETTLING
+		_settle_grace_frames = SETTLE_GRACE_FRAMES
 
 func _clear_pass_through() -> void:
+	if _pass_through_active:
+		collision_layer = _pass_through_restore_layer
+		collision_mask = _pass_through_restore_mask
 	_pass_through_active = false
 	_pass_through_until_y = 0.0
+	_reject_falling = false
 	_restore_pick_area()
 
 func _prepare_pick_area() -> void:
 	var pick_area := $PickArea as Area2D
 	if pick_area == null:
 		return
-	pick_area.collision_layer = 1 << 2
-	pick_area.collision_mask = 1 << 2
+	pick_area.collision_layer = PhysicsLayers.LAYER_PICK_AREA_BIT
+	pick_area.collision_mask = PhysicsLayers.LAYER_PICK_AREA_BIT
 	pick_area.input_pickable = true
 
 func _cache_default_pick_size() -> void:
@@ -311,11 +337,45 @@ func _resolve_local_center() -> Vector2:
 		return _physics_shape.position
 	return Vector2.ZERO
 
+func _get_sprite_aabb() -> Rect2:
+	var half := Vector2(get_visual_half_width(), get_visual_half_height())
+	return Rect2(global_position - half, half * 2.0)
+
+func _get_shape_aabb(shape: Shape2D, shape_transform: Transform2D) -> Rect2:
+	if shape == null:
+		return Rect2()
+	if shape is RectangleShape2D:
+		var rect := shape as RectangleShape2D
+		var half := rect.size * 0.5
+		var points := PackedVector2Array([
+			Vector2(-half.x, -half.y),
+			Vector2(half.x, -half.y),
+			Vector2(half.x, half.y),
+			Vector2(-half.x, half.y),
+		])
+		var min_x := INF
+		var max_x := -INF
+		var min_y := INF
+		var max_y := -INF
+		for point in points:
+			var world := shape_transform * point
+			min_x = minf(min_x, world.x)
+			max_x = maxf(max_x, world.x)
+			min_y = minf(min_y, world.y)
+			max_y = maxf(max_y, world.y)
+		return Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
+	if shape is CircleShape2D:
+		var circle := shape as CircleShape2D
+		var center := shape_transform.origin
+		var r := circle.radius
+		return Rect2(Vector2(center.x - r, center.y - r), Vector2(r * 2.0, r * 2.0))
+	return Rect2()
+
 
 func _resolve_physics_tick():
 	if _physics_tick != null and is_instance_valid(_physics_tick):
 		return _physics_tick
-	var node := get_tree().get_first_node_in_group("wardrobe_physics_tick")
+	var node := get_tree().get_first_node_in_group(PhysicsLayers.GROUP_TICK)
 	_physics_tick = node
 	return _physics_tick
 
@@ -362,3 +422,9 @@ func allow_settle() -> bool:
 
 func mark_stable() -> void:
 	_state = State.STABLE
+
+func is_reject_falling() -> bool:
+	return _reject_falling
+
+func is_pass_through_active() -> bool:
+	return _pass_through_active

@@ -1,6 +1,8 @@
 class_name CursorHand
 extends Node2D
 
+const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
+
 @export var small_scale: Vector2 = Vector2(0.7, 0.7)
 @export var big_scale: Vector2 = Vector2.ONE
 @export var preview_duration: float = 0.1
@@ -153,6 +155,6 @@ func _reset_feedback() -> void:
 func _resolve_physics_tick():
 	if _physics_tick != null and is_instance_valid(_physics_tick):
 		return _physics_tick
-	var node := get_tree().get_first_node_in_group("wardrobe_physics_tick")
+	var node := get_tree().get_first_node_in_group(PhysicsLayers.GROUP_TICK)
 	_physics_tick = node
 	return _physics_tick

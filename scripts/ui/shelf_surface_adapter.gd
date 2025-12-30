@@ -2,7 +2,10 @@
 extends Node2D
 class_name ShelfSurfaceAdapter
 
-const SHELF_GROUP := "wardrobe_shelves"
+const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
+const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
+
+const SHELF_GROUP := PhysicsLayers.GROUP_SHELVES
 
 @export var shelf_id: StringName = &"Shelf_1"
 @export var shelf_length_px: float = 240.0:
@@ -44,11 +47,16 @@ var _drop_area_height_px: float = 64.0
 func _ready() -> void:
 	add_to_group(SHELF_GROUP)
 	_resolve_children()
+	_apply_physics_layers()
 	_pull_drop_area_height()
 	_sync_from_editor()
 	_debug_validate_alignment()
 	if _items_root:
 		_items_root.y_sort_enabled = true
+	_register_surface()
+
+func _exit_tree() -> void:
+	_unregister_surface()
 
 func contains_item(item: ItemNode) -> bool:
 	if item == null:
@@ -87,6 +95,8 @@ func get_drop_rect_global() -> Rect2:
 func place_item(item: ItemNode, drop_global_pos: Vector2) -> void:
 	if item == null:
 		return
+	if item.is_reject_falling():
+		return
 	remove_item(item)
 	_items_by_id[StringName(item.item_id)] = item
 	if _items_root == null:
@@ -108,7 +118,7 @@ func place_item(item: ItemNode, drop_global_pos: Vector2) -> void:
 		]
 	)
 	item.global_position = Vector2(target_x, item.global_position.y)
-	item.force_snap_bottom_to_y(get_surface_y_global())
+	item.snap_bottom_to_y(get_surface_y_global())
 	item.z_index = int(item.global_position.y)
 	_debug_validate_item_alignment(item)
 	log_debug("place item=%s pos=%.1f,%.1f" % [item.item_id, item.global_position.x, item.global_position.y])
@@ -217,6 +227,29 @@ func _resolve_children() -> void:
 	if _visual_bar == null and _drop_area:
 		_visual_bar = _drop_area.find_child("VisualBar", true, false) as ColorRect
 
+func _apply_physics_layers() -> void:
+	if _surface_body:
+		_surface_body.collision_layer = PhysicsLayers.LAYER_SHELF_BIT
+		_surface_body.collision_mask = PhysicsLayers.LAYER_ITEM_BIT
+	if _drop_area:
+		_drop_area.collision_layer = PhysicsLayers.LAYER_PICK_AREA_BIT
+		_drop_area.collision_mask = 0
+
+func _register_surface() -> void:
+	var registry = _resolve_surface_registry()
+	if registry == null:
+		return
+	registry.register_shelf(self)
+
+func _unregister_surface() -> void:
+	var registry = _resolve_surface_registry()
+	if registry == null:
+		return
+	registry.unregister_shelf(self)
+
+func _resolve_surface_registry():
+	return get_node_or_null("/root/SurfaceRegistry")
+
 func _pull_drop_area_height() -> void:
 	if _drop_shape == null:
 		return
@@ -250,7 +283,7 @@ func _debug_validate_item_alignment(item: ItemNode) -> void:
 	if not debug_log or item == null:
 		return
 	var surface_y: float = get_surface_y_global()
-	var delta: float = abs(item.get_global_bottom_y() - surface_y)
+	var delta: float = abs(item.get_bottom_y_global() - surface_y)
 	if delta > 0.5:
 		push_warning("ShelfSurface %s item=%s bottom misaligned dy=%.2f surface_y=%.2f" % [shelf_id, item.item_id, delta, surface_y])
 

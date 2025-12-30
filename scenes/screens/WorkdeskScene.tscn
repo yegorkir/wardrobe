@@ -63,7 +63,8 @@ position = Vector2(0, 567.26)
 script = ExtResource("6")
 
 [node name="SurfaceBody" type="StaticBody2D" parent="StorageHall/FloorZone1"]
-collision_mask = 0
+collision_layer = 8
+collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone1/SurfaceBody"]
 position = Vector2(360, 0)
@@ -89,7 +90,8 @@ position = Vector2(0, 1055)
 script = ExtResource("6")
 
 [node name="SurfaceBody" type="StaticBody2D" parent="StorageHall/FloorZone2"]
-collision_mask = 0
+collision_layer = 8
+collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone2/SurfaceBody"]
 position = Vector2(360, 0)

@@ -1,12 +1,12 @@
 extends Node2D
 class_name WardrobePhysicsTickAdapter
 
-const SHELF_LAYER_MASK := 1
-const ITEM_LAYER_MASK := 1 << 1
+const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
+const PhysicsPlacementGateScript := preload("res://scripts/wardrobe/physics/physics_placement_gate.gd")
+const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 
 const TORQUE_BASE := 5.0
 const Y_SNAP_EPSILON := 2.0
-const OVERLAP_PUSH := 30.0
 const OVERLAP_TORQUE := 1.5
 const OVERLAP_MAX_PUSH_PER_ITEM_PX := 10.0
 const OVERLAP_MAX_PUSH_TOTAL_PX := 18.0
@@ -18,8 +18,7 @@ const OVERLAP_IGNORE_PX := 1.0
 const OVERLAP_COOLDOWN_FRAMES := 8
 const OUT_OF_BOUNDS_MARGIN := 4.0
 const HIGH_SPEED_LOG_THRESHOLD := 900.0
-const SHELF_GROUP := "wardrobe_shelves"
-const FLOOR_GROUP := "wardrobe_floor_zones"
+const REJECT_PASS_THROUGH_MARGIN_PX := 2.0
 
 @export var debug_log: bool = false
 
@@ -27,9 +26,20 @@ var _pending_stability_checks: Array[Dictionary] = []
 var _drag_probe_item: ItemNode
 var _drag_probe_supported := false
 var _overlap_cooldowns: Dictionary = {}
+var _placement_gate
+var _surface_registry
 
 func _ready() -> void:
-	add_to_group("wardrobe_physics_tick")
+	add_to_group(PhysicsLayers.GROUP_TICK)
+	_placement_gate = PhysicsPlacementGateScript.new(
+		OVERLAP_MAX_AFFECTED,
+		OVERLAP_MAX_AREA_RATIO,
+		OVERLAP_MAX_PUSH_PER_ITEM_PX,
+		OVERLAP_MAX_PUSH_TOTAL_PX,
+		OVERLAP_MIN_PUSH_PX,
+		OVERLAP_IGNORE_PX
+	)
+	_surface_registry = get_node_or_null("/root/SurfaceRegistry")
 
 func enqueue_drop_check(item: ItemNode, preferred_surface: Node = null) -> void:
 	if item == null:
@@ -78,6 +88,9 @@ func _run_stability_check(
 	var ray_hit: Dictionary = _cast_support_ray(space, item, cog_global)
 	var overlap_hits: Array = _get_overlap_hits(space, item)
 	var has_overlap := not overlap_hits.is_empty()
+	if item.is_reject_falling():
+		_log_debug("skip settle item=%s reject_falling" % item.item_id)
+		return
 	if item.is_settling() and not item.allow_settle():
 		_log_debug("skip settle item=%s grace_frames" % item.item_id)
 		return
@@ -96,24 +109,34 @@ func _run_stability_check(
 		]
 	)
 	if has_overlap:
+		var dir := _resolve_overlap_push_dir(item, overlap_hits, bounds)
+		var metrics := _compute_overlap_metrics(item, overlap_hits)
+		var would_push := _would_push_out_of_bounds(item, bounds, dir, float(metrics.get("max_push_px", 0.0)))
+		var decision: Dictionary = _placement_gate.decide_overlap(metrics, would_push)
+		var reason := String(decision.get("reason", ""))
 		if _is_in_overlap_cooldown(item):
-			_wake_overlap_neighbors(overlap_hits)
-			var dir := _resolve_overlap_push_dir(item, overlap_hits, bounds)
-			var metrics := _compute_overlap_metrics(item, overlap_hits)
-			var reject_reason := _resolve_overlap_reject_reason(item, bounds, dir, metrics)
-			if reject_reason != "":
-				_log_overlap_metrics(item, metrics, reject_reason)
+			if int(decision.get("decision", PhysicsPlacementGateScript.Decision.ALLOW)) == PhysicsPlacementGateScript.Decision.REJECT:
+				_log_overlap_metrics(item, metrics, reason)
 				_reject_big_overlap(item)
 				_log_debug("overlap item=%s resolve" % item.item_id)
 				return
 			_log_debug("overlap skip item=%s cooldown" % item.item_id)
 			return
-		_resolve_overlap(item, overlap_hits, bounds)
+		if reason != "":
+			_log_overlap_metrics(item, metrics, reason)
+		match int(decision.get("decision", PhysicsPlacementGateScript.Decision.ALLOW)):
+			PhysicsPlacementGateScript.Decision.REJECT:
+				_reject_big_overlap(item)
+			PhysicsPlacementGateScript.Decision.ALLOW_NUDGE:
+				_apply_small_overlap_push(item, dir, metrics)
+				_set_overlap_cooldown(item)
+			_:
+				pass
 		_log_debug("overlap item=%s resolve" % item.item_id)
 		return
 	if not ray_hit.is_empty() and bounds != Rect2() and _is_within_surface_bounds(item, bounds):
 		var hit_pos: Vector2 = ray_hit.get("position", cog_global) as Vector2
-		var bottom_y: float = item.get_global_bottom_y()
+		var bottom_y: float = item.get_bottom_y_global()
 		var snap_delta: float = abs(hit_pos.y - bottom_y)
 		if snap_delta <= Y_SNAP_EPSILON:
 			var before_x := item.global_position.x
@@ -162,7 +185,7 @@ func _cast_support_ray(
 	var params := PhysicsRayQueryParameters2D.new()
 	params.from = cog_global
 	params.to = cog_global + Vector2(0.0, item.get_support_ray_length())
-	params.collision_mask = SHELF_LAYER_MASK
+	params.collision_mask = PhysicsLayers.LAYER_SHELF_BIT | PhysicsLayers.LAYER_FLOOR_BIT
 	params.exclude = [item.get_rid()]
 	return space.intersect_ray(params)
 
@@ -177,7 +200,7 @@ func _get_overlap_hits(space: PhysicsDirectSpaceState2D, item: ItemNode) -> Arra
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = shape
 	params.transform = shape_transform
-	params.collision_mask = ITEM_LAYER_MASK
+	params.collision_mask = PhysicsLayers.LAYER_ITEM_BIT
 	params.exclude = [item.get_rid()]
 	var hits: Array = space.intersect_shape(params, 4)
 	if debug_log and not hits.is_empty():
@@ -185,38 +208,6 @@ func _get_overlap_hits(space: PhysicsDirectSpaceState2D, item: ItemNode) -> Arra
 			var collider: Object = hit.get("collider", null) as Object
 			_log_debug("overlap item=%s with=%s" % [item.item_id, _collider_debug(collider)])
 	return hits
-
-func _resolve_overlap(item: ItemNode, hits: Array, bounds: Rect2) -> void:
-	if hits.is_empty():
-		return
-	var before_x := item.global_position.x
-	var before_cog_x := item.get_global_cog().x
-	var dir := _resolve_overlap_push_dir(item, hits, bounds)
-	var metrics := _compute_overlap_metrics(item, hits)
-	var max_push: float = float(metrics.get("max_push_px", 0.0))
-	if max_push < OVERLAP_IGNORE_PX:
-		_wake_overlap_neighbors(hits)
-		_log_debug("overlap skip item=%s tiny_push=%.2f" % [item.item_id, max_push])
-		return
-	var reject_reason := _resolve_overlap_reject_reason(item, bounds, dir, metrics)
-	_log_overlap_metrics(item, metrics, reject_reason)
-	if reject_reason != "":
-		_reject_big_overlap(item)
-		return
-	_apply_small_overlap_push(item, dir, metrics)
-	_set_overlap_cooldown(item)
-	var after_x := item.global_position.x
-	var after_cog_x := item.get_global_cog().x
-	if debug_log:
-		_log_debug(
-			"overlap move item=%s x=%.2f->%.2f cog_x=%.2f->%.2f" % [
-				item.item_id,
-				before_x,
-				after_x,
-				before_cog_x,
-				after_cog_x,
-			]
-		)
 
 func _apply_overhang_torque(item: ItemNode, preferred_surface: Node, fallback_bounds: Rect2) -> void:
 	var bounds := fallback_bounds
@@ -307,28 +298,6 @@ func _compute_overlap_metrics(item: ItemNode, hits: Array) -> Dictionary:
 		"entries": entries,
 	}
 
-func _resolve_overlap_reject_reason(
-	item: ItemNode,
-	bounds: Rect2,
-	dir: float,
-	metrics: Dictionary
-) -> String:
-	var affected: int = int(metrics.get("affected_count", 0))
-	var max_push: float = float(metrics.get("max_push_px", 0.0))
-	var total_push: float = float(metrics.get("total_push_px", 0.0))
-	var max_ratio: float = float(metrics.get("max_area_ratio", 0.0))
-	if affected > OVERLAP_MAX_AFFECTED:
-		return "reject_big_overlap_affected"
-	if max_ratio > OVERLAP_MAX_AREA_RATIO:
-		return "reject_big_overlap_area"
-	if max_push > OVERLAP_MAX_PUSH_PER_ITEM_PX:
-		return "reject_big_overlap_push_item"
-	if total_push > OVERLAP_MAX_PUSH_TOTAL_PX:
-		return "reject_big_overlap_push_total"
-	if _would_push_out_of_bounds(item, bounds, dir, max_push):
-		return "reject_big_overlap_bounds"
-	return ""
-
 func _would_push_out_of_bounds(item: ItemNode, bounds: Rect2, dir: float, push_px: float) -> bool:
 	if bounds == Rect2():
 		return false
@@ -338,46 +307,18 @@ func _would_push_out_of_bounds(item: ItemNode, bounds: Rect2, dir: float, push_p
 	return next_x < left_x or next_x > right_x
 
 func _apply_small_overlap_push(item: ItemNode, dir: float, metrics: Dictionary) -> void:
+	if item == null or not item.is_settling():
+		return
 	var total_push: float = float(metrics.get("total_push_px", 0.0))
 	var planned_push := clampf(total_push, OVERLAP_MIN_PUSH_PX, OVERLAP_MAX_PUSH_TOTAL_PX)
 	_wake_item(item)
-	var entries: Array = metrics.get("entries", []) as Array
-	if entries.is_empty():
-		item.apply_central_impulse(Vector2(dir * planned_push * OVERLAP_PUSH_IMPULSE_PER_PX * item.mass, 0.0))
+	item.apply_central_impulse(Vector2(dir * planned_push * OVERLAP_PUSH_IMPULSE_PER_PX * item.mass, 0.0))
 	item.apply_torque_impulse(randf_range(-1.0, 1.0) * OVERLAP_TORQUE * item.mass)
 	_log_debug("overlap allow_small_push item=%s planned_px=%.2f dir=%.0f" % [
 		item.item_id,
 		planned_push,
 		dir,
 	])
-	if not entries.is_empty():
-		_apply_mass_aware_pushes(item, metrics)
-
-func _apply_mass_aware_pushes(item: ItemNode, metrics: Dictionary) -> void:
-	var entries: Array = metrics.get("entries", []) as Array
-	if entries.is_empty():
-		return
-	for entry in entries:
-		if not (entry is Dictionary):
-			continue
-		var other: ItemNode = (entry as Dictionary).get("other", null) as ItemNode
-		if other == null or not is_instance_valid(other):
-			continue
-		_wake_item(other)
-		var overlap_x := float((entry as Dictionary).get("overlap_x", 0.0))
-		if overlap_x <= 0.0:
-			continue
-		var dir := float((entry as Dictionary).get("dir", 0.0))
-		if is_equal_approx(dir, 0.0):
-			dir = 1.0 if randf() < 0.5 else -1.0
-		var total_mass := maxf(0.1, item.mass + other.mass)
-		var self_push := overlap_x * (other.mass / total_mass)
-		item.apply_central_impulse(Vector2(dir * self_push * OVERLAP_PUSH_IMPULSE_PER_PX * item.mass, 0.0))
-		_log_debug("overlap push item=%s other=%s self_px=%.2f" % [
-			item.item_id,
-			other.item_id,
-			self_push,
-		])
 
 func _is_in_overlap_cooldown(item: ItemNode) -> bool:
 	if item == null:
@@ -395,16 +336,6 @@ func _set_overlap_cooldown(item: ItemNode) -> void:
 	var item_key := StringName(item.item_id)
 	_overlap_cooldowns[item_key] = OVERLAP_COOLDOWN_FRAMES
 
-func _wake_overlap_neighbors(hits: Array) -> void:
-	if hits.is_empty():
-		return
-	for hit in hits:
-		if not (hit is Dictionary):
-			continue
-		var collider: Object = (hit as Dictionary).get("collider", null) as Object
-		if collider is ItemNode:
-			_wake_item(collider as ItemNode)
-
 func _wake_item(item: ItemNode) -> void:
 	if item == null:
 		return
@@ -421,8 +352,12 @@ func _reject_big_overlap(item: ItemNode) -> void:
 	item.freeze = false
 	item.sleeping = false
 	_remove_item_from_surface_registries(item)
-	var floor_zone := _get_floor_below_item(item.global_position.y)
+	var floor_zone := _get_floor_below_item(item)
 	if floor_zone != null:
+		var surface_y_var: Variant = floor_zone.call("get_surface_y_global")
+		if typeof(surface_y_var) == TYPE_FLOAT:
+			var pass_through_y := float(surface_y_var) - REJECT_PASS_THROUGH_MARGIN_PX
+			item.start_reject_fall(pass_through_y)
 		if floor_zone.has_method("drop_item_with_fall"):
 			floor_zone.call("drop_item_with_fall", item, item.global_position)
 		elif floor_zone.has_method("drop_item"):
@@ -433,78 +368,24 @@ func _reject_big_overlap(item: ItemNode) -> void:
 	])
 
 func _remove_item_from_surface_registries(item: ItemNode) -> void:
-	var tree := get_tree()
-	if tree == null:
+	if _surface_registry == null:
 		return
-	for shelf in tree.get_nodes_in_group(SHELF_GROUP):
-		if shelf != null and shelf.has_method("remove_item"):
-			shelf.call("remove_item", item)
-	for zone in tree.get_nodes_in_group(FLOOR_GROUP):
-		if zone != null and zone.has_method("remove_item"):
-			zone.call("remove_item", item)
+	_surface_registry.remove_item_from_all(item)
 
-func _get_floor_below_item(item_y: float) -> Node:
-	var tree := get_tree()
-	if tree == null:
+func _get_floor_below_item(item: ItemNode) -> Node:
+	if item == null or _surface_registry == null:
 		return null
-	var best: Node = null
-	var best_delta := INF
-	for zone in tree.get_nodes_in_group(FLOOR_GROUP):
-		if zone == null or not (zone is Node2D):
-			continue
-		var delta := (zone as Node2D).global_position.y - item_y
-		if delta <= 0.0:
-			continue
-		if delta < best_delta:
-			best_delta = delta
-			best = zone
-	return best
+	var item_rect := item.get_collider_aabb_global()
+	var item_x := item.global_position.x
+	if item_rect.size != Vector2.ZERO:
+		item_x = item_rect.position.x + item_rect.size.x * 0.5
+	var bottom_y := item.get_bottom_y_global()
+	return _surface_registry.get_floor_below(item_x, bottom_y)
 
 func _get_item_aabb(item: ItemNode) -> Rect2:
 	if item == null:
 		return Rect2()
-	var shape_data: Dictionary = item.get_physics_shape_query()
-	if shape_data.is_empty():
-		return _get_sprite_aabb(item)
-	var shape := shape_data.get("shape") as Shape2D
-	var shape_transform := shape_data.get("transform") as Transform2D
-	return _get_shape_aabb(shape, shape_transform)
-
-func _get_sprite_aabb(item: ItemNode) -> Rect2:
-	if item == null:
-		return Rect2()
-	var half := Vector2(item.get_visual_half_width(), item.get_visual_half_height())
-	return Rect2(item.global_position - half, half * 2.0)
-
-func _get_shape_aabb(shape: Shape2D, shape_transform: Transform2D) -> Rect2:
-	if shape == null:
-		return Rect2()
-	if shape is RectangleShape2D:
-		var rect := shape as RectangleShape2D
-		var half := rect.size * 0.5
-		var points := PackedVector2Array([
-			Vector2(-half.x, -half.y),
-			Vector2(half.x, -half.y),
-			Vector2(half.x, half.y),
-			Vector2(-half.x, half.y),
-		])
-		var min_x := INF
-		var max_x := -INF
-		var min_y := INF
-		var max_y := -INF
-		for point in points:
-			var world := shape_transform * point
-			min_x = minf(min_x, world.x)
-			max_x = maxf(max_x, world.x)
-			min_y = minf(min_y, world.y)
-			max_y = maxf(max_y, world.y)
-		return Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
-	if shape is CircleShape2D:
-		var circle := shape as CircleShape2D
-		var center := shape_transform.origin
-		var r := circle.radius
-		return Rect2(Vector2(center.x - r, center.y - r), Vector2(r * 2.0, r * 2.0))
-	return Rect2()
+	return item.get_collider_aabb_global()
 
 func _log_overlap_metrics(item: ItemNode, metrics: Dictionary, decision: String) -> void:
 	if not debug_log:

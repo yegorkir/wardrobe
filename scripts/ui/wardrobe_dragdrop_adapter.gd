@@ -11,6 +11,8 @@ const PlacementTypesScript := preload("res://scripts/app/wardrobe/placement/plac
 const ShelfSurfaceAdapterScript := preload("res://scripts/ui/shelf_surface_adapter.gd")
 const FloorZoneAdapterScript := preload("res://scripts/ui/floor_zone_adapter.gd")
 const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
+const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
+const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 
 const HOVER_DISTANCE_SQ := 64.0 * 64.0
 const HOVER_TIE_EPSILON := 0.001
@@ -42,6 +44,7 @@ var _hover_slot_original_modulate := Color.WHITE
 var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
+var _surface_registry
 @export var debug_log: bool = false
 func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Callable = Callable()) -> void:
 	var typed := context
@@ -61,6 +64,7 @@ func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Cal
 	_cursor_hand = cursor_hand
 	_physics_tick = typed.physics_tick
 	_validate_world = validate_world
+	_surface_registry = _resolve_surface_registry()
 	_cache_slots()
 	_setup_item_visuals(typed.item_scene)
 	_setup_interaction_events(typed.desk_by_id)
@@ -232,7 +236,7 @@ func _try_drop_to_floor(cursor_pos: Vector2) -> bool:
 	var item := _cursor_hand.get_active_hand_item()
 	if item == null:
 		return false
-	var target_floor := _get_floor_below_item(item.global_position.y)
+	var target_floor := _get_floor_below_item(item)
 	if target_floor == null:
 		push_warning("No FloorZone below item; drop ignored.")
 		return false
@@ -251,14 +255,26 @@ func _try_drop_to_floor(cursor_pos: Vector2) -> bool:
 	_interaction_service.clear_hand_item()
 	return true
 
-func _get_floor_below_item(item_y: float) -> FloorZoneAdapter:
+func _get_floor_below_item(item: ItemNode) -> FloorZoneAdapter:
+	if item == null:
+		return null
+	if _surface_registry != null:
+		var item_rect := item.get_collider_aabb_global()
+		var item_x := item.global_position.x
+		if item_rect.size != Vector2.ZERO:
+			item_x = item_rect.position.x + item_rect.size.x * 0.5
+		var bottom_y := item.get_bottom_y_global()
+		var floor = _surface_registry.get_floor_below(item_x, bottom_y)
+		if floor is FloorZoneAdapter:
+			return floor as FloorZoneAdapter
 	var best: FloorZoneAdapter = null
 	var best_delta: float = INF
+	var item_bottom_y := item.get_bottom_y_global()
 	for zone in _floor_zones:
 		if not (zone is FloorZoneAdapter):
 			continue
-		var delta: float = zone.global_position.y - item_y
-		if delta <= 0.0:
+		var delta: float = zone.get_surface_y_global() - item_bottom_y
+		if delta < 0.0:
 			continue
 		if delta < best_delta:
 			best_delta = delta
@@ -275,8 +291,8 @@ func _resolve_floor_pass_through_y(item: ItemNode, floor_zone: FloorZoneAdapter)
 	if item == null or floor_zone == null:
 		return INF
 	var surface_y := floor_zone.get_surface_y_global()
-	var pass_through_y := surface_y - item.get_visual_half_height() - PASS_THROUGH_MARGIN_PX
-	if pass_through_y <= item.global_position.y:
+	var pass_through_y := surface_y - PASS_THROUGH_MARGIN_PX
+	if pass_through_y <= item.get_bottom_y_global():
 		return INF
 	return pass_through_y
 
@@ -288,7 +304,7 @@ func _get_surface_item_at_point(cursor_pos: Vector2) -> ItemNode:
 	params.position = cursor_pos
 	params.collide_with_areas = true
 	params.collide_with_bodies = false
-	params.collision_mask = 1 << 2
+	params.collision_mask = PhysicsLayers.MASK_PICK_QUERY
 	var hits := space.intersect_point(params, 32)
 	if hits.is_empty():
 		return null
@@ -386,6 +402,12 @@ func _get_world_space_state() -> PhysicsDirectSpaceState2D:
 	if _cursor_hand and _cursor_hand.is_inside_tree():
 		return _cursor_hand.get_world_2d().direct_space_state
 	return null
+
+func _resolve_surface_registry() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return null
+	return tree.root.get_node_or_null("SurfaceRegistry")
 
 func _update_hover(cursor_pos: Vector2) -> void:
 	var best_slot: WardrobeSlot = null
