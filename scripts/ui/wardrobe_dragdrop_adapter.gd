@@ -15,6 +15,7 @@ const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config
 const HOVER_DISTANCE_SQ := 64.0 * 64.0
 const HOVER_TIE_EPSILON := 0.001
 const HOVER_COLOR := Color(1.0, 0.92, 0.55, 1.0)
+const PASS_THROUGH_MARGIN_PX := 2.0
 
 var _interaction_service: WardrobeInteractionService
 var _storage_state: WardrobeStorageState
@@ -107,6 +108,7 @@ func on_pointer_up(cursor_pos: Vector2) -> void:
 		if _hover_slot:
 			var held := _cursor_hand.get_active_hand_item()
 			if _is_storage_slot(_hover_slot) and not _can_place_on_hook(held):
+				_try_drop_to_floor(cursor_pos)
 				_drag_active = false
 				return
 			_perform_slot_interaction(_hover_slot)
@@ -234,10 +236,16 @@ func _try_drop_to_floor(cursor_pos: Vector2) -> bool:
 	if target_floor == null:
 		push_warning("No FloorZone below item; drop ignored.")
 		return false
+	var pass_through_surface_y := _resolve_floor_pass_through_y(item, target_floor)
 	item = _cursor_hand.take_item_from_hand()
 	_remove_item_from_surfaces(item)
-	target_floor.drop_item(item, cursor_pos)
 	item.exit_drag_mode()
+	if target_floor.has_method("drop_item_with_fall"):
+		target_floor.call("drop_item_with_fall", item, cursor_pos)
+	else:
+		target_floor.drop_item(item, cursor_pos)
+	if pass_through_surface_y < INF:
+		item.enable_pass_through_until_y(pass_through_surface_y)
 	_enqueue_stability_check(item, target_floor)
 	_log_debug("drop floor item=%s pos=%.1f,%.1f" % [item.item_id, item.global_position.x, item.global_position.y])
 	_interaction_service.clear_hand_item()
@@ -262,6 +270,15 @@ func _get_shelf_at_point(cursor_pos: Vector2) -> ShelfSurfaceAdapter:
 		if shelf is ShelfSurfaceAdapter and shelf.is_point_inside(cursor_pos):
 			return shelf
 	return null
+
+func _resolve_floor_pass_through_y(item: ItemNode, floor_zone: FloorZoneAdapter) -> float:
+	if item == null or floor_zone == null:
+		return INF
+	var surface_y := floor_zone.get_surface_y_global()
+	var pass_through_y := surface_y - item.get_visual_half_height() - PASS_THROUGH_MARGIN_PX
+	if pass_through_y <= item.global_position.y:
+		return INF
+	return pass_through_y
 
 func _get_surface_item_at_point(cursor_pos: Vector2) -> ItemNode:
 	var space := _get_world_space_state()

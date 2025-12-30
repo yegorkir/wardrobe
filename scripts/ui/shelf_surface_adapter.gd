@@ -72,6 +72,18 @@ func is_point_inside(global_point: Vector2) -> bool:
 	var local := to_local(global_point)
 	return rect.has_point(local)
 
+func get_drop_rect_global() -> Rect2:
+	var rect := _get_drop_rect_local()
+	if rect.size == Vector2.ZERO:
+		return Rect2()
+	var top_left := to_global(rect.position)
+	var bottom_right := to_global(rect.position + rect.size)
+	var min_x := minf(top_left.x, bottom_right.x)
+	var min_y := minf(top_left.y, bottom_right.y)
+	var max_x := maxf(top_left.x, bottom_right.x)
+	var max_y := maxf(top_left.y, bottom_right.y)
+	return Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
+
 func place_item(item: ItemNode, drop_global_pos: Vector2) -> void:
 	if item == null:
 		return

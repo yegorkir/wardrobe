@@ -31,6 +31,9 @@ const SETTLE_ANGULAR_THRESHOLD := 0.4
 const SETTLE_REQUIRED_TIME := 1.0
 const SUPPORT_RAY_LENGTH := 48.0
 const SETTLE_GRACE_FRAMES := 2
+const DEFAULT_COLLISION_LAYER := 1 << 1
+const DEFAULT_COLLISION_MASK := 1 | (1 << 1)
+const PASS_THROUGH_PICK_SCALE := 1.6
 
 @export var item_id: String = ""
 @export var item_type: ItemType = ItemType.COAT
@@ -50,6 +53,11 @@ var _settle_time := 0.0
 var _is_dragging := false
 var _state: int = State.STABLE
 var _settle_grace_frames := 0
+var _pass_through_active := false
+var _pass_through_until_y := 0.0
+var _pass_through_restore_layer := 0
+var _pass_through_restore_mask := 0
+var _pick_default_size := Vector2.ZERO
 
 func _ready() -> void:
 	contact_monitor = true
@@ -58,15 +66,19 @@ func _ready() -> void:
 	freeze_mode = FREEZE_MODE_KINEMATIC
 	_apply_mass_defaults()
 	mass = maxf(0.1, item_mass)
-	collision_layer = 1 << 1
-	collision_mask = 1 | (1 << 1)
+	collision_layer = DEFAULT_COLLISION_LAYER
+	collision_mask = DEFAULT_COLLISION_MASK
 	_prepare_pick_area()
+	_cache_default_pick_size()
 	_prepare_physics_shape()
 	_apply_physics_material()
 	_update_center_of_mass()
 	body_entered.connect(_on_body_entered)
 
 func _physics_process(delta: float) -> void:
+	if _pass_through_active:
+		if global_position.y >= _pass_through_until_y:
+			_restore_pass_through()
 	if freeze or _is_dragging:
 		_settle_time = 0.0
 		return
@@ -188,6 +200,7 @@ func force_snap_bottom_to_y(target_y: float) -> void:
 
 func enter_drag_mode() -> void:
 	_is_dragging = true
+	_clear_pass_through()
 	freeze = true
 	freeze_mode = FREEZE_MODE_KINEMATIC
 	collision_layer = 0
@@ -198,12 +211,33 @@ func enter_drag_mode() -> void:
 
 func exit_drag_mode() -> void:
 	_is_dragging = false
-	collision_layer = 1 << 1
-	collision_mask = 1 | (1 << 1)
+	collision_layer = DEFAULT_COLLISION_LAYER
+	collision_mask = DEFAULT_COLLISION_MASK
 	freeze = false
 	sleeping = false
 	_state = State.SETTLING
 	_settle_grace_frames = SETTLE_GRACE_FRAMES
+
+func enable_pass_through_until_y(target_y: float) -> void:
+	_pass_through_active = true
+	_pass_through_until_y = target_y
+	_pass_through_restore_layer = collision_layer
+	_pass_through_restore_mask = collision_mask
+	collision_layer = 0
+	collision_mask = 0
+	_expand_pick_area()
+
+func _restore_pass_through() -> void:
+	_pass_through_active = false
+	_pass_through_until_y = 0.0
+	collision_layer = _pass_through_restore_layer
+	collision_mask = _pass_through_restore_mask
+	_restore_pick_area()
+
+func _clear_pass_through() -> void:
+	_pass_through_active = false
+	_pass_through_until_y = 0.0
+	_restore_pick_area()
 
 func _prepare_pick_area() -> void:
 	var pick_area := $PickArea as Area2D
@@ -212,6 +246,29 @@ func _prepare_pick_area() -> void:
 	pick_area.collision_layer = 1 << 2
 	pick_area.collision_mask = 1 << 2
 	pick_area.input_pickable = true
+
+func _cache_default_pick_size() -> void:
+	if _pick_shape == null:
+		return
+	if _pick_shape.shape is RectangleShape2D:
+		var rect := _pick_shape.shape as RectangleShape2D
+		_pick_default_size = rect.size
+
+func _expand_pick_area() -> void:
+	if _pick_shape == null:
+		return
+	if _pick_shape.shape is RectangleShape2D:
+		var rect := _pick_shape.shape as RectangleShape2D
+		if _pick_default_size == Vector2.ZERO:
+			_pick_default_size = rect.size
+		rect.size = _pick_default_size * PASS_THROUGH_PICK_SCALE
+
+func _restore_pick_area() -> void:
+	if _pick_shape == null:
+		return
+	if _pick_shape.shape is RectangleShape2D and _pick_default_size != Vector2.ZERO:
+		var rect := _pick_shape.shape as RectangleShape2D
+		rect.size = _pick_default_size
 
 func _prepare_physics_shape() -> void:
 	if _physics_shape == null:

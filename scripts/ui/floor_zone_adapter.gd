@@ -51,37 +51,7 @@ func is_point_inside(global_point: Vector2) -> bool:
 	return rect.has_point(local)
 
 func drop_item(item: ItemNode, drop_global_pos: Vector2) -> Vector2:
-	if item == null:
-		return drop_global_pos
-	if _items_root == null:
-		push_warning("FloorZone ItemsRoot missing; cannot drop item.")
-		return drop_global_pos
-	var rect := _get_drop_rect_local()
-	var target_global := drop_global_pos
-	if rect.size != Vector2.ZERO:
-		var local := to_local(drop_global_pos)
-		var x_offset := _compute_scatter_offset(item)
-		var target_local_x := local.x + x_offset
-		var half_width := item.get_visual_half_width()
-		var margin := maxf(edge_margin_px, half_width)
-		var min_x := rect.position.x + margin
-		var max_x := rect.position.x + rect.size.x - margin
-		if min_x < max_x:
-			target_local_x = clampf(target_local_x, min_x, max_x)
-		var target_global_x := to_global(Vector2(target_local_x, 0.0)).x
-		var target_global_y := get_surface_y_global() - item.get_visual_half_height()
-		target_global = Vector2(target_global_x, target_global_y)
-	_items_by_id[StringName(item.item_id)] = item
-	if item.get_parent():
-		item.reparent(_items_root, true)
-	else:
-		_items_root.add_child(item)
-	item.global_position = target_global
-	item.global_rotation = 0.0
-	item.global_scale = Vector2.ONE
-	item.z_index = int(target_global.y)
-	_log_debug("drop item=%s pos=%.1f,%.1f" % [item.item_id, target_global.x, target_global.y])
-	return target_global
+	return drop_item_with_fall(item, drop_global_pos)
 
 func drop_item_with_fall(item: ItemNode, drop_global_pos: Vector2) -> Vector2:
 	if item == null:
