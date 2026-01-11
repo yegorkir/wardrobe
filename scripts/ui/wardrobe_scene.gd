@@ -23,6 +23,7 @@ const WardrobeShiftLogScript := preload("res://scripts/app/logging/shift_log.gd"
 @onready var _money_label: Label = %MoneyValue
 @onready var _magic_label: Label = %MagicValue
 @onready var _debt_label: Label = %DebtValue
+@onready var _strikes_label: Label = %StrikesValue
 @onready var _end_shift_button: Button = %EndShiftButton
 @onready var _player: WardrobePlayerController = %Player
 @onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
@@ -49,6 +50,7 @@ func _ready() -> void:
 		_money_label,
 		_magic_label,
 		_debt_label,
+		_strikes_label,
 		_end_shift_button
 	)
 	_hud_adapter.setup_hud()
