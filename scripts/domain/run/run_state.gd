@@ -2,6 +2,9 @@ extends RefCounted
 
 class_name RunState
 
+const MagicConfigScript := preload("res://scripts/domain/magic/magic_config.gd")
+const InspectionConfigScript := preload("res://scripts/domain/inspection/inspection_config.gd")
+
 const SHIFT_STATUS_RUNNING := StringName("running")
 const SHIFT_STATUS_FAILED := StringName("failed")
 const SHIFT_STATUS_SUCCESS := StringName("success")
@@ -12,8 +15,8 @@ var cleanliness_or_entropy: float = 0.0
 var inspector_risk: float = 0.0
 var magic_links: Dictionary = {}
 var shift_payout_debt: int = 0
-var magic_config: Dictionary = {}
-var inspection_config: Dictionary = {}
+var magic_config: MagicConfigScript
+var inspection_config: InspectionConfigScript
 var shift_status: StringName = SHIFT_STATUS_RUNNING
 var total_clients: int = 0
 var served_clients: int = 0
@@ -39,7 +42,7 @@ func reset_for_shift() -> void:
 	checkin_done = 0
 	checkout_done = 0
 
-func set_magic_links(ticket_number: int, item_ids: Array) -> void:
+func set_magic_links(ticket_number: int, item_ids: Array[StringName]) -> void:
 	magic_links[ticket_number] = item_ids.duplicate(true)
 
 func get_magic_links() -> Dictionary:

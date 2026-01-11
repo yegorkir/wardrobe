@@ -55,25 +55,24 @@ func teardown_hud() -> void:
 		_end_shift_button.pressed.disconnect(handler)
 		_button_connected = false
 
-func _on_hud_updated(snapshot: Dictionary) -> void:
+func _on_hud_updated(snapshot) -> void:
+	if snapshot == null:
+		return
 	if _wave_label:
-		_wave_label.text = "Wave: %s" % snapshot.get("wave", "-")
+		_wave_label.text = "Wave: %s" % snapshot.wave
 	if _time_label:
-		_time_label.text = "Time: %s" % snapshot.get("time", "-")
+		_time_label.text = "Time: %s" % snapshot.time
 	if _money_label:
-		_money_label.text = "Money: %s" % snapshot.get("money", "-")
+		_money_label.text = "Money: %s" % snapshot.money
 	if _magic_label:
-		_magic_label.text = "Magic: %s" % snapshot.get("magic", "-")
+		_magic_label.text = "Magic: %s" % snapshot.magic
 	if _debt_label:
-		_debt_label.text = "Debt: %s" % snapshot.get("debt", "-")
+		_debt_label.text = "Debt: %s" % snapshot.debt
 	if _strikes_label:
-		var current_text: String = "-"
-		var limit_text: String = "-"
-		if snapshot.has("strikes_current"):
-			current_text = str(snapshot.get("strikes_current"))
-		if snapshot.has("strikes_limit"):
-			limit_text = str(snapshot.get("strikes_limit"))
-		_strikes_label.text = "Strikes: %s/%s" % [current_text, limit_text]
+		_strikes_label.text = "Strikes: %s/%s" % [
+			str(snapshot.strikes_current),
+			str(snapshot.strikes_limit),
+		]
 
 func _on_end_shift_pressed() -> void:
 	if _run_manager:

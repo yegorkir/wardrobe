@@ -64,8 +64,8 @@ func test_shift_service_fails_at_strike_limit() -> void:
 	}
 	shift_service.setup(
 		null,
-		ShiftServiceScript.MAGIC_DEFAULT_CONFIG,
-		ShiftServiceScript.INSPECTION_DEFAULT_CONFIG,
+		null,
+		null,
 		shift_config,
 		{}
 	)
@@ -77,7 +77,7 @@ func test_shift_service_fails_at_strike_limit() -> void:
 	])
 
 	var failed_payloads: Array = []
-	shift_service.shift_failed.connect(func(payload: Dictionary) -> void:
+	shift_service.shift_failed.connect(func(payload) -> void:
 		failed_payloads.append(payload)
 	)
 
@@ -87,6 +87,6 @@ func test_shift_service_fails_at_strike_limit() -> void:
 	)
 
 	assert_int(failed_payloads.size()).is_equal(1)
-	var failed_payload: Dictionary = failed_payloads[0]
-	assert_that(failed_payload.get("reason")).is_equal("strikes")
-	assert_int(int(failed_payload.get("strikes_current", 0))).is_equal(3)
+	var failed_payload = failed_payloads[0]
+	assert_that(failed_payload.reason).is_equal(StringName("strikes"))
+	assert_int(failed_payload.strikes_current).is_equal(3)

@@ -1,9 +1,11 @@
 extends Control
 
+const ShiftSummaryModel := preload("res://scripts/app/shift/shift_summary.gd")
+
 @onready var _summary_label: Label = %SummaryLabel
 @onready var _back_button: Button = %BackButton
 var _run_manager: RunManagerBase
-var _payload: Dictionary = {}
+var _payload: ShiftSummaryModel
 var _is_ready := false
 
 func _ready() -> void:
@@ -15,8 +17,8 @@ func _ready() -> void:
 	_is_ready = true
 	_refresh()
 
-func apply_payload(payload: Dictionary) -> void:
-	_payload = payload.duplicate(true)
+func apply_payload(payload: ShiftSummaryModel) -> void:
+	_payload = payload.duplicate_summary() if payload else null
 	if _is_ready:
 		_refresh()
 
@@ -24,31 +26,20 @@ func _refresh() -> void:
 	if not _summary_label:
 		return
 	var lines: Array = ["Summary placeholder"]
-	if _payload.has("money"):
-		lines.append("Money earned: %s" % _payload["money"])
-	if _payload.has("cleanliness"):
-		lines.append("Cleanliness score: %s" % _payload["cleanliness"])
-	if _payload.has("inspector_risk"):
-		lines.append("Inspector risk: %s" % _payload["inspector_risk"])
-	if _payload.has("status"):
-		lines.append("Shift status: %s" % _payload["status"])
-	if _payload.has("strikes_current") and _payload.has("strikes_limit"):
-		lines.append("Strikes: %s/%s" % [_payload["strikes_current"], _payload["strikes_limit"]])
-	if _payload.has("end_reasons"):
-		var reasons: Array = []
-		var raw_reasons: Variant = _payload.get("end_reasons", [])
-		if raw_reasons is Array:
-			reasons = raw_reasons as Array
-		if not reasons.is_empty():
-			lines.append("End reasons: %s" % ", ".join(reasons))
-	if _payload.has("inspection_report"):
-		var report: Dictionary = _payload["inspection_report"]
-		if not report.is_empty():
-			lines.append("Inspection mode: %s" % report.get("mode", "-"))
-			var triggered_flag: bool = bool(report.get("triggered", false))
-			lines.append("Inspection triggered: %s" % ("Yes" if triggered_flag else "No"))
-	if _payload.has("notes"):
-		for note in _payload["notes"]:
+	if _payload:
+		lines.append("Money earned: %s" % _payload.money)
+		lines.append("Cleanliness score: %s" % _payload.cleanliness)
+		lines.append("Inspector risk: %s" % _payload.inspector_risk)
+		lines.append("Shift status: %s" % _payload.status)
+		lines.append("Strikes: %s/%s" % [_payload.strikes_current, _payload.strikes_limit])
+		if not _payload.end_reasons.is_empty():
+			lines.append("End reasons: %s" % ", ".join(_payload.end_reasons))
+		if _payload.inspection_report:
+			lines.append("Inspection mode: %s" % _payload.inspection_report.mode)
+			lines.append(
+				"Inspection triggered: %s" % ("Yes" if _payload.inspection_report.triggered else "No")
+			)
+		for note in _payload.notes:
 			lines.append(str(note))
 	_summary_label.text = "\n".join(lines)
 

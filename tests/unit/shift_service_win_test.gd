@@ -1,13 +1,31 @@
 extends GdUnitTestSuite
 
 const ShiftServiceScript := preload("res://scripts/app/shift/shift_service.gd")
+const MagicConfigScript := preload("res://scripts/domain/magic/magic_config.gd")
+const MagicSystemScript := preload("res://scripts/domain/magic/magic_system.gd")
+const InspectionConfigScript := preload("res://scripts/domain/inspection/inspection_config.gd")
+const InspectionSystemScript := preload("res://scripts/domain/inspection/inspection_system.gd")
 
 func test_shift_wins_when_targets_met_even_with_active_clients() -> void:
 	var shift_service := ShiftServiceScript.new()
+	var magic_config := MagicConfigScript.new(
+		MagicSystemScript.INSURANCE_MODE_FREE,
+		MagicSystemScript.EMERGENCY_COST_DEBT,
+		0,
+		5,
+		0,
+		MagicSystemScript.SEARCH_EFFECT_REVEAL_SLOT
+	)
+	var inspection_config := InspectionConfigScript.new(
+		InspectionSystemScript.MODE_PER_SHIFT,
+		3,
+		true,
+		{}
+	)
 	shift_service.setup(
 		null,
-		ShiftServiceScript.MAGIC_DEFAULT_CONFIG,
-		ShiftServiceScript.INSPECTION_DEFAULT_CONFIG,
+		magic_config,
+		inspection_config,
 		ShiftServiceScript.SHIFT_DEFAULT_CONFIG,
 		{}
 	)
@@ -16,7 +34,7 @@ func test_shift_wins_when_targets_met_even_with_active_clients() -> void:
 	shift_service.update_active_client_count(1)
 
 	var won_payloads: Array = []
-	shift_service.shift_won.connect(func(payload: Dictionary) -> void:
+	shift_service.shift_won.connect(func(payload) -> void:
 		won_payloads.append(payload)
 	)
 
@@ -30,14 +48,28 @@ func test_shift_wins_when_targets_met_even_with_active_clients() -> void:
 
 func test_shift_wont_win_after_failure() -> void:
 	var shift_service := ShiftServiceScript.new()
+	var magic_config := MagicConfigScript.new(
+		MagicSystemScript.INSURANCE_MODE_FREE,
+		MagicSystemScript.EMERGENCY_COST_DEBT,
+		0,
+		5,
+		0,
+		MagicSystemScript.SEARCH_EFFECT_REVEAL_SLOT
+	)
+	var inspection_config := InspectionConfigScript.new(
+		InspectionSystemScript.MODE_PER_SHIFT,
+		3,
+		true,
+		{}
+	)
 	var shift_config := {
 		"strikes_limit": 1,
 		"patience_max": 1.0,
 	}
 	shift_service.setup(
 		null,
-		ShiftServiceScript.MAGIC_DEFAULT_CONFIG,
-		ShiftServiceScript.INSPECTION_DEFAULT_CONFIG,
+		magic_config,
+		inspection_config,
 		shift_config,
 		{}
 	)
@@ -46,7 +78,7 @@ func test_shift_wont_win_after_failure() -> void:
 	shift_service.configure_patience_clients([StringName("Client_A")])
 
 	var won_payloads: Array = []
-	shift_service.shift_won.connect(func(payload: Dictionary) -> void:
+	shift_service.shift_won.connect(func(payload) -> void:
 		won_payloads.append(payload)
 	)
 

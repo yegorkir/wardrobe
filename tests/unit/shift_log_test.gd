@@ -8,6 +8,8 @@ func test_record_and_get_events_returns_copy() -> void:
 	event_log.record(&"event_b", {"value": 2})
 	var events := event_log.get_events()
 	assert_int(events.size()).is_equal(2)
+	assert_that(events[0].event_type).is_equal(&"event_a")
+	assert_that(events[0].payload.get("value")).is_equal(1)
 	events.clear()
 	assert_int(event_log.get_events().size()).is_equal(2)
 

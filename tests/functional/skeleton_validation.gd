@@ -34,10 +34,10 @@ class LogProbe:
 	func attach_run_manager(run_manager: RunManagerBase) -> void:
 		run_manager.run_state_changed.connect(func(state_name: String) -> void:
 			record("run_state_changed", {"state": state_name}))
-		run_manager.screen_requested.connect(func(screen_id: String, payload: Dictionary = {}) -> void:
-			record("screen_requested", {"screen": screen_id, "payload": payload.duplicate(true)}))
-		run_manager.hud_updated.connect(func(snapshot: Dictionary) -> void:
-			record("hud_updated", {"snapshot": snapshot.duplicate(true)}))
+		run_manager.screen_requested.connect(func(screen_id: String, payload: Variant = {}) -> void:
+			record("screen_requested", {"screen": screen_id, "payload": payload}))
+		run_manager.hud_updated.connect(func(snapshot) -> void:
+			record("hud_updated", {"snapshot": snapshot}))
 
 	func record(event_name: String, payload: Dictionary) -> void:
 		entries.append({
@@ -177,8 +177,8 @@ func test_save_manager_flow_and_run_manager_transitions() -> void:
 	var meta_saved_entry := _get_log_event(save_entries, "meta_saved")
 	assert_dict(meta_saved_entry).is_not_empty()
 	var saved_payload: Dictionary = meta_saved_entry.get("payload", {})
-	var summary: Dictionary = run_manager.get_last_summary()
-	var expected_total: int = int(summary.get("money", 0))
+	var summary = run_manager.get_last_summary()
+	var expected_total: int = summary.money if summary else 0
 	var saved_data: Dictionary = saved_payload.get("data", {})
 	assert_int(int(saved_data.get("total_currency", -1))).is_equal(expected_total)
 	assert_str(str(saved_payload.get("path", ""))).is_equal(SaveManagerBase.META_SAVE_PATH)

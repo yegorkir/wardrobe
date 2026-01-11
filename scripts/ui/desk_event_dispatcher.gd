@@ -7,6 +7,7 @@ const DeskRejectOutcomeSystemScript := preload("res://scripts/app/desk/desk_reje
 const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
+const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 
 var _desk_states: Array = []
@@ -45,7 +46,9 @@ func process_interaction_events(events: Array) -> Array:
 		return []
 	var collected: Array = []
 	for event_data in events:
-		var payload: Dictionary = event_data.get(EventSchema.EVENT_KEY_PAYLOAD, {})
+		if event_data == null:
+			continue
+		var payload: Dictionary = event_data.payload
 		var slot_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_SLOT_ID, "")))
 		if slot_id == StringName():
 			continue

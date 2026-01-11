@@ -2,9 +2,9 @@ extends RefCounted
 
 class_name WardrobeStorageState
 
-const RESULT_KEY_SUCCESS := "success"
-const RESULT_KEY_REASON := "reason"
-const RESULT_KEY_ITEM := "item"
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const StorageActionResultScript := preload("res://scripts/domain/storage/storage_action_result.gd")
+const WardrobeStorageSnapshotScript := preload("res://scripts/domain/storage/wardrobe_storage_snapshot.gd")
 const REASON_SLOT_MISSING := StringName("slot_missing")
 const REASON_SLOT_EMPTY := StringName("slot_empty")
 const REASON_SLOT_BLOCKED := StringName("slot_blocked")
@@ -33,7 +33,7 @@ func clear() -> void:
 func has_slot(slot_id: StringName) -> bool:
 	return _slots.has(slot_id)
 
-func put(slot_id: StringName, item: ItemInstance) -> Dictionary:
+func put(slot_id: StringName, item: ItemInstance) -> StorageActionResultScript:
 	if item == null:
 		return _result(false, REASON_ITEM_MISSING, null)
 	var slot := _slots.get(slot_id) as SlotState
@@ -44,7 +44,7 @@ func put(slot_id: StringName, item: ItemInstance) -> Dictionary:
 	slot.item = item
 	return _result(true, REASON_OK, null)
 
-func pick(slot_id: StringName) -> Dictionary:
+func pick(slot_id: StringName) -> StorageActionResultScript:
 	var slot := _slots.get(slot_id) as SlotState
 	if slot == null:
 		return _result(false, REASON_SLOT_MISSING, null)
@@ -54,7 +54,7 @@ func pick(slot_id: StringName) -> Dictionary:
 	slot.item = null
 	return _result(true, REASON_OK, picked)
 
-func pop_slot_item(slot_id: StringName) -> Dictionary:
+func pop_slot_item(slot_id: StringName) -> StorageActionResultScript:
 	return pick(slot_id)
 
 func get_slot_item(slot_id: StringName) -> ItemInstance:
@@ -70,7 +70,7 @@ func find_item_slot(item_id: StringName) -> StringName:
 			return slot.id
 	return StringName()
 
-func get_snapshot() -> Dictionary:
+func get_snapshot() -> WardrobeStorageSnapshotScript:
 	var slots: Dictionary = {}
 	for key in _slots.keys():
 		var slot := _slots[key] as SlotState
@@ -79,11 +79,7 @@ func get_snapshot() -> Dictionary:
 			slots[key] = item.to_snapshot()
 		else:
 			slots[key] = null
-	return {"slots": slots}
+	return WardrobeStorageSnapshotScript.new(slots)
 
-func _result(success: bool, reason: StringName, item: ItemInstance) -> Dictionary:
-	return {
-		RESULT_KEY_SUCCESS: success,
-		RESULT_KEY_REASON: reason,
-		RESULT_KEY_ITEM: item,
-	}
+func _result(success: bool, reason: StringName, item: ItemInstance) -> StorageActionResultScript:
+	return StorageActionResultScript.new(success, reason, item)

@@ -1,47 +1,57 @@
 extends RefCounted
 
-const INSURANCE_MODE_FREE := "FREE"
-const INSURANCE_MODE_SOFT_LIMIT := "SOFT_LIMIT"
+const MagicConfigScript := preload("res://scripts/domain/magic/magic_config.gd")
+const MagicEventScript := preload("res://scripts/domain/magic/magic_event.gd")
+const INSURANCE_MODE_FREE := StringName("FREE")
+const INSURANCE_MODE_SOFT_LIMIT := StringName("SOFT_LIMIT")
 
-const EMERGENCY_COST_DEBT := "DEBT"
-const EMERGENCY_COST_TIPS := "TIPS"
-const EMERGENCY_COST_SHIFT_CASH := "SHIFT_CASH"
+const EMERGENCY_COST_DEBT := StringName("DEBT")
+const EMERGENCY_COST_TIPS := StringName("TIPS")
+const EMERGENCY_COST_SHIFT_CASH := StringName("SHIFT_CASH")
 
-var _config := {}
+const SEARCH_EFFECT_REVEAL_SLOT := StringName("REVEAL_SLOT")
 
-func setup(config: Dictionary) -> void:
-	_config = {
-		"insurance_mode": INSURANCE_MODE_FREE,
-		"emergency_cost_mode": EMERGENCY_COST_DEBT,
-		"insurance_cost": 0,
-		"emergency_cost_value": 0,
-		"soft_limit": 0,
-		"search_effect": "REVEAL_SLOT",
-	}
-	for key in config.keys():
-		_config[key] = config[key]
+var _config: MagicConfigScript = _build_default_config()
 
-func get_config() -> Dictionary:
-	return _config.duplicate(true)
+func setup(config: MagicConfigScript) -> void:
+	_config = config.duplicate_config() if config else _build_default_config()
 
-func apply_insurance(run_state: RunState, ticket_number: int, item_ids: Array) -> Dictionary:
+func get_config() -> MagicConfigScript:
+	return _config.duplicate_config()
+
+func apply_insurance(
+	run_state: RunState,
+	ticket_number: int,
+	item_ids: Array[StringName]
+) -> MagicEventScript:
 	run_state.set_magic_links(ticket_number, item_ids)
-	return {
-		"type": "insurance_link",
-		"ticket_number": ticket_number,
-		"items": item_ids.duplicate(true),
-		"mode": _config["insurance_mode"],
-		"cost": _config["insurance_cost"],
-	}
+	return MagicEventScript.new(
+		MagicEventScript.TYPE_INSURANCE_LINK,
+		ticket_number,
+		item_ids,
+		_config.insurance_mode,
+		StringName(),
+		_config.insurance_cost,
+		null
+	)
 
-func request_emergency_locate(_run_state: RunState, ticket_number: int) -> Dictionary:
-	var cost_type: String = _config["emergency_cost_mode"]
-	var cost_value: int = _config["emergency_cost_value"]
-	return {
-		"type": "emergency_locate",
-		"ticket_number": ticket_number,
-		"highlight": null,
-		"cost_type": cost_type,
-		"cost_value": cost_value,
-		"mode": _config["search_effect"],
-	}
+func request_emergency_locate(_run_state: RunState, ticket_number: int) -> MagicEventScript:
+	return MagicEventScript.new(
+		MagicEventScript.TYPE_EMERGENCY_LOCATE,
+		ticket_number,
+		[],
+		_config.search_effect,
+		_config.emergency_cost_mode,
+		_config.emergency_cost_value,
+		null
+	)
+
+func _build_default_config() -> MagicConfigScript:
+	return MagicConfigScript.new(
+		INSURANCE_MODE_FREE,
+		EMERGENCY_COST_DEBT,
+		0,
+		0,
+		0,
+		SEARCH_EFFECT_REVEAL_SLOT
+	)

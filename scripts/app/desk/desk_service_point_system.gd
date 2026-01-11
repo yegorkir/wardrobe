@@ -5,6 +5,7 @@ class_name DeskServicePointSystem
 const DeskStateScript := preload("res://scripts/domain/desk/desk_state.gd")
 const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
+const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
@@ -22,14 +23,16 @@ func process_interaction_event(
 	queue_state: ClientQueueState,
 	clients: Dictionary,
 	storage_state: WardrobeStorageState,
-	interaction_event: Dictionary
+	interaction_event: InteractionEventScript
 ) -> Array:
 	if desk_state == null or storage_state == null:
 		return []
-	var event_type: StringName = interaction_event.get(EventSchema.EVENT_KEY_TYPE, StringName())
+	if interaction_event == null:
+		return []
+	var event_type: StringName = interaction_event.event_type
 	if event_type != EventSchema.EVENT_ITEM_PLACED:
 		return []
-	var payload: Dictionary = interaction_event.get(EventSchema.EVENT_KEY_PAYLOAD, {})
+	var payload: Dictionary = interaction_event.payload
 	var slot_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_SLOT_ID, "")))
 	var tick: int = int(payload.get(EventSchema.PAYLOAD_TICK, 0))
 	if slot_id != desk_state.desk_slot_id:
@@ -165,7 +168,7 @@ func _consume_desk_item(
 	reason_code: StringName
 ) -> Array:
 	var consume_result := storage_state.pick(desk_state.desk_slot_id)
-	if not consume_result.get(StorageStateScript.RESULT_KEY_SUCCESS, false):
+	if not consume_result.success:
 		return []
 	return [_make_event(EventSchema.EVENT_DESK_CONSUMED_ITEM, {
 		EventSchema.PAYLOAD_DESK_ID: desk_state.desk_id,
@@ -208,7 +211,7 @@ func _spawn_item_for_client(
 	if storage_state.get_slot_item(desk_state.desk_slot_id) != null:
 		return []
 	var put_result := storage_state.put(desk_state.desk_slot_id, item)
-	if not put_result.get(StorageStateScript.RESULT_KEY_SUCCESS, false):
+	if not put_result.success:
 		return []
 	return [_make_event(EventSchema.EVENT_DESK_SPAWNED_ITEM, {
 		EventSchema.PAYLOAD_DESK_ID: desk_state.desk_id,

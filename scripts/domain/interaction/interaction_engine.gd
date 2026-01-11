@@ -2,8 +2,13 @@ extends RefCounted
 
 class_name WardrobeInteractionDomainEngine
 
+const InteractionCommandScript := preload("res://scripts/domain/interaction/interaction_command.gd")
+const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
+const InteractionResultScript := preload("res://scripts/domain/interaction/interaction_result.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+
 const ResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
-const CommandScript := preload("res://scripts/app/interaction/interaction_command.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 const REASON_CONTEXT_MISSING := StringName("context_missing")
@@ -20,26 +25,28 @@ const REASON_UNKNOWN_ACTION := StringName("unknown_action")
 
 var _resolver := ResolverScript.new()
 
-func process_command(command: Dictionary, context: Variant, hand_item: ItemInstance = null) -> InteractionResult:
+func process_command(
+	command: InteractionCommandScript,
+	context: Variant,
+	hand_item: ItemInstance = null
+) -> InteractionResultScript:
 	if context is WardrobeStorageState:
 		return _process_with_storage(command, context as WardrobeStorageState, hand_item)
 	return _make_result(false, REASON_CONTEXT_MISSING, ResolverScript.ACTION_NONE, [], hand_item)
 
 func _process_with_storage(
-	command: Dictionary,
+	command: InteractionCommandScript,
 	storage_state: WardrobeStorageState,
 	hand_item: ItemInstance
-) -> InteractionResult:
+) -> InteractionResultScript:
 	if storage_state == null:
 		return _make_result(false, REASON_CONTEXT_MISSING, ResolverScript.ACTION_NONE, [], hand_item)
-	var tick := _read_tick(command)
-	var payload := _read_payload(command)
-	if payload.is_empty():
+	if command == null:
 		return _make_result(false, REASON_PAYLOAD_MISSING, ResolverScript.ACTION_NONE, [], hand_item)
-	var slot_id_variant: Variant = payload.get(CommandScript.PAYLOAD_SLOT_ID, "")
-	var slot_id := StringName(str(slot_id_variant))
+	var tick := command.tick
+	var slot_id := command.slot_id
 	var slot_item := storage_state.get_slot_item(slot_id)
-	var validation := _validate_request(storage_state, payload, slot_id, slot_item, hand_item, tick)
+	var validation := _validate_request(storage_state, command, slot_id, slot_item, hand_item, tick)
 	if validation != null:
 		return validation
 	var resolution := _resolve_action_result(command, hand_item != null, slot_item != null)
@@ -57,36 +64,31 @@ func _process_with_storage(
 
 func _validate_request(
 	storage_state: WardrobeStorageState,
-	payload: Dictionary,
+	command: InteractionCommandScript,
 	slot_id: StringName,
 	slot_item: ItemInstance,
 	hand_item: ItemInstance,
 	tick: int
-) -> InteractionResult:
+) -> InteractionResultScript:
 	if slot_id == StringName():
 		return _reject_with_event(REASON_SLOT_MISSING, slot_id, hand_item, tick)
 	if not storage_state.has_slot(slot_id):
 		return _reject_with_event(REASON_SLOT_MISSING, slot_id, hand_item, tick)
-	if not _validate_expected_item(payload, CommandScript.PAYLOAD_SLOT_ITEM_ID, slot_item):
+	if not _validate_expected_item(command.slot_item_id, slot_item):
 		return _reject_with_event(REASON_SLOT_MISMATCH, slot_id, hand_item, tick)
-	if not _validate_expected_item(payload, CommandScript.PAYLOAD_HAND_ITEM_ID, hand_item):
+	if not _validate_expected_item(command.hand_item_id, hand_item):
 		return _reject_with_event(REASON_HAND_MISMATCH, slot_id, hand_item, tick)
 	return null
 
-func _read_payload(command: Dictionary) -> Dictionary:
-	var payload_variant: Variant = command.get(CommandScript.KEY_PAYLOAD, {})
-	if payload_variant is Dictionary:
-		return payload_variant as Dictionary
-	return {}
-
-func _read_tick(command: Dictionary) -> int:
-	return int(command.get(CommandScript.KEY_TICK, 0))
-
-func _resolve_action_result(command: Dictionary, hand_present: bool, slot_present: bool) -> Dictionary:
-	var requested: StringName = command.get(CommandScript.KEY_TYPE, CommandScript.TYPE_AUTO)
-	if requested == CommandScript.TYPE_PICK:
+func _resolve_action_result(
+	command: InteractionCommandScript,
+	hand_present: bool,
+	slot_present: bool
+) -> Dictionary:
+	var requested: StringName = command.action
+	if requested == InteractionCommandScript.TYPE_PICK:
 		return {"action": ResolverScript.ACTION_PICK, "reason": REASON_NOTHING_TO_DO}
-	if requested == CommandScript.TYPE_PUT:
+	if requested == InteractionCommandScript.TYPE_PUT:
 		return {"action": ResolverScript.ACTION_PUT, "reason": REASON_NOTHING_TO_DO}
 	var resolved := _resolver.resolve(hand_present, slot_present)
 	return {
@@ -94,23 +96,23 @@ func _resolve_action_result(command: Dictionary, hand_present: bool, slot_presen
 		"reason": StringName(str(resolved.get("reason", REASON_NOTHING_TO_DO))),
 	}
 
-func _validate_expected_item(payload: Dictionary, key: StringName, actual: ItemInstance) -> bool:
-	var expected_variant: Variant = payload.get(key, "")
-	if expected_variant == null:
-		return true
-	var expected_id := StringName(str(expected_variant))
+func _validate_expected_item(expected_id: StringName, actual: ItemInstance) -> bool:
 	if expected_id == StringName():
 		return true
 	if actual == null:
 		return false
 	return actual.id == expected_id
 
-func _execute_pick(storage_state: WardrobeStorageState, slot_id: StringName, tick: int) -> InteractionResult:
+func _execute_pick(
+	storage_state: WardrobeStorageState,
+	slot_id: StringName,
+	tick: int
+) -> InteractionResultScript:
 	var pick_result := storage_state.pick(slot_id)
-	if not pick_result.get(WardrobeStorageState.RESULT_KEY_SUCCESS, false):
-		var reason: StringName = pick_result.get(WardrobeStorageState.RESULT_KEY_REASON, REASON_SLOT_EMPTY)
+	if not pick_result.success:
+		var reason: StringName = pick_result.reason
 		return _reject_with_event(reason, slot_id, null, tick)
-	var picked: ItemInstance = pick_result.get(WardrobeStorageState.RESULT_KEY_ITEM)
+	var picked: ItemInstance = pick_result.item
 	var events := [
 		_make_event(EventSchema.EVENT_ITEM_PICKED, {
 			EventSchema.PAYLOAD_SLOT_ID: slot_id,
@@ -125,12 +127,12 @@ func _execute_put(
 	slot_id: StringName,
 	hand_item: ItemInstance,
 	tick: int
-) -> InteractionResult:
+) -> InteractionResultScript:
 	if hand_item == null:
 		return _reject_with_event(REASON_HAND_EMPTY, slot_id, hand_item, tick)
 	var put_result := storage_state.put(slot_id, hand_item)
-	if not put_result.get(WardrobeStorageState.RESULT_KEY_SUCCESS, false):
-		var reason: StringName = put_result.get(WardrobeStorageState.RESULT_KEY_REASON, REASON_SLOT_BLOCKED)
+	if not put_result.success:
+		var reason: StringName = put_result.reason
 		return _reject_with_event(reason, slot_id, hand_item, tick)
 	var events := [
 		_make_event(EventSchema.EVENT_ITEM_PLACED, {
@@ -147,7 +149,7 @@ func _reject_with_event(
 	slot_id: StringName,
 	hand_item: ItemInstance,
 	tick: int
-) -> InteractionResult:
+) -> InteractionResultScript:
 	var events := [
 		_make_event(EventSchema.EVENT_ACTION_REJECTED, {
 			EventSchema.PAYLOAD_SLOT_ID: slot_id,
@@ -157,11 +159,8 @@ func _reject_with_event(
 	]
 	return _make_result(false, reason, ResolverScript.ACTION_NONE, events, hand_item)
 
-func _make_event(event_type: StringName, payload: Dictionary) -> Dictionary:
-	return {
-		EventSchema.EVENT_KEY_TYPE: event_type,
-		EventSchema.EVENT_KEY_PAYLOAD: payload.duplicate(true),
-	}
+func _make_event(event_type: StringName, payload: Dictionary) -> InteractionEventScript:
+	return InteractionEventScript.new(event_type, payload)
 
 func _make_result(
 	success: bool,
@@ -169,5 +168,5 @@ func _make_result(
 	action: String,
 	events: Array,
 	hand_item: ItemInstance
-) -> InteractionResult:
-	return InteractionResult.new(success, reason, action, events, hand_item)
+) -> InteractionResultScript:
+	return InteractionResultScript.new(success, reason, action, events, hand_item)

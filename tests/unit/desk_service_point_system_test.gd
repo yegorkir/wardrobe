@@ -7,6 +7,7 @@ const ClientQueueStateScript := preload("res://scripts/domain/clients/client_que
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
+const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
 
 func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
 	var system := DeskServicePointSystemScript.new()
@@ -125,13 +126,10 @@ func _make_client(id: String, coat_id: String, ticket_id: String) -> ClientState
 	var ticket := ItemInstanceScript.new(StringName(ticket_id), ItemInstanceScript.KIND_TICKET)
 	return ClientState.new(StringName(id), coat, ticket)
 
-func _make_put_event(slot_id: StringName) -> Dictionary:
-	return {
-		EventSchema.EVENT_KEY_TYPE: EventSchema.EVENT_ITEM_PLACED,
-		EventSchema.EVENT_KEY_PAYLOAD: {
-			EventSchema.PAYLOAD_SLOT_ID: slot_id,
-		},
-	}
+func _make_put_event(slot_id: StringName) -> InteractionEventScript:
+	return InteractionEventScript.new(EventSchema.EVENT_ITEM_PLACED, {
+		EventSchema.PAYLOAD_SLOT_ID: slot_id,
+	})
 
 func _has_event(events: Array, event_type: StringName) -> bool:
 	for event_data in events:

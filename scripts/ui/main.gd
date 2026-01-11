@@ -19,14 +19,14 @@ func _ready() -> void:
 	else:
 		push_warning("RunManager singleton not found; screens won't swap.")
 
-func _on_screen_requested(screen_id: String, payload: Dictionary = {}) -> void:
+func _on_screen_requested(screen_id: String, payload: Variant = {}) -> void:
 	if not SCREEN_SCENES.has(screen_id):
 		push_warning("Unknown screen requested: %s" % screen_id)
 		return
 	var scene: Node = SCREEN_SCENES[screen_id].instantiate()
 	_swap_screen(scene, payload)
 
-func _swap_screen(new_screen: Node, payload: Dictionary) -> void:
+func _swap_screen(new_screen: Node, payload: Variant) -> void:
 	if _current_screen:
 		_current_screen.queue_free()
 	_current_screen = new_screen

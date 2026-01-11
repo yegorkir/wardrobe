@@ -3,6 +3,7 @@ extends RefCounted
 class_name InteractionResult
 
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
 
 var success: bool
 var reason: StringName
