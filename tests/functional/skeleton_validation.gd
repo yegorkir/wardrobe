@@ -3,7 +3,8 @@ extends GdUnitTestSuite
 const REQUIRED_SCENES := [
 	"res://scenes/Main.tscn",
 	"res://scenes/screens/MainMenu.tscn",
-	"res://scenes/screens/WardrobeScene.tscn",
+	"res://scenes/screens/WorkdeskScene.tscn",
+	"res://scenes/screens/WorkdeskScene_Debug.tscn",
 	"res://scenes/screens/ShiftSummary.tscn",
 	"res://scenes/screens/ModifierSelect.tscn",
 ]
@@ -26,7 +27,7 @@ const REQUIRED_INPUT_ACTIONS := [
 	"debug_reset",
 ]
 
-const WARDROBE_SCENE := preload("res://scenes/screens/WardrobeScene.tscn")
+const WORKDESK_SCENE := preload("res://scenes/screens/WorkdeskScene.tscn")
 
 class LogProbe:
 	var entries: Array = []
@@ -189,22 +190,22 @@ func test_save_manager_flow_and_run_manager_transitions() -> void:
 	var final_entries := _pop_new_entries(save_log_cursor)
 	assert_bool(_has_log_event(final_entries, "meta_cleared")).is_true()
 
-func test_wardrobe_scene_receives_hud_updates() -> void:
-	# Directly instantiates WardrobeScene and verifies HUD reacts to RunManager signals.
+func test_workdesk_scene_receives_hud_updates() -> void:
+	# Directly instantiates WorkdeskScene and verifies HUD reacts to RunManager signals.
 	var run_manager := _get_autoload("RunManager") as RunManagerBase
 	assert_object(run_manager).is_not_null()
 	run_manager.start_shift()
-	var wardrobe: Node = auto_free(WARDROBE_SCENE.instantiate())
-	get_tree().root.add_child(wardrobe)
+	var workdesk: Node = auto_free(WORKDESK_SCENE.instantiate())
+	get_tree().root.add_child(workdesk)
 	await _wait_frames(1)
-	var money_label := wardrobe.get_node("HUDLayer/HUDContainer/HUDPanel/VBox/MoneyValue") as Label
+	var money_label := workdesk.get_node("HUDLayer/HUDContainer/HUDPanel/VBox/MoneyValue") as Label
 	assert_object(money_label).is_not_null()
 	var initial_value := _extract_label_value(money_label.text)
 	run_manager.adjust_demo_money(3)
 	await _wait_frames(1)
 	var updated_value := _extract_label_value(money_label.text)
 	assert_int(updated_value).is_greater(initial_value)
-	wardrobe.queue_free()
+	workdesk.queue_free()
 	await _wait_frames(1)
 
 func _assert_content_entry_loaded(category: String, sample_id: String, predicate: Callable) -> void:

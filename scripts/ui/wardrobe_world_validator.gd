@@ -1,6 +1,6 @@
 extends RefCounted
 
-func validate(slots: Array[WardrobeSlot], player: WardrobePlayerController) -> void:
+func validate(slots: Array[WardrobeSlot], player: Node) -> void:
 	var issues: Array[String] = []
 	var item_locations: Dictionary = {}
 	for slot in slots:
@@ -16,8 +16,8 @@ func validate(slots: Array[WardrobeSlot], player: WardrobePlayerController) -> v
 				)
 			else:
 				item_locations[slot_item] = slot.get_slot_identifier()
-	if player != null:
-		var hand_item := player.get_active_hand_item()
+	if player != null and player.has_method("get_active_hand_item"):
+		var hand_item: Variant = player.call("get_active_hand_item")
 		if hand_item:
 			if item_locations.has(hand_item):
 				issues.append("Item %s exists in slot and hand" % hand_item.item_id)

@@ -16,7 +16,6 @@ signal hud_updated(snapshot)
 
 const SCREEN_MAIN_MENU := "main_menu"
 const SCREEN_WARDROBE := "wardrobe"
-const SCREEN_WARDROBE_LEGACY := "wardrobe_legacy"
 const SCREEN_WARDROBE_DEBUG := "wardrobe_debug"
 const SCREEN_SHIFT_SUMMARY := "shift_summary"
 

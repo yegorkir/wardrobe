@@ -31,10 +31,6 @@ text = "Start Run (Workdesk)"
 unique_name_in_owner = true
 text = "Start Run (Workdesk Debug)"
 
-[node name="StartWardrobeButton" type="Button" parent="MarginContainer/VBox"]
-unique_name_in_owner = true
-text = "Start Run (Wardrobe)"
-
 [node name="QuitButton" type="Button" parent="MarginContainer/VBox"]
 unique_name_in_owner = true
 text = "Quit"

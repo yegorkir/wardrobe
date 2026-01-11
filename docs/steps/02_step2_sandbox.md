@@ -54,7 +54,7 @@ Seed описан в `res://content/seeds/step2_seed.json` (массив `items`
 | `Hook_3/SlotA`   | `ticket_002`      |
 | `Hook_5/SlotB`   | `anchor_ticket_001` |
 
-Цвет (`color`) задаётся hex-строкой (`#FFEEDD`) или массивом `[r,g,b,a]`. Остальные слоты пусты. WardrobeScene читает файл и fallback'ит на таблицу выше, если файла нет/он пуст.
+Цвет (`color`) задаётся hex-строкой (`#FFEEDD`) или массивом `[r,g,b,a]`. Остальные слоты пусты. Сцена песочницы читает файл и fallback'ит на таблицу выше, если файла нет/он пуст.
 
 ## 6. Debug и QA процедуры
 
