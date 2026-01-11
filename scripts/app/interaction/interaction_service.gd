@@ -4,6 +4,7 @@ class_name WardrobeInteractionService
 
 const CommandScript := preload("res://scripts/app/interaction/interaction_command.gd")
 const EngineScript := preload("res://scripts/domain/interaction/interaction_engine.gd")
+const InteractionConfigScript := preload("res://scripts/app/interaction/interaction_config.gd")
 const InteractionCommandScript := preload("res://scripts/domain/interaction/interaction_command.gd")
 const InteractionResultScript := preload("res://scripts/domain/interaction/interaction_result.gd")
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
@@ -13,6 +14,11 @@ var _storage_state: WardrobeStorageState = StorageStateScript.new()
 var _hand_item: ItemInstance
 var _interaction_tick := 0
 var _last_command: InteractionCommandScript
+var _interaction_config: InteractionConfigScript
+
+func _init(config: InteractionConfigScript = null) -> void:
+	_interaction_config = config.duplicate_config() if config else InteractionConfigScript.new()
+	_engine.setup(_interaction_config)
 
 func get_storage_state() -> WardrobeStorageState:
 	return _storage_state

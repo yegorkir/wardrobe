@@ -9,6 +9,7 @@ const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 
 const ResolverScript := preload("res://scripts/app/interaction/pick_put_swap_resolver.gd")
+const InteractionConfigScript := preload("res://scripts/app/interaction/interaction_config.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 const REASON_CONTEXT_MISSING := StringName("context_missing")
@@ -24,6 +25,10 @@ const REASON_SWAP_DISABLED := StringName("swap_disabled")
 const REASON_UNKNOWN_ACTION := StringName("unknown_action")
 
 var _resolver := ResolverScript.new()
+
+func setup(config: InteractionConfigScript) -> void:
+	if _resolver and _resolver.has_method("setup"):
+		_resolver.setup(config)
 
 func process_command(
 	command: InteractionCommandScript,

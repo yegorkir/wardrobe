@@ -88,6 +88,37 @@ func test_shift_wont_win_after_failure() -> void:
 	shift_service.register_checkout_completed(StringName("Client_A"))
 	assert_int(won_payloads.size()).is_equal(0)
 
+func test_configure_shift_clients_does_not_override_targets() -> void:
+	var shift_service := ShiftServiceScript.new()
+	var magic_config := MagicConfigScript.new(
+		MagicSystemScript.INSURANCE_MODE_FREE,
+		MagicSystemScript.EMERGENCY_COST_DEBT,
+		0,
+		5,
+		0,
+		MagicSystemScript.SEARCH_EFFECT_REVEAL_SLOT
+	)
+	var inspection_config := InspectionConfigScript.new(
+		InspectionSystemScript.MODE_PER_SHIFT,
+		3,
+		true,
+		{}
+	)
+	shift_service.setup(
+		null,
+		magic_config,
+		inspection_config,
+		ShiftServiceScript.SHIFT_DEFAULT_CONFIG,
+		{}
+	)
+	shift_service.start_shift()
+	shift_service.configure_shift_targets(6, 4)
+	shift_service.configure_shift_clients(12)
+
+	var snapshot: Dictionary = shift_service.get_queue_mix_snapshot()
+	assert_int(int(snapshot.get("target_checkin", 0))).is_equal(6)
+	assert_int(int(snapshot.get("target_checkout", 0))).is_equal(4)
+
 func test_shift_counters_dedup_by_client_id() -> void:
 	var shift_service := ShiftServiceScript.new()
 	var magic_config := MagicConfigScript.new(
