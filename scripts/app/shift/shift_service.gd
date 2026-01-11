@@ -105,6 +105,22 @@ func get_hud_snapshot() -> Dictionary:
 func get_patience_snapshot() -> Dictionary:
 	return _patience_state.get_patience_snapshot()
 
+func get_queue_mix_snapshot() -> Dictionary:
+	if _run_state == null:
+		return {}
+	var total_targets: int = max(1, _run_state.target_checkin + _run_state.target_checkout)
+	var progress: float = float(_run_state.checkin_done + _run_state.checkout_done) / float(total_targets)
+	return {
+		"checkin_done": _run_state.checkin_done,
+		"checkout_done": _run_state.checkout_done,
+		"target_checkin": _run_state.target_checkin,
+		"target_checkout": _run_state.target_checkout,
+		"need_in": _run_state.get_need_checkin(),
+		"need_out": _run_state.get_need_checkout(),
+		"outstanding": _run_state.get_outstanding_checkout(),
+		"progress": clamp(progress, 0.0, 1.0),
+	}
+
 func reset_demo_hud() -> void:
 	_reset_demo_hud()
 
@@ -157,19 +173,31 @@ func configure_shift_clients(total_clients: int) -> void:
 	_run_state.total_clients = max(0, total_clients)
 	_run_state.served_clients = 0
 	_run_state.active_clients = 0
+	_run_state.configure_shift_targets(total_clients, total_clients)
 	_try_finish_shift_success()
 
-func register_client_completed() -> void:
+func configure_shift_targets(target_checkin: int, target_checkout: int) -> void:
 	if _run_state == null:
 		return
-	_run_state.served_clients += 1
+	_run_state.configure_shift_targets(target_checkin, target_checkout)
+	_try_finish_shift_success()
+
+func register_checkin_completed() -> void:
+	if _run_state == null:
+		return
+	_run_state.register_checkin_completed()
+	_try_finish_shift_success()
+
+func register_checkout_completed() -> void:
+	if _run_state == null:
+		return
+	_run_state.register_checkout_completed()
 	_try_finish_shift_success()
 
 func update_active_client_count(active_clients: int) -> void:
 	if _run_state == null:
 		return
 	_run_state.active_clients = max(0, active_clients)
-	_try_finish_shift_success()
 
 func tick_patience(active_client_ids: Array, delta: float) -> Dictionary:
 	var result: Dictionary = _patience_system.tick_patience(_patience_state, active_client_ids, delta)
@@ -273,22 +301,21 @@ func _try_finish_shift_success() -> void:
 		return
 	if _run_state.shift_status != RunState.SHIFT_STATUS_RUNNING:
 		return
-	var result: Dictionary = _win_policy.evaluate(
-		_run_state.shift_status,
-		_run_state.served_clients,
-		_run_state.total_clients,
-		_run_state.active_clients
-	)
+	var result: Dictionary = _win_policy.evaluate(_run_state)
 	if not bool(result.get("can_win", false)):
 		return
 	_run_state.shift_status = RunState.SHIFT_STATUS_SUCCESS
 	_shift_log.record(EventSchema.EVENT_SHIFT_WON, {
-		"served_clients": _run_state.served_clients,
-		"total_clients": _run_state.total_clients,
+		EventSchema.PAYLOAD_CHECKIN_DONE: _run_state.checkin_done,
+		EventSchema.PAYLOAD_CHECKOUT_DONE: _run_state.checkout_done,
+		EventSchema.PAYLOAD_TARGET_CHECKIN: _run_state.target_checkin,
+		EventSchema.PAYLOAD_TARGET_CHECKOUT: _run_state.target_checkout,
 	})
 	emit_signal("shift_won", {
-		"served_clients": _run_state.served_clients,
-		"total_clients": _run_state.total_clients,
+		EventSchema.PAYLOAD_CHECKIN_DONE: _run_state.checkin_done,
+		EventSchema.PAYLOAD_CHECKOUT_DONE: _run_state.checkout_done,
+		EventSchema.PAYLOAD_TARGET_CHECKIN: _run_state.target_checkin,
+		EventSchema.PAYLOAD_TARGET_CHECKOUT: _run_state.target_checkout,
 	})
 
 func _collect_end_reasons() -> Array:

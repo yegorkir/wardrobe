@@ -20,7 +20,7 @@ func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
 		client_b.client_id: client_b,
 	}
 	desk.current_client_id = client_a.client_id
-	queue.enqueue(client_b.client_id)
+	queue.enqueue_checkin(client_b.client_id)
 	storage.put(desk.desk_slot_id, client_a.get_ticket_item())
 	var event := _make_put_event(desk.desk_slot_id)
 
@@ -29,7 +29,7 @@ func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
 	assert_that(client_a.phase).is_equal(ClientStateScript.PHASE_PICK_UP)
 	assert_that(desk.current_client_id).is_equal(client_b.client_id)
 	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(client_b.get_coat_id())
-	assert_that(queue.peek_next()).is_equal(client_a.client_id)
+	assert_that(queue.peek_next_checkout()).is_equal(client_a.client_id)
 	assert_bool(_has_event(events, EventSchema.EVENT_DESK_CONSUMED_ITEM)).is_true()
 	assert_bool(_has_event(events, EventSchema.EVENT_DESK_SPAWNED_ITEM)).is_true()
 
@@ -65,7 +65,7 @@ func test_pickup_consumes_correct_coat_and_spawns_next_ticket() -> void:
 		client_b.client_id: client_b,
 	}
 	desk.current_client_id = client_a.client_id
-	queue.enqueue(client_b.client_id)
+	queue.enqueue_checkout(client_b.client_id)
 	storage.put(desk.desk_slot_id, client_a.get_coat_item())
 	var event := _make_put_event(desk.desk_slot_id)
 
