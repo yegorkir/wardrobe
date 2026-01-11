@@ -8,3 +8,5 @@ reports/
 *.uid
 .idea/
 .godot_test_home_persist/
+.merge_ui.json
+_merged/

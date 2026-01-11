@@ -30,6 +30,7 @@ const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
 @onready var _money_label: Label = %MoneyValue
 @onready var _magic_label: Label = %MagicValue
 @onready var _debt_label: Label = %DebtValue
+@onready var _strikes_label: Label = %StrikesValue
 @onready var _end_shift_button: Button = %EndShiftButton
 @onready var _cursor_hand: CursorHand = %CursorHand
 @onready var _physics_tick: Node = %WardrobePhysicsTick
@@ -66,15 +67,18 @@ var _clients_ready := false
 
 func _ready() -> void:
 	DebugFlags.set_enabled(debug_logs_enabled)
+	if debug_no_fail_wave:
+		push_warning("debug_no_fail_wave is enabled; wave failures will be suppressed.")
 	_hud_adapter.configure(
 		_run_manager,
 		_wave_label,
 		_time_label,
-	_money_label,
-	_magic_label,
-	_debt_label,
-	_end_shift_button,
-	Callable(self, "_on_end_shift_pressed")
+		_money_label,
+		_magic_label,
+		_debt_label,
+		_strikes_label,
+		_end_shift_button,
+		Callable(self, "_on_end_shift_pressed")
 	)
 	_hud_adapter.setup_hud()
 	if _cursor_hand == null:
@@ -191,10 +195,9 @@ func _setup_clients_ui() -> void:
 		if desk_state == null:
 			continue
 		_desk_states_by_id[desk_state.desk_id] = desk_state
-	var patience_max := 30.0
-	for client_id in clients_by_id.keys():
-		_patience_by_client_id[client_id] = patience_max
-		_patience_max_by_client_id[client_id] = patience_max
+	if _run_manager:
+		var patience_snapshot := _run_manager.configure_patience_clients(clients_by_id.keys())
+		_apply_patience_snapshot(patience_snapshot)
 	_total_clients = clients_by_id.size()
 	var desks_by_id: Dictionary = {}
 	for desk_node in _world_adapter.get_desk_nodes():
@@ -219,6 +222,14 @@ func _setup_clients_ui() -> void:
 	)
 	_clients_ui.refresh()
 	_clients_ready = true
+
+func _apply_patience_snapshot(snapshot: Dictionary) -> void:
+	_patience_by_client_id.clear()
+	_patience_max_by_client_id.clear()
+	var patience_by: Dictionary = snapshot.get("patience_by_client_id", {})
+	var patience_max: Dictionary = snapshot.get("patience_max_by_client_id", {})
+	_patience_by_client_id.merge(patience_by, true)
+	_patience_max_by_client_id.merge(patience_max, true)
 
 func _collect_surface_targets() -> void:
 	_shelf_surfaces.clear()
@@ -251,25 +262,28 @@ func _tick_wave_and_patience(delta: float) -> void:
 	if _wave_failed:
 		return
 	_wave_time_left -= delta
-	if _wave_time_left <= 0.0 and _served_clients < _total_clients and not debug_no_fail_wave:
+	if _wave_time_left <= 0.0 and _served_clients < _total_clients:
 		_fail_wave()
 		return
-	for desk_state in _desk_states_by_id.values():
-		if desk_state == null:
-			continue
-		var client_id: StringName = desk_state.current_client_id
-		if client_id == StringName():
-			continue
-		var patience_left := float(_patience_by_client_id.get(client_id, 0.0))
-		patience_left = maxf(patience_left - delta, 0.0)
-		_patience_by_client_id[client_id] = patience_left
-		if patience_left <= 0.0 and not debug_no_fail_wave:
-			_fail_wave()
-			return
+	if _run_manager:
+		var active_clients: Array = []
+		for desk_state in _desk_states_by_id.values():
+			if desk_state == null:
+				continue
+			var client_id: StringName = desk_state.current_client_id
+			if client_id == StringName():
+				continue
+			active_clients.append(client_id)
+		_run_manager.tick_patience(active_clients, delta)
+		_apply_patience_snapshot(_run_manager.get_patience_snapshot())
 	_clients_ui.refresh()
 
 func _fail_wave() -> void:
 	if _shift_finished:
+		return
+	if debug_no_fail_wave:
+		push_warning("Wave failure suppressed by debug_no_fail_wave; ending shift without fail.")
+		_finish_shift_safe()
 		return
 	_wave_failed = true
 	_finish_shift_safe()
