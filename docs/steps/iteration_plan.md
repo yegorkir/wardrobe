@@ -14,6 +14,106 @@
 
 Если хочешь, чтобы **в интерфейсе гарантированно была одна понятная сущность**, могу сделать альтернативно **одну** задачу, которая срабатывает **каждые 30 минут 9 раз** и на каждом запуске подхватывает следующую итерацию из списка. Но это будет действительно **одна** задача (а не 9 отдельных).
 
+## Iteration plan review (v0.5) - updated order and status
+
+### Mapping and scope
+
+- The "Iteration 0" in the review is effectively the original Iteration 4.1 plus cleanup tasks (wave timer removal and target config).
+- This section reflects the repo snapshot and the v0.5 canon: what is done, what is legacy, and what must move earlier.
+
+### Still valid from the old plan
+
+- Win counters (N_checkin/N_checkout) as the win rule.
+- Queue mix policy (drop-off vs pick-up).
+- Quality stars as the main error accumulator.
+- Light zones + vampire/zombie/ghost as later modules.
+- Queue patience decay is optional for first playtest.
+
+### Outdated / legacy
+
+- Wave timer and wave fail logic should be removed (not just disabled).
+  - Current legacy location: `scripts/ui/workdesk_scene.gd` (`_wave_time_left`, `_tick_wave_and_patience`, `_fail_wave`, labels).
+
+### Missing but required before playtest
+
+- Service Desk as a surface table (not slot-only). This is required to test the real core loop.
+
+### Done in code (as of current snapshot)
+
+- Queue mix policy exists: `scripts/app/queue/queue_mix_policy.gd` (tune numbers, do not rewrite).
+- Targets win policy exists: `scripts/app/shift/shift_win_policy.gd` + `scripts/domain/run/run_state.gd`.
+- Swap disabled globally: `scripts/app/interaction/pick_put_swap_resolver.gd`.
+
+### Iteration 4.1 status (win counters)
+
+- Done:
+  - Counters and targets in domain + app (`run_state.gd`, `shift_service.gd`, `shift_win_policy.gd`).
+  - Domain-level dedup by `client_id`.
+  - Checkin/checkout events threaded from desk events (`workdesk_desk_events_bridge.gd`).
+  - Shift win unit tests updated (`tests/unit/shift_service_win_test.gd`).
+- Remaining:
+  - Targets still configured from `total_clients` in `scripts/ui/workdesk_scene.gd` (should be N_checkin/N_checkout from config).
+
+### Updated iteration order (v2)
+
+#### Iteration 0 - Clean MVP contour (maps to original 4.1 + cleanup)
+
+- Remove wave timer and wave-fail logic from `scripts/ui/workdesk_scene.gd`.
+- Configure shift targets from N_checkin/N_checkout (not total_clients).
+  - Source can be temporary config, but must not be derived from total_clients.
+- Keep shift win unit tests as a safety net (already updated, expand if needed).
+
+#### Iteration 1 - Service Desk as surface table (Papers, Please-like)
+
+- Desk is a surface table with free placement (not slots).
+- Items dropped outside the desk fall to the floor (no auto-delete).
+- Visual snap/highlight to show surface under cursor.
+- Items scale by depth (desk close, shelves far) - must be playtested.
+- Support items_per_client=1 now; keep architecture open for >1 later.
+
+#### Iteration 2 - Two-phase canonical flow
+
+- Check-in: ticket always taken even if items remain on desk.
+- Check-out: handoff is per-item; client leaves on complete bundle.
+- Wrong item: eject to floor + patience penalty (tunable per archetype).
+
+#### Iteration 3 - Quality stars (error accumulator)
+
+- Fall damage uses quality system.
+- Wrong item uses same damage rule.
+- Minimal quality UI on items.
+
+#### Iteration 4 - Patience anti-ignore
+
+- Patience=0 blocks only its slot; other slot remains usable.
+- Client can still be served and leave after 0.
+- Strikes = 3 on transition >0 -> 0.
+
+#### Iteration 5 - Light zones + vampire
+
+- Light sources with zones.
+- Pivot-in-zone rule by default (playtest).
+- Vampire items degrade in light.
+
+#### Iteration 6 - Zombie corrosion
+
+- Radius-based staged corrosion.
+- Exposure accumulation, threshold, star loss.
+
+#### Iteration 7 - Ghost rule
+
+- In dark: pale + non-interactive.
+- Optional lock icon (easy to toggle).
+
+#### Iteration 8 - Anchor_ticket (exploration)
+
+- Only evaluate feasibility; no concrete implementation yet.
+
+#### Iteration 9 - Queue patience decay (if needed)
+
+- Queue patience decay with separate rate.
+- Optional stress modifiers if slots blocked.
+
 
 ## Codex Task — Iteration 4.1: Dodelat’ Win po dvum schyotchikam + zavershenie smeny
 
