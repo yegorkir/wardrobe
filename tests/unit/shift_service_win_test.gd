@@ -2,7 +2,7 @@ extends GdUnitTestSuite
 
 const ShiftServiceScript := preload("res://scripts/app/shift/shift_service.gd")
 
-func test_shift_wins_when_all_served_and_no_active_clients() -> void:
+func test_shift_wins_when_targets_met_even_with_active_clients() -> void:
 	var shift_service := ShiftServiceScript.new()
 	shift_service.setup(
 		null,
@@ -12,7 +12,7 @@ func test_shift_wins_when_all_served_and_no_active_clients() -> void:
 		{}
 	)
 	shift_service.start_shift()
-	shift_service.configure_shift_clients(2)
+	shift_service.configure_shift_targets(2, 2)
 	shift_service.update_active_client_count(1)
 
 	var won_payloads: Array = []
@@ -20,10 +20,12 @@ func test_shift_wins_when_all_served_and_no_active_clients() -> void:
 		won_payloads.append(payload)
 	)
 
-	shift_service.register_client_completed()
+	shift_service.register_checkin_completed()
 	assert_int(won_payloads.size()).is_equal(0)
+	shift_service.register_checkout_completed()
+	shift_service.register_checkin_completed()
 	shift_service.update_active_client_count(0)
-	shift_service.register_client_completed()
+	shift_service.register_checkout_completed()
 	assert_int(won_payloads.size()).is_equal(1)
 
 func test_shift_wont_win_after_failure() -> void:
@@ -40,7 +42,7 @@ func test_shift_wont_win_after_failure() -> void:
 		{}
 	)
 	shift_service.start_shift()
-	shift_service.configure_shift_clients(1)
+	shift_service.configure_shift_targets(1, 1)
 	shift_service.configure_patience_clients([StringName("Client_A")])
 
 	var won_payloads: Array = []
@@ -50,5 +52,6 @@ func test_shift_wont_win_after_failure() -> void:
 
 	shift_service.tick_patience([StringName("Client_A")], 1.0)
 	shift_service.update_active_client_count(0)
-	shift_service.register_client_completed()
+	shift_service.register_checkin_completed()
+	shift_service.register_checkout_completed()
 	assert_int(won_payloads.size()).is_equal(0)

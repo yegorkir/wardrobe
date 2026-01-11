@@ -12,6 +12,10 @@ const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_s
 
 
 var _queue_system: ClientQueueSystem = ClientQueueSystemScript.new()
+var _queue_mix_provider: Callable
+
+func configure_queue_mix_provider(provider: Callable) -> void:
+	_queue_mix_provider = provider
 
 func process_interaction_event(
 	desk_state: DeskState,
@@ -115,9 +119,12 @@ func _assign_next_client_to_desk(
 	desk_state.current_client_id = StringName()
 	if queue_state == null:
 		return []
+	var mix_snapshot: Dictionary = {}
+	if _queue_mix_provider != null and _queue_mix_provider.is_valid():
+		mix_snapshot = _queue_mix_provider.call()
 	var attempts := queue_state.get_count()
 	for _step in range(attempts):
-		var next_client_id := _queue_system.take_next_waiting_client(queue_state)
+		var next_client_id := _queue_system.take_next_waiting_client(queue_state, mix_snapshot)
 		if next_client_id.is_empty():
 			return []
 		var next_client := _get_client(clients, next_client_id)

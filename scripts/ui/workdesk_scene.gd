@@ -90,7 +90,10 @@ func _ready() -> void:
 	call_deferred("_finish_ready_setup")
 
 func _finish_ready_setup() -> void:
-	_interaction_events_bridge.configure_bridge(Callable(self, "_on_client_completed"))
+	_interaction_events_bridge.configure_bridge(
+		Callable(self, "_on_client_completed"),
+		Callable(self, "_on_client_checkin")
+	)
 	_world_adapter.configure(
 		self,
 		_interaction_service,
@@ -99,6 +102,10 @@ func _finish_ready_setup() -> void:
 		_item_visuals,
 		Callable(_interaction_events, "apply_desk_events")
 	)
+	if _run_manager:
+		_world_adapter.get_desk_system().configure_queue_mix_provider(
+			Callable(_run_manager, "get_queue_mix_snapshot")
+		)
 	_world_adapter.collect_slots()
 	_world_adapter.collect_desks()
 	if _world_adapter.get_slots().is_empty():
@@ -221,7 +228,7 @@ func _setup_clients_ui() -> void:
 		_apply_patience_snapshot(patience_snapshot)
 	_total_clients = clients_by_id.size()
 	if _run_manager:
-		_run_manager.configure_shift_clients(_total_clients)
+		_run_manager.configure_shift_targets(_total_clients, _total_clients)
 	var desks_by_id: Dictionary = {}
 	for desk_node in _world_adapter.get_desk_nodes():
 		if desk_node == null:
@@ -315,7 +322,11 @@ func _fail_wave() -> void:
 func _on_client_completed() -> void:
 	_served_clients += 1
 	if _run_manager:
-		_run_manager.register_client_completed()
+		_run_manager.register_checkout_completed()
+
+func _on_client_checkin() -> void:
+	if _run_manager:
+		_run_manager.register_checkin_completed()
 
 func _on_end_shift_pressed() -> void:
 	if _shift_finished:

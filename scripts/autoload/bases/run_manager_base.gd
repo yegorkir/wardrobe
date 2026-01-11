@@ -126,9 +126,17 @@ func configure_shift_clients(total_clients: int) -> void:
 	if _shift_service:
 		_shift_service.configure_shift_clients(total_clients)
 
-func register_client_completed() -> void:
+func configure_shift_targets(target_checkin: int, target_checkout: int) -> void:
 	if _shift_service:
-		_shift_service.register_client_completed()
+		_shift_service.configure_shift_targets(target_checkin, target_checkout)
+
+func register_checkin_completed() -> void:
+	if _shift_service:
+		_shift_service.register_checkin_completed()
+
+func register_checkout_completed() -> void:
+	if _shift_service:
+		_shift_service.register_checkout_completed()
 
 func update_active_client_count(active_clients: int) -> void:
 	if _shift_service:
@@ -150,6 +158,11 @@ func tick_patience(active_client_ids: Array, delta: float) -> Dictionary:
 func apply_patience_penalty(client_id: StringName, amount: float, reason_code: StringName) -> Dictionary:
 	if _shift_service:
 		return _shift_service.apply_patience_penalty(client_id, amount, reason_code)
+	return {}
+
+func get_queue_mix_snapshot() -> Dictionary:
+	if _shift_service:
+		return _shift_service.get_queue_mix_snapshot()
 	return {}
 
 func _configure_input_map() -> void:
