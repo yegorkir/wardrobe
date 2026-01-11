@@ -8,3 +8,9 @@
 - Threaded `client_id` through the desk events bridge and workdesk handlers to ensure checkin/checkout events map to domain events deterministically.
 - Sourced client counts from `content/waves` in `WardrobeStep3SetupAdapter` to align configured targets with wave definitions.
 - Updated unit tests to pass `client_id` and added a dedup coverage check in `tests/unit/shift_service_win_test.gd`.
+- Removed wave timer/fail path from `scripts/ui/workdesk_scene.gd` and its debug-only flag to avoid non-canon shift endings.
+- Stopped `ShiftService.configure_shift_clients` from overwriting targets; targets now come only from `configure_shift_targets`.
+- Added `client_count`, `target_checkin`, and `target_checkout` to `content/waves/wave_1.json` and use them via `WardrobeStep3SetupAdapter`.
+- Decoupled `wave.clients` (archetype roster) from client count in `WardrobeStep3SetupAdapter`, keeping roster for archetype selection only.
+- Added a unit test guarding against target overrides in `tests/unit/shift_service_win_test.gd`.
+- Updated Iteration 4.1 status in `docs/steps/iteration_plan.md` to reflect config-driven targets and removal of total_clients override.

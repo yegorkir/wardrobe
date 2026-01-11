@@ -51,8 +51,8 @@
   - Domain-level dedup by `client_id`.
   - Checkin/checkout events threaded from desk events (`workdesk_desk_events_bridge.gd`).
   - Shift win unit tests updated (`tests/unit/shift_service_win_test.gd`).
-- Remaining:
-  - Targets still configured from `total_clients` in `scripts/ui/workdesk_scene.gd` (should be N_checkin/N_checkout from config).
+- Done:
+  - Targets configured from wave config (N_checkin/N_checkout) and no longer derived from `total_clients`.
 
 ### Updated iteration order (v2)
 

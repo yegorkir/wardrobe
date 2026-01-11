@@ -2,5 +2,8 @@
   "id": "wave_1",
   "duration": 90,
   "clients": ["human", "zombie", "vampire"],
+  "client_count": 4,
+  "target_checkin": 6,
+  "target_checkout": 4,
   "difficulty": 1
 }
