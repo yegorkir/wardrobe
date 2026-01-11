@@ -48,19 +48,6 @@ func test_pick_rejects_empty_slot() -> void:
 		WardrobeStorageState.REASON_SLOT_EMPTY
 	)
 
-func test_swap_exchanges_items() -> void:
-	var state := WardrobeStorageStateScript.new()
-	state.register_slot(StringName("Slot_A"))
-	state.put(StringName("Slot_A"), _make_item("coat_slot", ItemInstance.KIND_COAT))
-	var incoming := _make_item("coat_hand", ItemInstance.KIND_COAT)
-	var result := state.swap(StringName("Slot_A"), incoming)
-	assert_bool(result.get(WardrobeStorageState.RESULT_KEY_SUCCESS, false)).is_true()
-	assert_that(result.get(WardrobeStorageState.RESULT_KEY_REASON, StringName())).is_equal(
-		WardrobeStorageState.REASON_OK
-	)
-	assert_that(result.get(WardrobeStorageState.RESULT_KEY_OUTGOING)).is_not_null()
-	assert_that(state.get_slot_item(StringName("Slot_A"))).is_equal(incoming)
-
 func test_snapshot_contains_slot_items() -> void:
 	var state := WardrobeStorageStateScript.new()
 	state.register_slot(StringName("Slot_A"))

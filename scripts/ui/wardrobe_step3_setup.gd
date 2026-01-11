@@ -9,6 +9,7 @@ const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_servi
 const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
+const ContentDBBaseScript := preload("res://scripts/autoload/bases/content_db_base.gd")
 
 var _root: Node
 var _clear_spawned_items: Callable
@@ -123,13 +124,45 @@ func _make_demo_client(index: int, client_id: StringName, color: Color) -> Clien
 		ItemInstanceScript.KIND_TICKET,
 		color
 	)
+	var archetype_data := _resolve_demo_archetype(index)
+	var archetype_id: StringName = archetype_data.get("id", StringName())
+	var wrong_item_penalty: float = float(archetype_data.get("wrong_item_penalty", 0.0))
 	return ClientStateScript.new(
 		client_id,
 		coat,
 		ticket,
 		StringName(),
-		StringName("color_%d" % index)
+		StringName("color_%d" % index),
+		archetype_id,
+		wrong_item_penalty
 	)
+
+func _resolve_demo_archetype(index: int) -> Dictionary:
+	if _root == null:
+		return {
+			"id": StringName("human"),
+			"wrong_item_penalty": 0.0,
+		}
+	var content_db := _root.get_node_or_null("/root/ContentDB") as ContentDBBaseScript
+	if content_db == null:
+		return {
+			"id": StringName("human"),
+			"wrong_item_penalty": 0.0,
+		}
+	var wave := content_db.get_wave("wave_1")
+	var wave_payload: Dictionary = wave.get("payload", {})
+	var wave_clients: Variant = wave_payload.get("clients", [])
+	var archetype_id := StringName("human")
+	if wave_clients is Array and not (wave_clients as Array).is_empty():
+		var clients_list := wave_clients as Array
+		archetype_id = StringName(str(clients_list[index % clients_list.size()]))
+	var archetype := content_db.get_archetype(String(archetype_id))
+	var payload: Dictionary = archetype.get("payload", {})
+	var penalty: float = float(payload.get("wrong_item_patience_penalty", 0.0))
+	return {
+		"id": archetype_id,
+		"wrong_item_penalty": penalty,
+	}
 
 func _seed_step3_hook_tickets() -> void:
 	if not _get_ticket_slots.is_valid():

@@ -12,7 +12,6 @@ const PAYLOAD_SLOT_ITEM_ID := &"slot_item_id"
 const TYPE_AUTO := &"interaction_auto"
 const TYPE_PICK := &"interaction_pick"
 const TYPE_PUT := &"interaction_put"
-const TYPE_SWAP := &"interaction_swap"
 
 static func build(
 	action: StringName,

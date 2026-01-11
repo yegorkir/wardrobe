@@ -30,12 +30,23 @@ func _refresh() -> void:
 		lines.append("Cleanliness score: %s" % _payload["cleanliness"])
 	if _payload.has("inspector_risk"):
 		lines.append("Inspector risk: %s" % _payload["inspector_risk"])
-		if _payload.has("inspection_report"):
-			var report: Dictionary = _payload["inspection_report"]
-			if not report.is_empty():
-				lines.append("Inspection mode: %s" % report.get("mode", "-"))
-				var triggered_flag: bool = bool(report.get("triggered", false))
-				lines.append("Inspection triggered: %s" % ("Yes" if triggered_flag else "No"))
+	if _payload.has("status"):
+		lines.append("Shift status: %s" % _payload["status"])
+	if _payload.has("strikes_current") and _payload.has("strikes_limit"):
+		lines.append("Strikes: %s/%s" % [_payload["strikes_current"], _payload["strikes_limit"]])
+	if _payload.has("end_reasons"):
+		var reasons: Array = []
+		var raw_reasons: Variant = _payload.get("end_reasons", [])
+		if raw_reasons is Array:
+			reasons = raw_reasons as Array
+		if not reasons.is_empty():
+			lines.append("End reasons: %s" % ", ".join(reasons))
+	if _payload.has("inspection_report"):
+		var report: Dictionary = _payload["inspection_report"]
+		if not report.is_empty():
+			lines.append("Inspection mode: %s" % report.get("mode", "-"))
+			var triggered_flag: bool = bool(report.get("triggered", false))
+			lines.append("Inspection triggered: %s" % ("Yes" if triggered_flag else "No"))
 	if _payload.has("notes"):
 		for note in _payload["notes"]:
 			lines.append(str(note))

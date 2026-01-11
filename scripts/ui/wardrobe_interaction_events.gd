@@ -2,6 +2,7 @@ extends RefCounted
 class_name WardrobeInteractionEventsAdapter
 
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
+const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 
 const UNHANDLED_IGNORE := StringName("ignore")
 const UNHANDLED_WARN := StringName("warn")
@@ -49,6 +50,7 @@ func _setup_handlers() -> void:
 	_handlers[EventSchema.EVENT_CLIENT_PHASE_CHANGED] = Callable(self, "_log_client_phase_changed")
 	_handlers[EventSchema.EVENT_CLIENT_COMPLETED] = Callable(self, "_log_client_completed")
 	_handlers[EventSchema.EVENT_DESK_REJECTED_DELIVERY] = Callable(self, "_log_desk_rejected_delivery")
+	_handlers[EventSchema.EVENT_ITEM_DROPPED] = Callable(self, "_apply_item_dropped")
 
 func _apply_desk_consumed(payload: Dictionary) -> void:
 	var item_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_ITEM_INSTANCE_ID, "")))
@@ -86,6 +88,46 @@ func _log_client_completed(payload: Dictionary) -> void:
 
 func _log_desk_rejected_delivery(payload: Dictionary) -> void:
 	_debug_desk_event("desk_rejected_delivery", payload)
+
+func _apply_item_dropped(payload: Dictionary) -> void:
+	var item_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_ITEM_INSTANCE_ID, "")))
+	var floor_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_TO, "")))
+	if item_id == StringName() or floor_id == StringName():
+		return
+	var node: ItemNode = _item_nodes.get(item_id, null)
+	if node == null:
+		return
+	if _detach_item_node.is_valid():
+		_detach_item_node.call(node)
+	var registry := SurfaceRegistryScript.get_autoload()
+	if registry != null:
+		registry.remove_item_from_all(node)
+	var floor_node := _resolve_floor_by_id(floor_id)
+	if floor_node == null:
+		push_warning("Floor zone %s not found; item drop skipped." % floor_id)
+		return
+	var drop_pos := node.global_position
+	node.set_landing_cause(EventSchema.CAUSE_REJECT)
+	if floor_node.has_method("drop_item_with_fall"):
+		floor_node.call("drop_item_with_fall", node, drop_pos)
+	else:
+		floor_node.call("drop_item", node, drop_pos)
+	var floor_y := float(floor_node.call("get_surface_collision_y_global"))
+	var mode := ItemNode.FloorTransferMode.FALL_ONLY
+	if floor_y < node.get_bottom_y_global():
+		mode = ItemNode.FloorTransferMode.RISE_THEN_FALL
+	node.start_floor_transfer(floor_y, mode)
+
+func _resolve_floor_by_id(floor_id: StringName) -> Node:
+	var registry := SurfaceRegistryScript.get_autoload()
+	if registry == null:
+		return null
+	for floor_node in registry.get_floors():
+		if floor_node == null:
+			continue
+		if StringName(String(floor_node.name)) == floor_id:
+			return floor_node
+	return null
 
 func _handle_unhandled(event_type: StringName, payload: Dictionary) -> void:
 	if _unhandled_policy == UNHANDLED_IGNORE:

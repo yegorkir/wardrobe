@@ -15,6 +15,7 @@ const REASON_SLOT_MISMATCH := StringName("slot_mismatch")
 const REASON_HAND_MISMATCH := StringName("hand_mismatch")
 const REASON_HAND_EMPTY := StringName("hand_empty")
 const REASON_NOTHING_TO_DO := StringName("nothing_to_do")
+const REASON_SWAP_DISABLED := StringName("swap_disabled")
 const REASON_UNKNOWN_ACTION := StringName("unknown_action")
 
 var _resolver := ResolverScript.new()
@@ -41,16 +42,16 @@ func _process_with_storage(
 	var validation := _validate_request(storage_state, payload, slot_id, slot_item, hand_item, tick)
 	if validation != null:
 		return validation
-	var desired_action := _resolve_action(command, hand_item != null, slot_item != null)
+	var resolution := _resolve_action_result(command, hand_item != null, slot_item != null)
+	var desired_action: String = resolution.get("action", ResolverScript.ACTION_NONE)
+	var resolved_reason: StringName = resolution.get("reason", REASON_NOTHING_TO_DO)
 	match desired_action:
 		ResolverScript.ACTION_PICK:
 			return _execute_pick(storage_state, slot_id, tick)
 		ResolverScript.ACTION_PUT:
 			return _execute_put(storage_state, slot_id, hand_item, tick)
-		ResolverScript.ACTION_SWAP:
-			return _execute_swap(storage_state, slot_id, hand_item, tick)
 		ResolverScript.ACTION_NONE:
-			return _reject_with_event(REASON_NOTHING_TO_DO, slot_id, hand_item, tick)
+			return _reject_with_event(resolved_reason, slot_id, hand_item, tick)
 		_:
 			return _reject_with_event(REASON_UNKNOWN_ACTION, slot_id, hand_item, tick)
 
@@ -81,16 +82,17 @@ func _read_payload(command: Dictionary) -> Dictionary:
 func _read_tick(command: Dictionary) -> int:
 	return int(command.get(CommandScript.KEY_TICK, 0))
 
-func _resolve_action(command: Dictionary, hand_present: bool, slot_present: bool) -> String:
+func _resolve_action_result(command: Dictionary, hand_present: bool, slot_present: bool) -> Dictionary:
 	var requested: StringName = command.get(CommandScript.KEY_TYPE, CommandScript.TYPE_AUTO)
 	if requested == CommandScript.TYPE_PICK:
-		return ResolverScript.ACTION_PICK
+		return {"action": ResolverScript.ACTION_PICK, "reason": REASON_NOTHING_TO_DO}
 	if requested == CommandScript.TYPE_PUT:
-		return ResolverScript.ACTION_PUT
-	if requested == CommandScript.TYPE_SWAP:
-		return ResolverScript.ACTION_SWAP
+		return {"action": ResolverScript.ACTION_PUT, "reason": REASON_NOTHING_TO_DO}
 	var resolved := _resolver.resolve(hand_present, slot_present)
-	return str(resolved.get("action", ResolverScript.ACTION_NONE))
+	return {
+		"action": str(resolved.get("action", ResolverScript.ACTION_NONE)),
+		"reason": StringName(str(resolved.get("reason", REASON_NOTHING_TO_DO))),
+	}
 
 func _validate_expected_item(payload: Dictionary, key: StringName, actual: ItemInstance) -> bool:
 	var expected_variant: Variant = payload.get(key, "")
@@ -139,28 +141,6 @@ func _execute_put(
 	]
 	return _make_result(true, WardrobeStorageState.REASON_OK, ResolverScript.ACTION_PUT, events, null)
 
-func _execute_swap(
-	storage_state: WardrobeStorageState,
-	slot_id: StringName,
-	hand_item: ItemInstance,
-	tick: int
-) -> InteractionResult:
-	if hand_item == null:
-		return _reject_with_event(REASON_HAND_EMPTY, slot_id, hand_item, tick)
-	var swap_result := storage_state.swap(slot_id, hand_item)
-	if not swap_result.get(WardrobeStorageState.RESULT_KEY_SUCCESS, false):
-		var reason: StringName = swap_result.get(WardrobeStorageState.RESULT_KEY_REASON, REASON_SLOT_EMPTY)
-		return _reject_with_event(reason, slot_id, hand_item, tick)
-	var outgoing: ItemInstance = swap_result.get(WardrobeStorageState.RESULT_KEY_OUTGOING)
-	var events := [
-		_make_event(EventSchema.EVENT_ITEM_SWAPPED, {
-			EventSchema.PAYLOAD_SLOT_ID: slot_id,
-			EventSchema.PAYLOAD_INCOMING_ITEM: hand_item.to_snapshot(),
-			EventSchema.PAYLOAD_OUTGOING_ITEM: outgoing.to_snapshot(),
-			EventSchema.PAYLOAD_TICK: tick,
-		})
-	]
-	return _make_result(true, WardrobeStorageState.REASON_OK, ResolverScript.ACTION_SWAP, events, outgoing)
 
 func _reject_with_event(
 	reason: StringName,

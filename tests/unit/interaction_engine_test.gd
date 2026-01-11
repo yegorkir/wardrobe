@@ -51,7 +51,7 @@ func test_put_consumes_hand_and_logs_event() -> void:
 	assert_int(events.size()).is_equal(1)
 	assert_that(events[0].get(EventSchema.EVENT_KEY_TYPE)).is_equal(EventSchema.EVENT_ITEM_PLACED)
 
-func test_swap_returns_outgoing_item_and_event_payloads() -> void:
+func test_rejects_when_swap_disabled() -> void:
 	var engine := InteractionEngine.new()
 	var storage := _make_storage()
 	var hand := _make_item("coat_hand")
@@ -61,20 +61,17 @@ func test_swap_returns_outgoing_item_and_event_payloads() -> void:
 
 	var result: InteractionResult = engine.process_command(command, storage, hand)
 
-	assert_that(result.success).is_true()
-	assert_that(result.action).is_equal(Resolver.ACTION_SWAP)
-	var new_hand: ItemInstance = result.hand_item
-	assert_that(new_hand).is_not_null()
-	assert_that(new_hand.id).is_equal(StringName("coat_slot"))
+	assert_that(result.success).is_false()
+	assert_that(result.action).is_equal(Resolver.ACTION_NONE)
+	assert_that(result.reason).is_equal(InteractionEngine.REASON_SWAP_DISABLED)
+	assert_that(result.hand_item).is_equal(hand)
 	var slot_after := storage.get_slot_item(StringName("Slot_A"))
-	assert_that(slot_after).is_not_null()
-	if slot_after:
-		assert_that(slot_after.id).is_equal(StringName("coat_hand"))
+	assert_that(slot_after).is_equal(slot_item)
 	var events: Array = result.events
 	assert_int(events.size()).is_equal(1)
 	var payload: Dictionary = events[0].get(EventSchema.EVENT_KEY_PAYLOAD, {})
-	assert_bool(payload.get(EventSchema.PAYLOAD_INCOMING_ITEM, {}) is Dictionary).is_true()
-	assert_bool(payload.get(EventSchema.PAYLOAD_OUTGOING_ITEM, {}) is Dictionary).is_true()
+	assert_that(events[0].get(EventSchema.EVENT_KEY_TYPE)).is_equal(EventSchema.EVENT_ACTION_REJECTED)
+	assert_that(payload.get(EventSchema.PAYLOAD_REASON)).is_equal(InteractionEngine.REASON_SWAP_DISABLED)
 
 func test_rejects_when_hand_id_mismatches() -> void:
 	var engine := InteractionEngine.new()

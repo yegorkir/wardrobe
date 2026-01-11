@@ -1,0 +1,189 @@
+[gd_scene load_steps=9 format=3 uid="uid://c6kv1r1uwxk7g"]
+
+[ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://b1vy45o0cbxlk" path="res://scenes/prefabs/StorageCabinetLayout_Simple.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://bbsuw6pn2oo58" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
+[ext_resource type="Script" uid="uid://c1jb2jnhticws" path="res://scripts/wardrobe/cursor_hand.gd" id="4"]
+[ext_resource type="Script" uid="uid://ce2nlf0hgoh2r" path="res://scripts/ui/wardrobe_physics_tick_adapter.gd" id="5"]
+[ext_resource type="Script" uid="uid://bpqv5b0mctves" path="res://scripts/ui/floor_zone_adapter.gd" id="6"]
+
+[sub_resource type="RectangleShape2D" id="3"]
+size = Vector2(720, 6)
+
+[sub_resource type="RectangleShape2D" id="2"]
+size = Vector2(720, 54)
+
+[node name="WorkdeskScene" type="Node2D"]
+script = ExtResource("1")
+debug_no_fail_wave = true
+debug_logs_enabled = true
+
+[node name="WardrobePhysicsTick" type="Node2D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("5")
+
+[node name="StorageHall" type="Node2D" parent="."]
+position = Vector2(0, 40)
+
+[node name="CabinetsGrid" type="Node2D" parent="StorageHall"]
+position = Vector2(180, 465)
+
+[node name="Cabinet_100" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(-53, -140)
+cabinet_id = &"Cab_100"
+
+[node name="Cabinet_010" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(176, -140)
+cabinet_id = &"Cab_010"
+
+[node name="Cabinet_001" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(413, -140)
+cabinet_id = &"Cab_001"
+
+[node name="Cabinet_200" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(-53, 360)
+cabinet_id = &"Cab_200"
+
+[node name="Cabinet_020" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(176, 360)
+cabinet_id = &"Cab_020"
+
+[node name="Cabinet_002" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
+position = Vector2(413, 360)
+cabinet_id = &"Cab_002"
+
+[node name="CurtainsColumn" type="Node2D" parent="StorageHall"]
+position = Vector2(40, 655)
+
+[node name="BulbsColumn" type="Node2D" parent="StorageHall"]
+position = Vector2(650, 655)
+
+[node name="FloorZone1" type="Node2D" parent="StorageHall"]
+position = Vector2(0, 567.26)
+script = ExtResource("6")
+
+[node name="SurfaceBody" type="StaticBody2D" parent="StorageHall/FloorZone1"]
+collision_layer = 8
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone1/SurfaceBody"]
+position = Vector2(360, 0)
+shape = SubResource("3")
+
+[node name="DropArea" type="Area2D" parent="StorageHall/FloorZone1"]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone1/DropArea"]
+position = Vector2(360, 0)
+shape = SubResource("2")
+
+[node name="SurfaceRef" type="Node2D" parent="StorageHall/FloorZone1"]
+position = Vector2(360, 0)
+
+[node name="FloorZone" type="Node2D" parent="StorageHall/FloorZone1/DropArea"]
+
+[node name="ItemsRoot" type="Node2D" parent="StorageHall/FloorZone1/DropArea"]
+
+[node name="FloorZone2" type="Node2D" parent="StorageHall"]
+position = Vector2(0, 1055)
+script = ExtResource("6")
+
+[node name="SurfaceBody" type="StaticBody2D" parent="StorageHall/FloorZone2"]
+collision_layer = 8
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone2/SurfaceBody"]
+position = Vector2(360, 0)
+shape = SubResource("3")
+
+[node name="DropArea" type="Area2D" parent="StorageHall/FloorZone2"]
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone2/DropArea"]
+position = Vector2(360, 0)
+shape = SubResource("2")
+
+[node name="SurfaceRef" type="Node2D" parent="StorageHall/FloorZone2"]
+position = Vector2(360, 0)
+
+[node name="FloorZone" type="Node2D" parent="StorageHall/FloorZone2/DropArea"]
+
+[node name="ItemsRoot" type="Node2D" parent="StorageHall/FloorZone2/DropArea"]
+
+[node name="ServiceZone" type="Node2D" parent="."]
+position = Vector2(0, 775)
+
+[node name="ServiceSlots" type="Node2D" parent="ServiceZone"]
+position = Vector2(240, 445)
+
+[node name="Desk_A" parent="ServiceZone/ServiceSlots" instance=ExtResource("3")]
+desk_id = &"Desk_A"
+desk_slot_id = &"DeskSlot_0"
+
+[node name="Desk_B" parent="ServiceZone/ServiceSlots" instance=ExtResource("3")]
+position = Vector2(220, 0)
+desk_id = &"Desk_B"
+desk_slot_id = &"DeskSlot_1"
+
+[node name="HandRoot" type="Node2D" parent="."]
+z_index = 1000
+z_as_relative = false
+
+[node name="CursorHand" type="Node2D" parent="HandRoot"]
+unique_name_in_owner = true
+script = ExtResource("4")
+
+[node name="HUDLayer" type="CanvasLayer" parent="."]
+
+[node name="HUDContainer" type="MarginContainer" parent="HUDLayer"]
+unique_name_in_owner = true
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 170.0
+mouse_filter = 2
+
+[node name="HUDPanel" type="PanelContainer" parent="HUDLayer/HUDContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="HUDLayer/HUDContainer/HUDPanel"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="WaveValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Wave: -"
+
+[node name="TimeValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Time: -"
+
+[node name="MoneyValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Money: -"
+
+[node name="MagicValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Magic: -"
+
+[node name="DebtValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Debt: -"
+
+[node name="StrikesValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Strikes: -"
+
+[node name="EndShiftButton" type="Button" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "End Shift (debug)"

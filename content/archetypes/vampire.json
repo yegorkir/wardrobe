@@ -2,5 +2,6 @@
   "id": "vampire",
   "display_name": "Vampire",
   "patience": 80,
-  "effect": "Dislikes bright light"
+  "effect": "Dislikes bright light",
+  "wrong_item_patience_penalty": 12
 }

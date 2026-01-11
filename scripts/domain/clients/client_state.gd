@@ -16,6 +16,8 @@ var assigned_service_point_id: StringName
 var phase: StringName = PHASE_DROP_OFF
 var presence: StringName = PRESENCE_PRESENT
 var color_id: StringName = StringName()
+var archetype_id: StringName = StringName()
+var wrong_item_patience_penalty: float = 0.0
 
 var _coat_item: ItemInstance
 var _ticket_item: ItemInstance
@@ -25,13 +27,17 @@ func _init(
 	coat_item: ItemInstance,
 	ticket_item: ItemInstance = null,
 	desk_id: StringName = StringName(),
-	client_color_id: StringName = StringName()
+	client_color_id: StringName = StringName(),
+	client_archetype_id: StringName = StringName(),
+	wrong_item_penalty: float = 0.0
 ) -> void:
 	client_id = id
 	_coat_item = coat_item
 	_ticket_item = ticket_item
 	assigned_service_point_id = desk_id
 	color_id = client_color_id
+	archetype_id = client_archetype_id
+	wrong_item_patience_penalty = wrong_item_penalty
 
 func get_coat_item() -> ItemInstance:
 	return _coat_item
@@ -60,3 +66,6 @@ func set_presence(new_presence: StringName) -> void:
 
 func set_assigned_service_point(desk_id: StringName) -> void:
 	assigned_service_point_id = desk_id
+
+func get_wrong_item_patience_penalty() -> float:
+	return wrong_item_patience_penalty

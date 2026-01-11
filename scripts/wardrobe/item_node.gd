@@ -285,6 +285,18 @@ func exit_drag_mode() -> void:
 	_settle_grace_frames = SETTLE_GRACE_FRAMES
 	_log_debug("exit_drag item=%s state=%s", [item_id, str(_state)])
 
+func prepare_for_slot_anchor() -> void:
+	_cancel_floor_transfer()
+	_clear_pass_through()
+	_reject_falling = false
+	last_drop_reason = DropReason.NONE
+	_is_dragging = false
+	_settle_time = 0.0
+	_settle_grace_frames = 0
+	_state = State.STABLE
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
+
 func enable_pass_through_until_y(target_y: float) -> void:
 	_start_pass_through(target_y)
 
@@ -716,6 +728,17 @@ func _log_transfer_sink_detected(state: PhysicsDirectBodyState2D) -> void:
 		"collision_mask": collision_mask,
 	}
 	DebugLog.event(StringName("TRANSFER_SINK_DETECTED"), payload)
+
+func get_debug_state_label() -> String:
+	match _state:
+		State.STABLE:
+			return "stable"
+		State.DRAGGING:
+			return "dragging"
+		State.SETTLING:
+			return "settling"
+		_:
+			return "unknown"
 
 func is_settling() -> bool:
 	return _state == State.SETTLING

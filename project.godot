@@ -30,6 +30,11 @@ window/size/viewport_height=1280
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/log_path="user://.godot.log"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")

@@ -2,6 +2,10 @@ extends RefCounted
 
 class_name RunState
 
+const SHIFT_STATUS_RUNNING := StringName("running")
+const SHIFT_STATUS_FAILED := StringName("failed")
+const SHIFT_STATUS_SUCCESS := StringName("success")
+
 var shift_index: int = 0
 var wave_index: int = 0
 var cleanliness_or_entropy: float = 0.0
@@ -10,6 +14,14 @@ var magic_links: Dictionary = {}
 var shift_payout_debt: int = 0
 var magic_config: Dictionary = {}
 var inspection_config: Dictionary = {}
+var shift_status: StringName = SHIFT_STATUS_RUNNING
+var total_clients: int = 0
+var served_clients: int = 0
+var active_clients: int = 0
+var target_checkin: int = 0
+var target_checkout: int = 0
+var checkin_done: int = 0
+var checkout_done: int = 0
 
 func reset_for_shift() -> void:
 	shift_index += 1
@@ -18,9 +30,38 @@ func reset_for_shift() -> void:
 	inspector_risk = 0.0
 	shift_payout_debt = 0
 	magic_links.clear()
+	shift_status = SHIFT_STATUS_RUNNING
+	total_clients = 0
+	served_clients = 0
+	active_clients = 0
+	target_checkin = 0
+	target_checkout = 0
+	checkin_done = 0
+	checkout_done = 0
 
 func set_magic_links(ticket_number: int, item_ids: Array) -> void:
 	magic_links[ticket_number] = item_ids.duplicate(true)
 
 func get_magic_links() -> Dictionary:
 	return magic_links.duplicate(true)
+
+func configure_shift_targets(checkin_target: int, checkout_target: int) -> void:
+	target_checkin = max(0, checkin_target)
+	target_checkout = max(0, checkout_target)
+	checkin_done = 0
+	checkout_done = 0
+
+func register_checkin_completed() -> void:
+	checkin_done += 1
+
+func register_checkout_completed() -> void:
+	checkout_done += 1
+
+func get_need_checkin() -> int:
+	return max(0, target_checkin - checkin_done)
+
+func get_need_checkout() -> int:
+	return max(0, target_checkout - checkout_done)
+
+func get_outstanding_checkout() -> int:
+	return checkin_done - checkout_done

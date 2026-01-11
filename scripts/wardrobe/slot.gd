@@ -23,6 +23,7 @@ func put_item(item: ItemNode) -> bool:
 	if not can_put(item):
 		return false
 	_held_item = item
+	item.prepare_for_slot_anchor()
 	item.freeze = true
 	item.collision_layer = 0
 	item.collision_mask = 0

@@ -7,6 +7,7 @@ var _time_label: Label
 var _money_label: Label
 var _magic_label: Label
 var _debt_label: Label
+var _strikes_label: Label
 var _end_shift_button: Button
 var _end_shift_handler: Callable = Callable()
 var _hud_connected := false
@@ -19,6 +20,7 @@ func configure(
 	money_label: Label,
 	magic_label: Label,
 	debt_label: Label,
+	strikes_label: Label,
 	end_shift_button: Button,
 	end_shift_handler: Callable = Callable()
 ) -> void:
@@ -28,6 +30,7 @@ func configure(
 	_money_label = money_label
 	_magic_label = magic_label
 	_debt_label = debt_label
+	_strikes_label = strikes_label
 	_end_shift_button = end_shift_button
 	_end_shift_handler = end_shift_handler
 
@@ -63,6 +66,14 @@ func _on_hud_updated(snapshot: Dictionary) -> void:
 		_magic_label.text = "Magic: %s" % snapshot.get("magic", "-")
 	if _debt_label:
 		_debt_label.text = "Debt: %s" % snapshot.get("debt", "-")
+	if _strikes_label:
+		var current_text: String = "-"
+		var limit_text: String = "-"
+		if snapshot.has("strikes_current"):
+			current_text = str(snapshot.get("strikes_current"))
+		if snapshot.has("strikes_limit"):
+			limit_text = str(snapshot.get("strikes_limit"))
+		_strikes_label.text = "Strikes: %s/%s" % [current_text, limit_text]
 
 func _on_end_shift_pressed() -> void:
 	if _run_manager:

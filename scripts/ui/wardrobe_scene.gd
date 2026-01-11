@@ -14,6 +14,8 @@ const WardrobeWorldSetupAdapterScript := preload("res://scripts/ui/wardrobe_worl
 const WardrobeHudAdapterScript := preload("res://scripts/ui/wardrobe_hud_adapter.gd")
 const WardrobeInteractionLoggerScript := preload("res://scripts/ui/wardrobe_interaction_logger.gd")
 const WardrobeShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
+const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
+const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -23,6 +25,7 @@ const WardrobeShiftLogScript := preload("res://scripts/app/logging/shift_log.gd"
 @onready var _money_label: Label = %MoneyValue
 @onready var _magic_label: Label = %MagicValue
 @onready var _debt_label: Label = %DebtValue
+@onready var _strikes_label: Label = %StrikesValue
 @onready var _end_shift_button: Button = %EndShiftButton
 @onready var _player: WardrobePlayerController = %Player
 @onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
@@ -40,6 +43,7 @@ var _world_adapter := WardrobeWorldSetupAdapterScript.new()
 var _hud_adapter := WardrobeHudAdapterScript.new()
 var _interaction_logger := WardrobeInteractionLoggerScript.new()
 var _shift_log: WardrobeShiftLog = WardrobeShiftLogScript.new()
+var _floor_resolver = FloorResolverScript.new()
 
 func _ready() -> void:
 	_hud_adapter.configure(
@@ -49,6 +53,7 @@ func _ready() -> void:
 		_money_label,
 		_magic_label,
 		_debt_label,
+		_strikes_label,
 		_end_shift_button
 	)
 	_hud_adapter.setup_hud()
@@ -73,6 +78,7 @@ func _finish_ready_setup() -> void:
 		_world_adapter.collect_slots()
 		_world_adapter.collect_desks()
 	_world_adapter.reset_storage_state()
+	_configure_floor_resolver()
 	var interaction_context := WardrobeInteractionContextScript.new()
 	interaction_context.player = _player
 	interaction_context.interaction_service = _interaction_service
@@ -93,11 +99,28 @@ func _finish_ready_setup() -> void:
 	interaction_context.client_queue_state = _world_adapter.get_client_queue_state()
 	interaction_context.clients = _world_adapter.get_clients()
 	interaction_context.find_item_instance = Callable(_world_adapter, "find_item_instance")
+	interaction_context.floor_resolver = _floor_resolver
+	if _run_manager != null:
+		interaction_context.apply_patience_penalty = Callable(_run_manager, "apply_patience_penalty")
 	_interaction_logger.configure(Callable(_shift_log, "record"))
 	interaction_context.interaction_logger = _interaction_logger
 	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
 	_interaction_adapter.configure(interaction_context)
 	_world_adapter.initialize_world()
+
+func _configure_floor_resolver() -> void:
+	var registry := SurfaceRegistryScript.get_autoload()
+	if registry == null:
+		return
+	var floor_ids: Array = []
+	for floor_node in registry.get_floors():
+		if floor_node == null:
+			continue
+		floor_ids.append(StringName(String(floor_node.name)))
+	var default_floor_id := StringName()
+	if not floor_ids.is_empty():
+		default_floor_id = StringName(String(floor_ids[0]))
+	_floor_resolver.configure(floor_ids, default_floor_id)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact"):

@@ -8,7 +8,7 @@ func test_resolver_returns_expected_actions() -> void:
 		{ "hand": false, "slot": false, "action": Resolver.ACTION_NONE, "success": false },
 		{ "hand": false, "slot": true, "action": Resolver.ACTION_PICK, "success": true },
 		{ "hand": true, "slot": false, "action": Resolver.ACTION_PUT, "success": true },
-		{ "hand": true, "slot": true, "action": Resolver.ACTION_SWAP, "success": true },
+		{ "hand": true, "slot": true, "action": Resolver.ACTION_NONE, "success": false },
 	]
 	for case_data in cases:
 		var result := resolver.resolve(case_data.hand, case_data.slot)
@@ -19,3 +19,8 @@ func test_resolver_reason_when_no_action() -> void:
 	var resolver := Resolver.new()
 	var result := resolver.resolve(false, false)
 	assert_that(result.get("reason", "")).is_equal("nothing_to_do")
+
+func test_resolver_reason_when_swap_disabled() -> void:
+	var resolver := Resolver.new()
+	var result := resolver.resolve(true, true)
+	assert_that(result.get("reason", "")).is_equal("swap_disabled")

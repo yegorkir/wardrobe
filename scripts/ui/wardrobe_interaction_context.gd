@@ -1,6 +1,8 @@
 extends RefCounted
 class_name WardrobeInteractionContext
 
+const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
+
 var player: WardrobePlayerController
 var interaction_service: WardrobeInteractionService
 var storage_state: WardrobeStorageState
@@ -22,3 +24,5 @@ var client_queue_state: ClientQueueState
 var clients: Dictionary = {}
 var find_item_instance: Callable
 var interaction_logger
+var floor_resolver
+var apply_patience_penalty: Callable

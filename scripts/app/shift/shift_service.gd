@@ -5,6 +5,8 @@ class_name ShiftService
 signal hud_updated(snapshot: Dictionary)
 signal shift_started(snapshot: Dictionary)
 signal shift_ended(summary: Dictionary)
+signal shift_failed(payload: Dictionary)
+signal shift_won(payload: Dictionary)
 
 const MagicSystemScript := preload("res://scripts/domain/magic/magic_system.gd")
 const InspectionSystemScript := preload("res://scripts/domain/inspection/inspection_system.gd")
@@ -12,6 +14,9 @@ const LandingServiceScript := preload("res://scripts/app/wardrobe/landing/landin
 const LandingOutcomeScript := preload("res://scripts/app/wardrobe/landing/landing_outcome.gd")
 const ShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
+const ShiftPatienceStateScript := preload("res://scripts/domain/shift/shift_patience_state.gd")
+const ShiftPatienceSystemScript := preload("res://scripts/app/shift/shift_patience_system.gd")
+const ShiftWinPolicyScript := preload("res://scripts/app/shift/shift_win_policy.gd")
 const MAGIC_DEFAULT_CONFIG := {
 	"insurance_mode": MagicSystemScript.INSURANCE_MODE_FREE,
 	"emergency_cost_mode": MagicSystemScript.EMERGENCY_COST_DEBT,
@@ -28,24 +33,35 @@ const INSPECTION_DEFAULT_CONFIG := {
 	"thresholds": {},
 }
 
+const SHIFT_DEFAULT_CONFIG := {
+	"strikes_limit": 3,
+	"patience_max": 30.0,
+}
+
 var _save_manager
 var _magic_system := MagicSystemScript.new()
 var _inspection_system := InspectionSystemScript.new()
 var _landing_service := LandingServiceScript.new()
 var _shift_log: WardrobeShiftLog = ShiftLogScript.new()
 var _run_state: RunState
+var _patience_state: ShiftPatienceState = ShiftPatienceStateScript.new()
+var _patience_system: ShiftPatienceSystem = ShiftPatienceSystemScript.new()
+var _win_policy = ShiftWinPolicyScript.new()
 var _hud_snapshot: Dictionary = {}
 var _last_summary: Dictionary = {}
 var _meta_data: Dictionary = {}
+var _shift_config: Dictionary = SHIFT_DEFAULT_CONFIG.duplicate(true)
 
 func setup(
 	save_manager,
 	magic_config: Dictionary = MAGIC_DEFAULT_CONFIG,
 	inspection_config: Dictionary = INSPECTION_DEFAULT_CONFIG,
+	shift_config: Dictionary = SHIFT_DEFAULT_CONFIG,
 	meta_data: Dictionary = {}
 ) -> void:
 	_save_manager = save_manager
 	_meta_data = meta_data.duplicate(true)
+	_shift_config = shift_config.duplicate(true)
 	_magic_system.setup(magic_config)
 	_inspection_system.setup(inspection_config)
 	_initialize_run_state()
@@ -54,11 +70,14 @@ func setup(
 func start_shift() -> Dictionary:
 	_shift_log.clear()
 	_prepare_shift_state()
+	_reset_patience_state()
 	_reset_demo_hud()
 	emit_signal("shift_started", get_hud_snapshot())
 	return get_hud_snapshot()
 
 func end_shift() -> Dictionary:
+	if _run_state and _run_state.shift_status == RunState.SHIFT_STATUS_RUNNING:
+		_run_state.shift_status = RunState.SHIFT_STATUS_SUCCESS
 	var inspection_report := _inspection_system.build_inspection_report(
 		_run_state,
 		_run_state.shift_index if _run_state else 1
@@ -68,7 +87,11 @@ func end_shift() -> Dictionary:
 		"notes": ["Prototype summary placeholder"],
 		"cleanliness": _run_state.cleanliness_or_entropy if _run_state else 0.0,
 		"inspector_risk": _run_state.inspector_risk if _run_state else 0.0,
+		"status": _run_state.shift_status if _run_state else RunState.SHIFT_STATUS_SUCCESS,
+		"strikes_current": _patience_state.strikes_current,
+		"strikes_limit": _patience_state.strikes_limit,
 		"inspection_report": inspection_report,
+		"end_reasons": _collect_end_reasons(),
 	}
 	_meta_data["total_currency"] = _meta_data.get("total_currency", 0) + int(_hud_snapshot.get("money", 0))
 	if _save_manager:
@@ -78,6 +101,25 @@ func end_shift() -> Dictionary:
 
 func get_hud_snapshot() -> Dictionary:
 	return _hud_snapshot.duplicate(true)
+
+func get_patience_snapshot() -> Dictionary:
+	return _patience_state.get_patience_snapshot()
+
+func get_queue_mix_snapshot() -> Dictionary:
+	if _run_state == null:
+		return {}
+	var total_targets: int = max(1, _run_state.target_checkin + _run_state.target_checkout)
+	var progress: float = float(_run_state.checkin_done + _run_state.checkout_done) / float(total_targets)
+	return {
+		"checkin_done": _run_state.checkin_done,
+		"checkout_done": _run_state.checkout_done,
+		"target_checkin": _run_state.target_checkin,
+		"target_checkout": _run_state.target_checkout,
+		"need_in": _run_state.get_need_checkin(),
+		"need_out": _run_state.get_need_checkout(),
+		"outstanding": _run_state.get_outstanding_checkout(),
+		"progress": clamp(progress, 0.0, 1.0),
+	}
 
 func reset_demo_hud() -> void:
 	_reset_demo_hud()
@@ -118,6 +160,68 @@ func record_item_landed(payload: Dictionary) -> LandingOutcomeScript:
 func get_shift_log() -> WardrobeShiftLog:
 	return _shift_log
 
+func configure_patience_clients(client_ids: Array) -> Dictionary:
+	var patience_max := float(_shift_config.get("patience_max", 30.0))
+	var strikes_limit := int(_shift_config.get("strikes_limit", 3))
+	_patience_system.reset_for_shift(_patience_state, client_ids, patience_max, strikes_limit)
+	_update_strikes_hud()
+	return _patience_state.get_patience_snapshot()
+
+func configure_shift_clients(total_clients: int) -> void:
+	if _run_state == null:
+		return
+	_run_state.total_clients = max(0, total_clients)
+	_run_state.served_clients = 0
+	_run_state.active_clients = 0
+	_run_state.configure_shift_targets(total_clients, total_clients)
+	_try_finish_shift_success()
+
+func configure_shift_targets(target_checkin: int, target_checkout: int) -> void:
+	if _run_state == null:
+		return
+	_run_state.configure_shift_targets(target_checkin, target_checkout)
+	_try_finish_shift_success()
+
+func register_checkin_completed() -> void:
+	if _run_state == null:
+		return
+	_run_state.register_checkin_completed()
+	_try_finish_shift_success()
+
+func register_checkout_completed() -> void:
+	if _run_state == null:
+		return
+	_run_state.register_checkout_completed()
+	_try_finish_shift_success()
+
+func update_active_client_count(active_clients: int) -> void:
+	if _run_state == null:
+		return
+	_run_state.active_clients = max(0, active_clients)
+
+func tick_patience(active_client_ids: Array, delta: float) -> Dictionary:
+	var result: Dictionary = _patience_system.tick_patience(_patience_state, active_client_ids, delta)
+	var strike_clients: Array = result.get("strike_client_ids", [])
+	if strike_clients.is_empty():
+		return result
+	_record_patience_zero_events(strike_clients)
+	return result
+
+func apply_patience_penalty(client_id: StringName, amount: float, reason_code: StringName) -> Dictionary:
+	var result: Dictionary = _patience_system.apply_penalty(_patience_state, client_id, amount)
+	if amount > 0.0:
+		_shift_log.record(EventSchema.EVENT_CLIENT_PATIENCE_PENALIZED, {
+			EventSchema.PAYLOAD_CLIENT_ID: client_id,
+			EventSchema.PAYLOAD_REASON_CODE: reason_code,
+			EventSchema.PAYLOAD_AMOUNT: amount,
+			EventSchema.PAYLOAD_STRIKES_CURRENT: _patience_state.strikes_current,
+			EventSchema.PAYLOAD_STRIKES_LIMIT: _patience_state.strikes_limit,
+		})
+	var strike_clients: Array = result.get("strike_client_ids", [])
+	if not strike_clients.is_empty():
+		_record_patience_zero_events(strike_clients)
+	return result
+
 func _initialize_run_state() -> void:
 	_run_state = RunState.new()
 	_run_state.magic_config = _magic_system.get_config()
@@ -135,6 +239,8 @@ func _reset_demo_hud() -> void:
 		"money": 42,
 		"magic": 3,
 		"debt": _run_state.shift_payout_debt if _run_state else 0,
+		"strikes_current": _patience_state.strikes_current,
+		"strikes_limit": _patience_state.strikes_limit,
 	}
 	emit_signal("hud_updated", get_hud_snapshot())
 
@@ -149,3 +255,75 @@ func _process_emergency_cost(event_data: Dictionary) -> void:
 
 func _log_magic_event(event_data: Dictionary) -> void:
 	print("MagicSystem event:", event_data)
+
+func _reset_patience_state() -> void:
+	var patience_max := float(_shift_config.get("patience_max", 30.0))
+	var strikes_limit := int(_shift_config.get("strikes_limit", 3))
+	_patience_state.reset([], patience_max, strikes_limit)
+
+func _update_strikes_hud() -> void:
+	_hud_snapshot["strikes_current"] = _patience_state.strikes_current
+	_hud_snapshot["strikes_limit"] = _patience_state.strikes_limit
+	emit_signal("hud_updated", get_hud_snapshot())
+
+func _record_patience_zero_events(strike_clients: Array) -> void:
+	for client_id in strike_clients:
+		_shift_log.record(EventSchema.EVENT_CLIENT_PATIENCE_ZERO, {
+			EventSchema.PAYLOAD_CLIENT_ID: client_id,
+			EventSchema.PAYLOAD_STRIKES_CURRENT: _patience_state.strikes_current,
+			EventSchema.PAYLOAD_STRIKES_LIMIT: _patience_state.strikes_limit,
+		})
+	_update_strikes_hud()
+	_apply_strike_failure_if_needed()
+
+func _apply_strike_failure_if_needed() -> void:
+	if _run_state == null:
+		return
+	if _run_state.shift_status == RunState.SHIFT_STATUS_FAILED:
+		return
+	if _patience_state.strikes_limit <= 0:
+		return
+	if _patience_state.strikes_current < _patience_state.strikes_limit:
+		return
+	_run_state.shift_status = RunState.SHIFT_STATUS_FAILED
+	_shift_log.record(EventSchema.EVENT_SHIFT_FAILED, {
+		EventSchema.PAYLOAD_STRIKES_CURRENT: _patience_state.strikes_current,
+		EventSchema.PAYLOAD_STRIKES_LIMIT: _patience_state.strikes_limit,
+	})
+	emit_signal("shift_failed", {
+		"reason": "strikes",
+		"strikes_current": _patience_state.strikes_current,
+		"strikes_limit": _patience_state.strikes_limit,
+	})
+
+func _try_finish_shift_success() -> void:
+	if _run_state == null:
+		return
+	if _run_state.shift_status != RunState.SHIFT_STATUS_RUNNING:
+		return
+	var result: Dictionary = _win_policy.evaluate(_run_state)
+	if not bool(result.get("can_win", false)):
+		return
+	_run_state.shift_status = RunState.SHIFT_STATUS_SUCCESS
+	_shift_log.record(EventSchema.EVENT_SHIFT_WON, {
+		EventSchema.PAYLOAD_CHECKIN_DONE: _run_state.checkin_done,
+		EventSchema.PAYLOAD_CHECKOUT_DONE: _run_state.checkout_done,
+		EventSchema.PAYLOAD_TARGET_CHECKIN: _run_state.target_checkin,
+		EventSchema.PAYLOAD_TARGET_CHECKOUT: _run_state.target_checkout,
+	})
+	emit_signal("shift_won", {
+		EventSchema.PAYLOAD_CHECKIN_DONE: _run_state.checkin_done,
+		EventSchema.PAYLOAD_CHECKOUT_DONE: _run_state.checkout_done,
+		EventSchema.PAYLOAD_TARGET_CHECKIN: _run_state.target_checkin,
+		EventSchema.PAYLOAD_TARGET_CHECKOUT: _run_state.target_checkout,
+	})
+
+func _collect_end_reasons() -> Array:
+	var reasons: Array = []
+	for event in _shift_log.get_events():
+		var event_type: StringName = StringName(str(event.get("type", "")))
+		if event_type == EventSchema.EVENT_SHIFT_WON:
+			reasons.append("SHIFT_WON")
+		elif event_type == EventSchema.EVENT_SHIFT_FAILED:
+			reasons.append("SHIFT_FAILED")
+	return reasons

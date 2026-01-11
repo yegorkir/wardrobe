@@ -19,6 +19,8 @@ const WorkdeskClientsUIAdapterScript := preload("res://scripts/ui/workdesk_clien
 const ShelfSurfaceAdapterScript := preload("res://scripts/ui/shelf_surface_adapter.gd")
 const FloorZoneAdapterScript := preload("res://scripts/ui/floor_zone_adapter.gd")
 const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
+const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
+const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -30,6 +32,7 @@ const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
 @onready var _money_label: Label = %MoneyValue
 @onready var _magic_label: Label = %MagicValue
 @onready var _debt_label: Label = %DebtValue
+@onready var _strikes_label: Label = %StrikesValue
 @onready var _end_shift_button: Button = %EndShiftButton
 @onready var _cursor_hand: CursorHand = %CursorHand
 @onready var _physics_tick: Node = %WardrobePhysicsTick
@@ -50,6 +53,7 @@ var _hud_adapter := WardrobeHudAdapterScript.new()
 var _interaction_logger := WardrobeInteractionLoggerScript.new()
 var _shift_log: WardrobeShiftLog = WardrobeShiftLogScript.new()
 var _clients_ui: WorkdeskClientsUIAdapter = WorkdeskClientsUIAdapterScript.new()
+var _floor_resolver = FloorResolverScript.new()
 var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
@@ -66,15 +70,18 @@ var _clients_ready := false
 
 func _ready() -> void:
 	DebugFlags.set_enabled(debug_logs_enabled)
+	if debug_no_fail_wave:
+		push_warning("debug_no_fail_wave is enabled; wave failures will be suppressed.")
 	_hud_adapter.configure(
 		_run_manager,
 		_wave_label,
 		_time_label,
-	_money_label,
-	_magic_label,
-	_debt_label,
-	_end_shift_button,
-	Callable(self, "_on_end_shift_pressed")
+		_money_label,
+		_magic_label,
+		_debt_label,
+		_strikes_label,
+		_end_shift_button,
+		Callable(self, "_on_end_shift_pressed")
 	)
 	_hud_adapter.setup_hud()
 	if _cursor_hand == null:
@@ -83,7 +90,10 @@ func _ready() -> void:
 	call_deferred("_finish_ready_setup")
 
 func _finish_ready_setup() -> void:
-	_interaction_events_bridge.configure_bridge(Callable(self, "_on_client_completed"))
+	_interaction_events_bridge.configure_bridge(
+		Callable(self, "_on_client_completed"),
+		Callable(self, "_on_client_checkin")
+	)
 	_world_adapter.configure(
 		self,
 		_interaction_service,
@@ -92,6 +102,10 @@ func _finish_ready_setup() -> void:
 		_item_visuals,
 		Callable(_interaction_events, "apply_desk_events")
 	)
+	if _run_manager:
+		_world_adapter.get_desk_system().configure_queue_mix_provider(
+			Callable(_run_manager, "get_queue_mix_snapshot")
+		)
 	_world_adapter.collect_slots()
 	_world_adapter.collect_desks()
 	if _world_adapter.get_slots().is_empty():
@@ -99,6 +113,7 @@ func _finish_ready_setup() -> void:
 		_world_adapter.collect_slots()
 		_world_adapter.collect_desks()
 	_world_adapter.reset_storage_state()
+	_configure_floor_resolver()
 	var interaction_context := WardrobeInteractionContextScript.new()
 	interaction_context.player = null
 	interaction_context.interaction_service = _interaction_service
@@ -120,6 +135,9 @@ func _finish_ready_setup() -> void:
 	interaction_context.client_queue_state = _world_adapter.get_client_queue_state()
 	interaction_context.clients = _world_adapter.get_clients()
 	interaction_context.find_item_instance = Callable(_world_adapter, "find_item_instance")
+	interaction_context.floor_resolver = _floor_resolver
+	if _run_manager != null:
+		interaction_context.apply_patience_penalty = Callable(_run_manager, "apply_patience_penalty")
 	_interaction_logger.configure(Callable(_shift_log, "record"))
 	interaction_context.interaction_logger = _interaction_logger
 	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
@@ -128,6 +146,20 @@ func _finish_ready_setup() -> void:
 	_dragdrop_adapter.configure_surface_targets(_shelf_surfaces, _floor_zone)
 	_world_adapter.initialize_world()
 	_setup_clients_ui()
+
+func _configure_floor_resolver() -> void:
+	var registry := SurfaceRegistryScript.get_autoload()
+	if registry == null:
+		return
+	var floor_ids: Array = []
+	for floor_node in registry.get_floors():
+		if floor_node == null:
+			continue
+		floor_ids.append(StringName(String(floor_node.name)))
+	var default_floor_id := StringName()
+	if not floor_ids.is_empty():
+		default_floor_id = StringName(String(floor_ids[0]))
+	_floor_resolver.configure(floor_ids, default_floor_id)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_reset"):
@@ -191,11 +223,12 @@ func _setup_clients_ui() -> void:
 		if desk_state == null:
 			continue
 		_desk_states_by_id[desk_state.desk_id] = desk_state
-	var patience_max := 30.0
-	for client_id in clients_by_id.keys():
-		_patience_by_client_id[client_id] = patience_max
-		_patience_max_by_client_id[client_id] = patience_max
+	if _run_manager:
+		var patience_snapshot := _run_manager.configure_patience_clients(clients_by_id.keys())
+		_apply_patience_snapshot(patience_snapshot)
 	_total_clients = clients_by_id.size()
+	if _run_manager:
+		_run_manager.configure_shift_targets(_total_clients, _total_clients)
 	var desks_by_id: Dictionary = {}
 	for desk_node in _world_adapter.get_desk_nodes():
 		if desk_node == null:
@@ -219,6 +252,14 @@ func _setup_clients_ui() -> void:
 	)
 	_clients_ui.refresh()
 	_clients_ready = true
+
+func _apply_patience_snapshot(snapshot: Dictionary) -> void:
+	_patience_by_client_id.clear()
+	_patience_max_by_client_id.clear()
+	var patience_by: Dictionary = snapshot.get("patience_by_client_id", {})
+	var patience_max: Dictionary = snapshot.get("patience_max_by_client_id", {})
+	_patience_by_client_id.merge(patience_by, true)
+	_patience_max_by_client_id.merge(patience_max, true)
 
 func _collect_surface_targets() -> void:
 	_shelf_surfaces.clear()
@@ -251,33 +292,41 @@ func _tick_wave_and_patience(delta: float) -> void:
 	if _wave_failed:
 		return
 	_wave_time_left -= delta
-	if _wave_time_left <= 0.0 and _served_clients < _total_clients and not debug_no_fail_wave:
+	if _wave_time_left <= 0.0 and _served_clients < _total_clients:
 		_fail_wave()
 		return
-	for desk_state in _desk_states_by_id.values():
-		if desk_state == null:
-			continue
-		var client_id: StringName = desk_state.current_client_id
-		if client_id == StringName():
-			continue
-		var patience_left := float(_patience_by_client_id.get(client_id, 0.0))
-		patience_left = maxf(patience_left - delta, 0.0)
-		_patience_by_client_id[client_id] = patience_left
-		if patience_left <= 0.0 and not debug_no_fail_wave:
-			_fail_wave()
-			return
+	if _run_manager:
+		var active_clients: Array = []
+		for desk_state in _desk_states_by_id.values():
+			if desk_state == null:
+				continue
+			var client_id: StringName = desk_state.current_client_id
+			if client_id == StringName():
+				continue
+			active_clients.append(client_id)
+		_run_manager.tick_patience(active_clients, delta)
+		_apply_patience_snapshot(_run_manager.get_patience_snapshot())
+		_run_manager.update_active_client_count(active_clients.size())
 	_clients_ui.refresh()
 
 func _fail_wave() -> void:
 	if _shift_finished:
+		return
+	if debug_no_fail_wave:
+		push_warning("Wave failure suppressed by debug_no_fail_wave; ending shift without fail.")
+		_finish_shift_safe()
 		return
 	_wave_failed = true
 	_finish_shift_safe()
 
 func _on_client_completed() -> void:
 	_served_clients += 1
-	if _total_clients > 0 and _served_clients >= _total_clients:
-		_finish_shift_safe()
+	if _run_manager:
+		_run_manager.register_checkout_completed()
+
+func _on_client_checkin() -> void:
+	if _run_manager:
+		_run_manager.register_checkin_completed()
 
 func _on_end_shift_pressed() -> void:
 	if _shift_finished:
