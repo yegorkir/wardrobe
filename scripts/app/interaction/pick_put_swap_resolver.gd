@@ -2,13 +2,22 @@ extends RefCounted
 
 class_name PickPutSwapResolver
 
+const InteractionConfigScript := preload("res://scripts/app/interaction/interaction_config.gd")
+
 const ACTION_NONE := "NONE"
 const ACTION_PICK := "PICK"
 const ACTION_PUT := "PUT"
 
+var _config: InteractionConfigScript = InteractionConfigScript.new()
+
+func setup(config: InteractionConfigScript) -> void:
+	_config = config.duplicate_config() if config else InteractionConfigScript.new()
+
 func resolve(hand_has_item: bool, slot_has_item: bool) -> Dictionary:
 	if hand_has_item and slot_has_item:
-		return _make_result(false, ACTION_NONE, "swap_disabled")
+		if not _config.swap_enabled:
+			return _make_result(false, ACTION_NONE, "swap_disabled")
+		return _make_result(false, ACTION_NONE, "swap_unavailable")
 	var action := _determine_action(hand_has_item, slot_has_item)
 	match action:
 		ACTION_PICK:
