@@ -319,14 +319,14 @@ func _fail_wave() -> void:
 	_wave_failed = true
 	_finish_shift_safe()
 
-func _on_client_completed() -> void:
+func _on_client_completed(client_id: StringName) -> void:
 	_served_clients += 1
 	if _run_manager:
-		_run_manager.register_checkout_completed()
+		_run_manager.register_checkout_completed(client_id)
 
-func _on_client_checkin() -> void:
+func _on_client_checkin(client_id: StringName) -> void:
 	if _run_manager:
-		_run_manager.register_checkin_completed()
+		_run_manager.register_checkin_completed(client_id)
 
 func _on_end_shift_pressed() -> void:
 	if _shift_finished:

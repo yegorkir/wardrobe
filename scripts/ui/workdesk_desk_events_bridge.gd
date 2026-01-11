@@ -14,11 +14,14 @@ func apply_desk_events(events: Array) -> void:
 	for event_data in events:
 		var event_type: StringName = event_data.get(EventSchema.EVENT_KEY_TYPE, StringName())
 		if event_type == EventSchema.EVENT_CLIENT_COMPLETED and _on_client_completed.is_valid():
-			_on_client_completed.call()
+			var payload: Dictionary = event_data.get(EventSchema.EVENT_KEY_PAYLOAD, {})
+			var client_id := StringName(str(payload.get(EventSchema.PAYLOAD_CLIENT_ID, "")))
+			_on_client_completed.call(client_id)
 		if event_type == EventSchema.EVENT_CLIENT_PHASE_CHANGED and _on_client_checkin.is_valid():
 			var payload: Dictionary = event_data.get(EventSchema.EVENT_KEY_PAYLOAD, {})
 			var from_phase := StringName(str(payload.get(EventSchema.PAYLOAD_FROM, "")))
 			var to_phase := StringName(str(payload.get(EventSchema.PAYLOAD_TO, "")))
 			if from_phase == ClientStateScript.PHASE_DROP_OFF and to_phase == ClientStateScript.PHASE_PICK_UP:
-				_on_client_checkin.call()
+				var client_id := StringName(str(payload.get(EventSchema.PAYLOAD_CLIENT_ID, "")))
+				_on_client_checkin.call(client_id)
 	super.apply_desk_events(events)

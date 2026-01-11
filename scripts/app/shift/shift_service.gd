@@ -204,16 +204,16 @@ func configure_shift_targets(target_checkin: int, target_checkout: int) -> void:
 	_run_state.configure_shift_targets(target_checkin, target_checkout)
 	_try_finish_shift_success()
 
-func register_checkin_completed() -> void:
+func register_checkin_completed(client_id: StringName) -> void:
 	if _run_state == null:
 		return
-	_run_state.register_checkin_completed()
+	_run_state.register_checkin_completed(client_id)
 	_try_finish_shift_success()
 
-func register_checkout_completed() -> void:
+func register_checkout_completed(client_id: StringName) -> void:
 	if _run_state == null:
 		return
-	_run_state.register_checkout_completed()
+	_run_state.register_checkout_completed(client_id)
 	_try_finish_shift_success()
 
 func update_active_client_count(active_clients: int) -> void:

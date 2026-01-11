@@ -25,6 +25,8 @@ var target_checkin: int = 0
 var target_checkout: int = 0
 var checkin_done: int = 0
 var checkout_done: int = 0
+var completed_checkins: Dictionary = {}
+var completed_checkouts: Dictionary = {}
 
 func reset_for_shift() -> void:
 	shift_index += 1
@@ -41,6 +43,8 @@ func reset_for_shift() -> void:
 	target_checkout = 0
 	checkin_done = 0
 	checkout_done = 0
+	completed_checkins.clear()
+	completed_checkouts.clear()
 
 func set_magic_links(ticket_number: int, item_ids: Array[StringName]) -> void:
 	magic_links[ticket_number] = item_ids.duplicate(true)
@@ -53,12 +57,26 @@ func configure_shift_targets(checkin_target: int, checkout_target: int) -> void:
 	target_checkout = max(0, checkout_target)
 	checkin_done = 0
 	checkout_done = 0
+	completed_checkins.clear()
+	completed_checkouts.clear()
 
-func register_checkin_completed() -> void:
+func register_checkin_completed(client_id: StringName) -> bool:
+	if client_id == StringName():
+		return false
+	if completed_checkins.has(client_id):
+		return false
+	completed_checkins[client_id] = true
 	checkin_done += 1
+	return true
 
-func register_checkout_completed() -> void:
+func register_checkout_completed(client_id: StringName) -> bool:
+	if client_id == StringName():
+		return false
+	if completed_checkouts.has(client_id):
+		return false
+	completed_checkouts[client_id] = true
 	checkout_done += 1
+	return true
 
 func get_need_checkin() -> int:
 	return max(0, target_checkin - checkin_done)
