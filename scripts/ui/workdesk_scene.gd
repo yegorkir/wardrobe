@@ -24,7 +24,6 @@ const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_r
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
-@export var debug_no_fail_wave: bool = false
 @export var debug_logs_enabled: bool = false
 
 @onready var _wave_label: Label = %WaveValue
@@ -58,8 +57,6 @@ var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
 
-var _wave_time_left := 60.0
-var _wave_failed := false
 var _shift_finished := false
 var _served_clients := 0
 var _total_clients := 0
@@ -70,8 +67,6 @@ var _clients_ready := false
 
 func _ready() -> void:
 	DebugFlags.set_enabled(debug_logs_enabled)
-	if debug_no_fail_wave:
-		push_warning("debug_no_fail_wave is enabled; wave failures will be suppressed.")
 	_hud_adapter.configure(
 		_run_manager,
 		_wave_label,
@@ -194,7 +189,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _process(_delta: float) -> void:
 	_dragdrop_adapter.update_drag_watchdog()
-	_tick_wave_and_patience(_delta)
+	_tick_patience(_delta)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
@@ -210,8 +205,6 @@ func _debug_validate_world() -> void:
 
 func _setup_clients_ui() -> void:
 	_clients_ready = false
-	_wave_time_left = 60.0
-	_wave_failed = false
 	_shift_finished = false
 	_served_clients = 0
 	_patience_by_client_id.clear()
@@ -228,7 +221,18 @@ func _setup_clients_ui() -> void:
 		_apply_patience_snapshot(patience_snapshot)
 	_total_clients = clients_by_id.size()
 	if _run_manager:
-		_run_manager.configure_shift_targets(_total_clients, _total_clients)
+		var targets: Dictionary = {}
+		if _step3_setup:
+			targets = _step3_setup.get_shift_targets()
+		var target_checkin := int(targets.get(
+			"target_checkin",
+			WardrobeStep3SetupAdapterScript.DEFAULT_TARGET_CHECKIN
+		))
+		var target_checkout := int(targets.get(
+			"target_checkout",
+			WardrobeStep3SetupAdapterScript.DEFAULT_TARGET_CHECKOUT
+		))
+		_run_manager.configure_shift_targets(target_checkin, target_checkout)
 	var desks_by_id: Dictionary = {}
 	for desk_node in _world_adapter.get_desk_nodes():
 		if desk_node == null:
@@ -286,14 +290,8 @@ func _collect_surface_targets() -> void:
 	if _floor_zone == null:
 		push_warning("FloorZone adapter missing; surface drops will be ignored.")
 
-func _tick_wave_and_patience(delta: float) -> void:
+func _tick_patience(delta: float) -> void:
 	if not _clients_ready or _shift_finished:
-		return
-	if _wave_failed:
-		return
-	_wave_time_left -= delta
-	if _wave_time_left <= 0.0 and _served_clients < _total_clients:
-		_fail_wave()
 		return
 	if _run_manager:
 		var active_clients: Array = []
@@ -308,16 +306,6 @@ func _tick_wave_and_patience(delta: float) -> void:
 		_apply_patience_snapshot(_run_manager.get_patience_snapshot())
 		_run_manager.update_active_client_count(active_clients.size())
 	_clients_ui.refresh()
-
-func _fail_wave() -> void:
-	if _shift_finished:
-		return
-	if debug_no_fail_wave:
-		push_warning("Wave failure suppressed by debug_no_fail_wave; ending shift without fail.")
-		_finish_shift_safe()
-		return
-	_wave_failed = true
-	_finish_shift_safe()
 
 func _on_client_completed(client_id: StringName) -> void:
 	_served_clients += 1

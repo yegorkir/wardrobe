@@ -11,6 +11,8 @@ const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardro
 const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
 const ContentDBBaseScript := preload("res://scripts/autoload/bases/content_db_base.gd")
 const DEFAULT_CLIENT_COUNT := 4
+const DEFAULT_TARGET_CHECKIN := 6
+const DEFAULT_TARGET_CHECKOUT := 4
 
 var _root: Node
 var _clear_spawned_items: Callable
@@ -28,6 +30,9 @@ var _get_ticket_slots: Callable
 var _place_item_instance_in_slot: Callable
 var _apply_desk_events: Callable
 var _wave_clients: Array[StringName] = []
+var _wave_client_count: int = DEFAULT_CLIENT_COUNT
+var _wave_target_checkin: int = DEFAULT_TARGET_CHECKIN
+var _wave_target_checkout: int = DEFAULT_TARGET_CHECKOUT
 
 func configure(context: RefCounted) -> void:
 	_root = context.root
@@ -51,7 +56,7 @@ func initialize_step3() -> void:
 		_clear_spawned_items.call()
 	if _collect_desks.is_valid():
 		_collect_desks.call()
-	_wave_clients = _load_wave_clients()
+	_apply_wave_settings()
 	_setup_step3_desks_and_clients()
 	_seed_step3_hook_tickets()
 	_sync_hook_anchor_tickets_once()
@@ -93,9 +98,7 @@ func _build_clients() -> Array[StringName]:
 		Color(0.9, 0.75, 0.35),
 	]
 	var client_ids: Array[StringName] = []
-	var client_count := DEFAULT_CLIENT_COUNT
-	if not _wave_clients.is_empty():
-		client_count = _wave_clients.size()
+	var client_count := _wave_client_count
 	for i in range(client_count):
 		var client_id := StringName("Client_%d" % i)
 		var color: Color = colors[i % colors.size()]
@@ -166,12 +169,29 @@ func _resolve_demo_archetype(index: int) -> Dictionary:
 		"wrong_item_penalty": penalty,
 	}
 
-func _load_wave_clients() -> Array[StringName]:
+func get_shift_targets() -> Dictionary:
+	return {
+		"target_checkin": _wave_target_checkin,
+		"target_checkout": _wave_target_checkout,
+	}
+
+func _apply_wave_settings() -> void:
+	var settings := _load_wave_settings()
+	var clients_value: Variant = settings.get("clients", [])
+	if clients_value is Array:
+		_wave_clients = clients_value as Array[StringName]
+	else:
+		_wave_clients = []
+	_wave_client_count = max(0, int(settings.get("client_count", DEFAULT_CLIENT_COUNT)))
+	_wave_target_checkin = max(0, int(settings.get("target_checkin", DEFAULT_TARGET_CHECKIN)))
+	_wave_target_checkout = max(0, int(settings.get("target_checkout", DEFAULT_TARGET_CHECKOUT)))
+
+func _load_wave_settings() -> Dictionary:
 	if _root == null:
-		return []
+		return {}
 	var content_db := _root.get_node_or_null("/root/ContentDB") as ContentDBBaseScript
 	if content_db == null:
-		return []
+		return {}
 	var wave := content_db.get_wave("wave_1")
 	var wave_payload: Dictionary = wave.get("payload", {})
 	var wave_clients: Variant = wave_payload.get("clients", [])
@@ -179,8 +199,18 @@ func _load_wave_clients() -> Array[StringName]:
 		var result: Array[StringName] = []
 		for entry in wave_clients:
 			result.append(StringName(str(entry)))
-		return result
-	return []
+		return {
+			"clients": result,
+			"client_count": int(wave_payload.get("client_count", DEFAULT_CLIENT_COUNT)),
+			"target_checkin": int(wave_payload.get("target_checkin", DEFAULT_TARGET_CHECKIN)),
+			"target_checkout": int(wave_payload.get("target_checkout", DEFAULT_TARGET_CHECKOUT)),
+		}
+	return {
+		"clients": [],
+		"client_count": int(wave_payload.get("client_count", DEFAULT_CLIENT_COUNT)),
+		"target_checkin": int(wave_payload.get("target_checkin", DEFAULT_TARGET_CHECKIN)),
+		"target_checkout": int(wave_payload.get("target_checkout", DEFAULT_TARGET_CHECKOUT)),
+	}
 
 func _seed_step3_hook_tickets() -> void:
 	if not _get_ticket_slots.is_valid():

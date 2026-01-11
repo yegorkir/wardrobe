@@ -195,7 +195,6 @@ func configure_shift_clients(total_clients: int) -> void:
 	_run_state.total_clients = max(0, total_clients)
 	_run_state.served_clients = 0
 	_run_state.active_clients = 0
-	_run_state.configure_shift_targets(total_clients, total_clients)
 	_try_finish_shift_success()
 
 func configure_shift_targets(target_checkin: int, target_checkout: int) -> void:
