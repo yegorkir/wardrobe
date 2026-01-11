@@ -135,13 +135,13 @@ func configure_shift_targets(target_checkin: int, target_checkout: int) -> void:
 	if _shift_service:
 		_shift_service.configure_shift_targets(target_checkin, target_checkout)
 
-func register_checkin_completed() -> void:
+func register_checkin_completed(client_id: StringName) -> void:
 	if _shift_service:
-		_shift_service.register_checkin_completed()
+		_shift_service.register_checkin_completed(client_id)
 
-func register_checkout_completed() -> void:
+func register_checkout_completed(client_id: StringName) -> void:
 	if _shift_service:
-		_shift_service.register_checkout_completed()
+		_shift_service.register_checkout_completed(client_id)
 
 func update_active_client_count(active_clients: int) -> void:
 	if _shift_service:

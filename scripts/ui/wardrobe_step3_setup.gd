@@ -10,6 +10,7 @@ const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_s
 const WardrobeStorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
 const ContentDBBaseScript := preload("res://scripts/autoload/bases/content_db_base.gd")
+const DEFAULT_CLIENT_COUNT := 4
 
 var _root: Node
 var _clear_spawned_items: Callable
@@ -26,6 +27,7 @@ var _storage_state: WardrobeStorageState
 var _get_ticket_slots: Callable
 var _place_item_instance_in_slot: Callable
 var _apply_desk_events: Callable
+var _wave_clients: Array[StringName] = []
 
 func configure(context: RefCounted) -> void:
 	_root = context.root
@@ -49,6 +51,7 @@ func initialize_step3() -> void:
 		_clear_spawned_items.call()
 	if _collect_desks.is_valid():
 		_collect_desks.call()
+	_wave_clients = _load_wave_clients()
 	_setup_step3_desks_and_clients()
 	_seed_step3_hook_tickets()
 	_sync_hook_anchor_tickets_once()
@@ -90,7 +93,10 @@ func _build_clients() -> Array[StringName]:
 		Color(0.9, 0.75, 0.35),
 	]
 	var client_ids: Array[StringName] = []
-	for i in range(4):
+	var client_count := DEFAULT_CLIENT_COUNT
+	if not _wave_clients.is_empty():
+		client_count = _wave_clients.size()
+	for i in range(client_count):
 		var client_id := StringName("Client_%d" % i)
 		var color: Color = colors[i % colors.size()]
 		var client := _make_demo_client(i, client_id, color)
@@ -143,19 +149,15 @@ func _resolve_demo_archetype(index: int) -> Dictionary:
 			"id": StringName("human"),
 			"wrong_item_penalty": 0.0,
 		}
+	var archetype_id := StringName("human")
+	if not _wave_clients.is_empty():
+		archetype_id = _wave_clients[index % _wave_clients.size()]
 	var content_db := _root.get_node_or_null("/root/ContentDB") as ContentDBBaseScript
 	if content_db == null:
 		return {
-			"id": StringName("human"),
+			"id": archetype_id,
 			"wrong_item_penalty": 0.0,
 		}
-	var wave := content_db.get_wave("wave_1")
-	var wave_payload: Dictionary = wave.get("payload", {})
-	var wave_clients: Variant = wave_payload.get("clients", [])
-	var archetype_id := StringName("human")
-	if wave_clients is Array and not (wave_clients as Array).is_empty():
-		var clients_list := wave_clients as Array
-		archetype_id = StringName(str(clients_list[index % clients_list.size()]))
 	var archetype := content_db.get_archetype(String(archetype_id))
 	var payload: Dictionary = archetype.get("payload", {})
 	var penalty: float = float(payload.get("wrong_item_patience_penalty", 0.0))
@@ -163,6 +165,22 @@ func _resolve_demo_archetype(index: int) -> Dictionary:
 		"id": archetype_id,
 		"wrong_item_penalty": penalty,
 	}
+
+func _load_wave_clients() -> Array[StringName]:
+	if _root == null:
+		return []
+	var content_db := _root.get_node_or_null("/root/ContentDB") as ContentDBBaseScript
+	if content_db == null:
+		return []
+	var wave := content_db.get_wave("wave_1")
+	var wave_payload: Dictionary = wave.get("payload", {})
+	var wave_clients: Variant = wave_payload.get("clients", [])
+	if wave_clients is Array:
+		var result: Array[StringName] = []
+		for entry in wave_clients:
+			result.append(StringName(str(entry)))
+		return result
+	return []
 
 func _seed_step3_hook_tickets() -> void:
 	if not _get_ticket_slots.is_valid():
