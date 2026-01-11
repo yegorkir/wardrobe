@@ -19,6 +19,8 @@ const WorkdeskClientsUIAdapterScript := preload("res://scripts/ui/workdesk_clien
 const ShelfSurfaceAdapterScript := preload("res://scripts/ui/shelf_surface_adapter.gd")
 const FloorZoneAdapterScript := preload("res://scripts/ui/floor_zone_adapter.gd")
 const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
+const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
+const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -51,6 +53,7 @@ var _hud_adapter := WardrobeHudAdapterScript.new()
 var _interaction_logger := WardrobeInteractionLoggerScript.new()
 var _shift_log: WardrobeShiftLog = WardrobeShiftLogScript.new()
 var _clients_ui: WorkdeskClientsUIAdapter = WorkdeskClientsUIAdapterScript.new()
+var _floor_resolver = FloorResolverScript.new()
 var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
@@ -103,6 +106,7 @@ func _finish_ready_setup() -> void:
 		_world_adapter.collect_slots()
 		_world_adapter.collect_desks()
 	_world_adapter.reset_storage_state()
+	_configure_floor_resolver()
 	var interaction_context := WardrobeInteractionContextScript.new()
 	interaction_context.player = null
 	interaction_context.interaction_service = _interaction_service
@@ -124,6 +128,9 @@ func _finish_ready_setup() -> void:
 	interaction_context.client_queue_state = _world_adapter.get_client_queue_state()
 	interaction_context.clients = _world_adapter.get_clients()
 	interaction_context.find_item_instance = Callable(_world_adapter, "find_item_instance")
+	interaction_context.floor_resolver = _floor_resolver
+	if _run_manager != null:
+		interaction_context.apply_patience_penalty = Callable(_run_manager, "apply_patience_penalty")
 	_interaction_logger.configure(Callable(_shift_log, "record"))
 	interaction_context.interaction_logger = _interaction_logger
 	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
@@ -132,6 +139,20 @@ func _finish_ready_setup() -> void:
 	_dragdrop_adapter.configure_surface_targets(_shelf_surfaces, _floor_zone)
 	_world_adapter.initialize_world()
 	_setup_clients_ui()
+
+func _configure_floor_resolver() -> void:
+	var registry := SurfaceRegistryScript.get_autoload()
+	if registry == null:
+		return
+	var floor_ids: Array = []
+	for floor_node in registry.get_floors():
+		if floor_node == null:
+			continue
+		floor_ids.append(StringName(String(floor_node.name)))
+	var default_floor_id := StringName()
+	if not floor_ids.is_empty():
+		default_floor_id = StringName(String(floor_ids[0]))
+	_floor_resolver.configure(floor_ids, default_floor_id)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_reset"):

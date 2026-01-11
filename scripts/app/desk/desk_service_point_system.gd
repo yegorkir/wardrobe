@@ -27,6 +27,7 @@ func process_interaction_event(
 		return []
 	var payload: Dictionary = interaction_event.get(EventSchema.EVENT_KEY_PAYLOAD, {})
 	var slot_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_SLOT_ID, "")))
+	var tick: int = int(payload.get(EventSchema.PAYLOAD_TICK, 0))
 	if slot_id != desk_state.desk_slot_id:
 		return []
 	var slot_item := storage_state.get_slot_item(desk_state.desk_slot_id)
@@ -36,9 +37,9 @@ func process_interaction_event(
 	if current_client == null:
 		return []
 	if current_client.phase == ClientState.PHASE_DROP_OFF:
-		return _handle_dropoff(desk_state, queue_state, clients, storage_state, current_client, slot_item)
+		return _handle_dropoff(desk_state, queue_state, clients, storage_state, current_client, slot_item, tick)
 	if current_client.phase == ClientState.PHASE_PICK_UP:
-		return _handle_pickup(desk_state, queue_state, clients, storage_state, current_client, slot_item)
+		return _handle_pickup(desk_state, queue_state, clients, storage_state, current_client, slot_item, tick)
 	return []
 
 func _handle_dropoff(
@@ -47,12 +48,13 @@ func _handle_dropoff(
 	clients: Dictionary,
 	storage_state: WardrobeStorageState,
 	current_client: ClientState,
-	slot_item: ItemInstance
+	slot_item: ItemInstance,
+	tick: int
 ) -> Array:
 	if slot_item.kind != ItemInstanceScript.KIND_TICKET:
-		return []
+		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_WRONG_ITEM, tick)
 	if current_client.presence == ClientState.PRESENCE_AWAY:
-		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_CLIENT_AWAY)
+		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_CLIENT_AWAY, tick)
 	var consume_events := _consume_desk_item(desk_state, storage_state, slot_item, EventSchema.REASON_DROP_OFF_TICKET)
 	if consume_events.is_empty():
 		return []
@@ -71,14 +73,15 @@ func _handle_pickup(
 	clients: Dictionary,
 	storage_state: WardrobeStorageState,
 	current_client: ClientState,
-	slot_item: ItemInstance
+	slot_item: ItemInstance,
+	tick: int
 ) -> Array:
 	if slot_item.kind != ItemInstanceScript.KIND_COAT:
 		return []
 	if current_client.presence == ClientState.PRESENCE_AWAY:
-		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_CLIENT_AWAY)
+		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_CLIENT_AWAY, tick)
 	if slot_item.id != current_client.get_coat_id():
-		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_WRONG_COAT)
+		return _make_delivery_rejected_event(desk_state, current_client, slot_item, EventSchema.REASON_WRONG_ITEM, tick)
 	var consume_events := _consume_desk_item(desk_state, storage_state, slot_item, EventSchema.REASON_PICKUP_COAT)
 	if consume_events.is_empty():
 		return []
@@ -132,13 +135,20 @@ func _make_delivery_rejected_event(
 	desk_state: DeskState,
 	current_client: ClientState,
 	slot_item: ItemInstance,
-	reason_code: StringName
+	reason_code: StringName,
+	tick: int
 ) -> Array:
+	var event_id := _build_reject_event_id(desk_state, current_client, slot_item, reason_code, tick)
 	return [_make_event(EventSchema.EVENT_DESK_REJECTED_DELIVERY, {
 		EventSchema.PAYLOAD_DESK_ID: desk_state.desk_id,
+		EventSchema.PAYLOAD_DESK_SLOT_ID: desk_state.desk_slot_id,
 		EventSchema.PAYLOAD_CLIENT_ID: current_client.client_id,
+		EventSchema.PAYLOAD_CLIENT_INSTANCE_ID: current_client.client_id,
+		EventSchema.PAYLOAD_CLIENT_SLOT_ID: desk_state.desk_id,
+		EventSchema.PAYLOAD_CLIENT_PHASE: current_client.phase,
 		EventSchema.PAYLOAD_ITEM_INSTANCE_ID: slot_item.id,
 		EventSchema.PAYLOAD_REASON_CODE: reason_code,
+		EventSchema.PAYLOAD_EVENT_ID: event_id,
 	})]
 
 func _consume_desk_item(
@@ -219,3 +229,20 @@ func _make_event(event_type: StringName, payload: Dictionary) -> Dictionary:
 		EventSchema.EVENT_KEY_TYPE: event_type,
 		EventSchema.EVENT_KEY_PAYLOAD: payload.duplicate(true),
 	}
+
+func _build_reject_event_id(
+	desk_state: DeskState,
+	current_client: ClientState,
+	slot_item: ItemInstance,
+	reason_code: StringName,
+	tick: int
+) -> StringName:
+	if desk_state == null or current_client == null or slot_item == null:
+		return StringName()
+	return StringName("%s:%s:%s:%s:%d" % [
+		String(desk_state.desk_id),
+		String(current_client.client_id),
+		String(slot_item.id),
+		String(reason_code),
+		tick,
+	])

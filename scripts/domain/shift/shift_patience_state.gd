@@ -24,6 +24,9 @@ func set_patience_left(client_id: StringName, value: float) -> void:
 func get_patience_left(client_id: StringName) -> float:
 	return float(_patience_by_client_id.get(client_id, 0.0))
 
+func has_client(client_id: StringName) -> bool:
+	return _patience_by_client_id.has(client_id)
+
 func get_patience_max(client_id: StringName) -> float:
 	return float(_patience_max_by_client_id.get(client_id, 0.0))
 

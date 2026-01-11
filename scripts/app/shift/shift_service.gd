@@ -152,14 +152,22 @@ func tick_patience(active_client_ids: Array, delta: float) -> Dictionary:
 	var strike_clients: Array = result.get("strike_client_ids", [])
 	if strike_clients.is_empty():
 		return result
-	for client_id in strike_clients:
-		_shift_log.record(EventSchema.EVENT_CLIENT_PATIENCE_ZERO, {
+	_record_patience_zero_events(strike_clients)
+	return result
+
+func apply_patience_penalty(client_id: StringName, amount: float, reason_code: StringName) -> Dictionary:
+	var result: Dictionary = _patience_system.apply_penalty(_patience_state, client_id, amount)
+	if amount > 0.0:
+		_shift_log.record(EventSchema.EVENT_CLIENT_PATIENCE_PENALIZED, {
 			EventSchema.PAYLOAD_CLIENT_ID: client_id,
+			EventSchema.PAYLOAD_REASON_CODE: reason_code,
+			EventSchema.PAYLOAD_AMOUNT: amount,
 			EventSchema.PAYLOAD_STRIKES_CURRENT: _patience_state.strikes_current,
 			EventSchema.PAYLOAD_STRIKES_LIMIT: _patience_state.strikes_limit,
 		})
-	_update_strikes_hud()
-	_apply_strike_failure_if_needed()
+	var strike_clients: Array = result.get("strike_client_ids", [])
+	if not strike_clients.is_empty():
+		_record_patience_zero_events(strike_clients)
 	return result
 
 func _initialize_run_state() -> void:
@@ -205,6 +213,16 @@ func _update_strikes_hud() -> void:
 	_hud_snapshot["strikes_current"] = _patience_state.strikes_current
 	_hud_snapshot["strikes_limit"] = _patience_state.strikes_limit
 	emit_signal("hud_updated", get_hud_snapshot())
+
+func _record_patience_zero_events(strike_clients: Array) -> void:
+	for client_id in strike_clients:
+		_shift_log.record(EventSchema.EVENT_CLIENT_PATIENCE_ZERO, {
+			EventSchema.PAYLOAD_CLIENT_ID: client_id,
+			EventSchema.PAYLOAD_STRIKES_CURRENT: _patience_state.strikes_current,
+			EventSchema.PAYLOAD_STRIKES_LIMIT: _patience_state.strikes_limit,
+		})
+	_update_strikes_hud()
+	_apply_strike_failure_if_needed()
 
 func _apply_strike_failure_if_needed() -> void:
 	if _run_state == null:

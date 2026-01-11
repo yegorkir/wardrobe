@@ -93,6 +93,27 @@ func test_pickup_rejects_wrong_coat() -> void:
 
 	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(StringName("coat_wrong"))
 	assert_bool(_has_event(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)).is_true()
+	var reject_payload := _find_event_payload(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)
+	assert_that(reject_payload.get(EventSchema.PAYLOAD_REASON_CODE)).is_equal(EventSchema.REASON_WRONG_ITEM)
+
+func test_dropoff_rejects_non_ticket_item() -> void:
+	var system := DeskServicePointSystemScript.new()
+	var storage := _make_storage()
+	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
+	var queue := ClientQueueStateScript.new()
+	var client_a := _make_client("Client_A", "coat_a", "ticket_a")
+	var clients := {client_a.client_id: client_a}
+	desk.current_client_id = client_a.client_id
+	var wrong_item := ItemInstanceScript.new(StringName("coat_wrong"), ItemInstanceScript.KIND_COAT)
+	storage.put(desk.desk_slot_id, wrong_item)
+	var event := _make_put_event(desk.desk_slot_id)
+
+	var events := system.process_interaction_event(desk, queue, clients, storage, event)
+
+	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(StringName("coat_wrong"))
+	assert_bool(_has_event(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)).is_true()
+	var reject_payload := _find_event_payload(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)
+	assert_that(reject_payload.get(EventSchema.PAYLOAD_REASON_CODE)).is_equal(EventSchema.REASON_WRONG_ITEM)
 
 func _make_storage() -> WardrobeStorageState:
 	var storage := StorageStateScript.new()
@@ -117,3 +138,9 @@ func _has_event(events: Array, event_type: StringName) -> bool:
 		if event_data.get(EventSchema.EVENT_KEY_TYPE) == event_type:
 			return true
 	return false
+
+func _find_event_payload(events: Array, event_type: StringName) -> Dictionary:
+	for event_data in events:
+		if event_data.get(EventSchema.EVENT_KEY_TYPE) == event_type:
+			return event_data.get(EventSchema.EVENT_KEY_PAYLOAD, {})
+	return {}

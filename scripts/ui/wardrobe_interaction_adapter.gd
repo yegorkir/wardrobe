@@ -8,6 +8,7 @@ const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardro
 const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
+const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
 
 const DISTANCE_TIE_THRESHOLD := 6.0
 
@@ -49,7 +50,9 @@ func configure(context: RefCounted) -> void:
 		typed.desk_by_slot_id,
 		typed.desk_system,
 		typed.client_queue_state,
-		typed.clients
+		typed.clients,
+		typed.floor_resolver,
+		typed.apply_patience_penalty
 	)
 	_connect_event_adapter()
 
@@ -167,7 +170,9 @@ func _setup_desk_dispatcher(
 	desk_by_slot_id: Dictionary,
 	desk_system: DeskServicePointSystem,
 	client_queue_state: ClientQueueState,
-	clients: Dictionary
+	clients: Dictionary,
+	floor_resolver,
+	apply_patience_penalty: Callable
 ) -> void:
 	if _desk_event_dispatcher == null:
 		return
@@ -177,7 +182,9 @@ func _setup_desk_dispatcher(
 		desk_system,
 		client_queue_state,
 		clients,
-		_storage_state
+		_storage_state,
+		floor_resolver,
+		apply_patience_penalty
 	)
 
 func _connect_event_adapter() -> void:
