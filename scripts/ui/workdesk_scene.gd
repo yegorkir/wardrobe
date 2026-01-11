@@ -220,6 +220,8 @@ func _setup_clients_ui() -> void:
 		var patience_snapshot := _run_manager.configure_patience_clients(clients_by_id.keys())
 		_apply_patience_snapshot(patience_snapshot)
 	_total_clients = clients_by_id.size()
+	if _run_manager:
+		_run_manager.configure_shift_clients(_total_clients)
 	var desks_by_id: Dictionary = {}
 	for desk_node in _world_adapter.get_desk_nodes():
 		if desk_node == null:
@@ -297,6 +299,7 @@ func _tick_wave_and_patience(delta: float) -> void:
 			active_clients.append(client_id)
 		_run_manager.tick_patience(active_clients, delta)
 		_apply_patience_snapshot(_run_manager.get_patience_snapshot())
+		_run_manager.update_active_client_count(active_clients.size())
 	_clients_ui.refresh()
 
 func _fail_wave() -> void:
@@ -311,8 +314,8 @@ func _fail_wave() -> void:
 
 func _on_client_completed() -> void:
 	_served_clients += 1
-	if _total_clients > 0 and _served_clients >= _total_clients:
-		_finish_shift_safe()
+	if _run_manager:
+		_run_manager.register_client_completed()
 
 func _on_end_shift_pressed() -> void:
 	if _shift_finished:

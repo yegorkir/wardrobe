@@ -16,6 +16,8 @@ const EVENT_CLIENT_COMPLETED := StringName("client_completed")
 const EVENT_DESK_REJECTED_DELIVERY := StringName("desk_rejected_delivery")
 const EVENT_CLIENT_PATIENCE_ZERO := StringName("client_patience_zero")
 const EVENT_CLIENT_PATIENCE_PENALIZED := StringName("client_patience_penalized")
+const EVENT_SHIFT_WON := StringName("shift_won")
+const EVENT_SHIFT_FAILED := StringName("shift_failed")
 
 const PAYLOAD_SLOT_ID := StringName("slot_id")
 const PAYLOAD_ITEM := StringName("item")

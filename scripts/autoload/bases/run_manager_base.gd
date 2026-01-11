@@ -51,6 +51,11 @@ func _ready() -> void:
 			return
 		end_shift()
 	)
+	_shift_service.shift_won.connect(func(_payload: Dictionary) -> void:
+		if _current_state != RUN_STATE_SHIFT:
+			return
+		end_shift()
+	)
 	_on_shift_hud_updated(_shift_service.get_hud_snapshot())
 	_configure_input_map()
 	call_deferred("go_to_menu")
@@ -116,6 +121,18 @@ func configure_patience_clients(client_ids: Array) -> Dictionary:
 		"patience_by_client_id": {},
 		"patience_max_by_client_id": {},
 	}
+
+func configure_shift_clients(total_clients: int) -> void:
+	if _shift_service:
+		_shift_service.configure_shift_clients(total_clients)
+
+func register_client_completed() -> void:
+	if _shift_service:
+		_shift_service.register_client_completed()
+
+func update_active_client_count(active_clients: int) -> void:
+	if _shift_service:
+		_shift_service.update_active_client_count(active_clients)
 
 func get_patience_snapshot() -> Dictionary:
 	if _shift_service:
