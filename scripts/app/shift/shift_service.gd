@@ -6,6 +6,7 @@ signal hud_updated(snapshot: Dictionary)
 signal shift_started(snapshot: Dictionary)
 signal shift_ended(summary: Dictionary)
 signal shift_failed(payload: Dictionary)
+signal shift_won(payload: Dictionary)
 
 const MagicSystemScript := preload("res://scripts/domain/magic/magic_system.gd")
 const InspectionSystemScript := preload("res://scripts/domain/inspection/inspection_system.gd")
@@ -15,6 +16,7 @@ const ShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const ShiftPatienceStateScript := preload("res://scripts/domain/shift/shift_patience_state.gd")
 const ShiftPatienceSystemScript := preload("res://scripts/app/shift/shift_patience_system.gd")
+const ShiftWinPolicyScript := preload("res://scripts/app/shift/shift_win_policy.gd")
 const MAGIC_DEFAULT_CONFIG := {
 	"insurance_mode": MagicSystemScript.INSURANCE_MODE_FREE,
 	"emergency_cost_mode": MagicSystemScript.EMERGENCY_COST_DEBT,
@@ -44,6 +46,7 @@ var _shift_log: WardrobeShiftLog = ShiftLogScript.new()
 var _run_state: RunState
 var _patience_state: ShiftPatienceState = ShiftPatienceStateScript.new()
 var _patience_system: ShiftPatienceSystem = ShiftPatienceSystemScript.new()
+var _win_policy = ShiftWinPolicyScript.new()
 var _hud_snapshot: Dictionary = {}
 var _last_summary: Dictionary = {}
 var _meta_data: Dictionary = {}
@@ -88,6 +91,7 @@ func end_shift() -> Dictionary:
 		"strikes_current": _patience_state.strikes_current,
 		"strikes_limit": _patience_state.strikes_limit,
 		"inspection_report": inspection_report,
+		"end_reasons": _collect_end_reasons(),
 	}
 	_meta_data["total_currency"] = _meta_data.get("total_currency", 0) + int(_hud_snapshot.get("money", 0))
 	if _save_manager:
@@ -146,6 +150,26 @@ func configure_patience_clients(client_ids: Array) -> Dictionary:
 	_patience_system.reset_for_shift(_patience_state, client_ids, patience_max, strikes_limit)
 	_update_strikes_hud()
 	return _patience_state.get_patience_snapshot()
+
+func configure_shift_clients(total_clients: int) -> void:
+	if _run_state == null:
+		return
+	_run_state.total_clients = max(0, total_clients)
+	_run_state.served_clients = 0
+	_run_state.active_clients = 0
+	_try_finish_shift_success()
+
+func register_client_completed() -> void:
+	if _run_state == null:
+		return
+	_run_state.served_clients += 1
+	_try_finish_shift_success()
+
+func update_active_client_count(active_clients: int) -> void:
+	if _run_state == null:
+		return
+	_run_state.active_clients = max(0, active_clients)
+	_try_finish_shift_success()
 
 func tick_patience(active_client_ids: Array, delta: float) -> Dictionary:
 	var result: Dictionary = _patience_system.tick_patience(_patience_state, active_client_ids, delta)
@@ -234,8 +258,45 @@ func _apply_strike_failure_if_needed() -> void:
 	if _patience_state.strikes_current < _patience_state.strikes_limit:
 		return
 	_run_state.shift_status = RunState.SHIFT_STATUS_FAILED
+	_shift_log.record(EventSchema.EVENT_SHIFT_FAILED, {
+		EventSchema.PAYLOAD_STRIKES_CURRENT: _patience_state.strikes_current,
+		EventSchema.PAYLOAD_STRIKES_LIMIT: _patience_state.strikes_limit,
+	})
 	emit_signal("shift_failed", {
 		"reason": "strikes",
 		"strikes_current": _patience_state.strikes_current,
 		"strikes_limit": _patience_state.strikes_limit,
 	})
+
+func _try_finish_shift_success() -> void:
+	if _run_state == null:
+		return
+	if _run_state.shift_status != RunState.SHIFT_STATUS_RUNNING:
+		return
+	var result: Dictionary = _win_policy.evaluate(
+		_run_state.shift_status,
+		_run_state.served_clients,
+		_run_state.total_clients,
+		_run_state.active_clients
+	)
+	if not bool(result.get("can_win", false)):
+		return
+	_run_state.shift_status = RunState.SHIFT_STATUS_SUCCESS
+	_shift_log.record(EventSchema.EVENT_SHIFT_WON, {
+		"served_clients": _run_state.served_clients,
+		"total_clients": _run_state.total_clients,
+	})
+	emit_signal("shift_won", {
+		"served_clients": _run_state.served_clients,
+		"total_clients": _run_state.total_clients,
+	})
+
+func _collect_end_reasons() -> Array:
+	var reasons: Array = []
+	for event in _shift_log.get_events():
+		var event_type: StringName = StringName(str(event.get("type", "")))
+		if event_type == EventSchema.EVENT_SHIFT_WON:
+			reasons.append("SHIFT_WON")
+		elif event_type == EventSchema.EVENT_SHIFT_FAILED:
+			reasons.append("SHIFT_FAILED")
+	return reasons
