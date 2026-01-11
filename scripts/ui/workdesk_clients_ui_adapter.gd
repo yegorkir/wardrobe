@@ -1,7 +1,8 @@
 extends RefCounted
 class_name WorkdeskClientsUIAdapter
 
-const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
+const DEFAULT_TEXTURE: Texture2D = preload("res://assets/sprites/placeholder/slot.png")
 
 class DeskClientView extends RefCounted:
 	var client_visual: CanvasItem
@@ -30,14 +31,16 @@ class DeskClientView extends RefCounted:
 		if patience_fill:
 			patience_fill.visible = visible
 
-	func set_client_color(color: Color) -> void:
+	func set_client_texture(texture: Texture2D) -> void:
 		if client_visual == null:
 			return
-		if client_visual is ColorRect:
-			var rect := client_visual as ColorRect
-			rect.color = color
+		if client_visual is TextureRect:
+			var rect := client_visual as TextureRect
+			rect.texture = texture
 			return
-		client_visual.modulate = color
+		if client_visual is Sprite2D:
+			var sprite := client_visual as Sprite2D
+			sprite.texture = texture
 
 	func set_patience_ratio(ratio: float) -> void:
 		if patience_fill == null:
@@ -53,6 +56,7 @@ var _desk_states_by_id: Dictionary = {}
 var _patience_by_client_id: Dictionary = {}
 var _patience_max_by_client_id: Dictionary = {}
 var _clients_by_id: Dictionary = {}
+var _portrait_cache: Dictionary = {}
 
 func configure(
 	desks_by_id: Dictionary,
@@ -66,6 +70,7 @@ func configure(
 	_patience_by_client_id = patience_by_client_id
 	_patience_max_by_client_id = patience_max_by_client_id
 	_clients_by_id = clients_by_id_opt
+	_portrait_cache.clear()
 
 func refresh() -> void:
 	for desk_id in _desks_by_id.keys():
@@ -81,7 +86,7 @@ func refresh() -> void:
 			desk_view.set_client_visible(false)
 			continue
 		desk_view.set_client_visible(true)
-		desk_view.set_client_color(_resolve_client_color(client_id))
+		desk_view.set_client_texture(_resolve_client_portrait(client_id))
 		var patience_left := float(_patience_by_client_id.get(client_id, 0.0))
 		var patience_max := float(_patience_max_by_client_id.get(client_id, 0.0))
 		var ratio := 0.0
@@ -89,15 +94,26 @@ func refresh() -> void:
 			ratio = patience_left / patience_max
 		desk_view.set_patience_ratio(ratio)
 
-func _resolve_client_color(client_id: StringName) -> Color:
+func _resolve_client_portrait(client_id: StringName) -> Texture2D:
+	if _portrait_cache.has(client_id):
+		return _portrait_cache[client_id]
 	var client: RefCounted = _clients_by_id.get(client_id, null)
-	if client != null and client.has_method("get_coat_item"):
-		var coat: ItemInstance = client.get_coat_item() as ItemInstance
-		if coat != null:
-			return coat.color
-	var id_str := String(client_id)
-	var hash_value := 0
-	for index in id_str.length():
-		hash_value = int((hash_value * 31 + id_str.unicode_at(index)) % 360)
-	var hue := float(hash_value) / 360.0
-	return Color.from_hsv(hue, 0.5, 0.9)
+	if client == null or not (client is ClientStateScript):
+		_portrait_cache[client_id] = DEFAULT_TEXTURE
+		return DEFAULT_TEXTURE
+	var client_state := client as ClientState
+	var portrait_key := client_state.portrait_key
+	if portrait_key == StringName():
+		_portrait_cache[client_id] = DEFAULT_TEXTURE
+		return DEFAULT_TEXTURE
+	var key_text := String(portrait_key)
+	var texture: Texture2D = DEFAULT_TEXTURE
+	if key_text.begins_with("res://"):
+		if ResourceLoader.exists(key_text):
+			texture = load(key_text)
+	else:
+		var candidate := "res://assets/portraits/%s.png" % key_text
+		if ResourceLoader.exists(candidate):
+			texture = load(candidate)
+	_portrait_cache[client_id] = texture
+	return texture

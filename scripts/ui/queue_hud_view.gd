@@ -50,13 +50,14 @@ func _sync_items(clients: Array) -> void:
 
 func _create_item(vm) -> Control:
 	var wrapper := Control.new()
-	wrapper.custom_minimum_size = Vector2(42, 42)
+	wrapper.custom_minimum_size = Vector2(112, 112)
 	wrapper.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	wrapper.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var content := Control.new()
 	content.anchor_right = 1.0
 	content.anchor_bottom = 1.0
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.clip_contents = true
 	wrapper.add_child(content)
 	var bg := ColorRect.new()
 	bg.color = Color(0.12, 0.12, 0.12, 0.8)
@@ -67,7 +68,7 @@ func _create_item(vm) -> Control:
 	var icon := TextureRect.new()
 	icon.texture = _resolve_texture(vm.portrait_key)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	icon.anchor_right = 1.0
 	icon.anchor_bottom = 1.0
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE

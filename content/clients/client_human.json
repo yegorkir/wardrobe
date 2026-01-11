@@ -1,6 +1,6 @@
 {
   "id": "client_human",
   "archetype_id": "human",
-  "portrait_key": "human",
+  "portrait_key": "client_human",
   "wrong_item_patience_penalty": 0.0
 }
