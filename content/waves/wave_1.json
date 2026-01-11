@@ -1,7 +1,7 @@
 {
   "id": "wave_1",
   "duration": 90,
-  "clients": ["human", "zombie", "vampire"],
+  "clients": ["client_human", "client_zombie", "client_vampire"],
   "client_count": 4,
   "target_checkin": 6,
   "target_checkout": 4,

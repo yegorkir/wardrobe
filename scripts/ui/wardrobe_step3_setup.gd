@@ -29,7 +29,7 @@ var _storage_state: WardrobeStorageState
 var _get_ticket_slots: Callable
 var _place_item_instance_in_slot: Callable
 var _apply_desk_events: Callable
-var _wave_clients: Array[StringName] = []
+var _wave_client_defs: Array[StringName] = []
 var _wave_client_count: int = DEFAULT_CLIENT_COUNT
 var _wave_target_checkin: int = DEFAULT_TARGET_CHECKIN
 var _wave_target_checkout: int = DEFAULT_TARGET_CHECKOUT
@@ -133,9 +133,11 @@ func _make_demo_client(index: int, client_id: StringName, color: Color) -> Clien
 		ItemInstanceScript.KIND_TICKET,
 		color
 	)
-	var archetype_data := _resolve_demo_archetype(index)
-	var archetype_id: StringName = archetype_data.get("id", StringName())
-	var wrong_item_penalty: float = float(archetype_data.get("wrong_item_penalty", 0.0))
+	var client_def_id := _resolve_client_def_id(index)
+	var client_def := _resolve_client_definition(client_def_id)
+	var archetype_id: StringName = client_def.get("archetype_id", StringName())
+	var portrait_key: StringName = client_def.get("portrait_key", StringName())
+	var wrong_item_penalty: float = float(client_def.get("wrong_item_penalty", 0.0))
 	return ClientStateScript.new(
 		client_id,
 		coat,
@@ -143,29 +145,38 @@ func _make_demo_client(index: int, client_id: StringName, color: Color) -> Clien
 		StringName(),
 		StringName("color_%d" % index),
 		archetype_id,
-		wrong_item_penalty
+		wrong_item_penalty,
+		client_def_id,
+		portrait_key
 	)
 
-func _resolve_demo_archetype(index: int) -> Dictionary:
+func _resolve_client_def_id(index: int) -> StringName:
+	if _wave_client_defs.is_empty():
+		return StringName("client_human")
+	return _wave_client_defs[index % _wave_client_defs.size()]
+
+func _resolve_client_definition(client_def_id: StringName) -> Dictionary:
 	if _root == null:
 		return {
-			"id": StringName("human"),
+			"archetype_id": StringName("human"),
+			"portrait_key": StringName(),
 			"wrong_item_penalty": 0.0,
 		}
-	var archetype_id := StringName("human")
-	if not _wave_clients.is_empty():
-		archetype_id = _wave_clients[index % _wave_clients.size()]
 	var content_db := _root.get_node_or_null("/root/ContentDB") as ContentDBBaseScript
 	if content_db == null:
 		return {
-			"id": archetype_id,
+			"archetype_id": StringName("human"),
+			"portrait_key": StringName(),
 			"wrong_item_penalty": 0.0,
 		}
-	var archetype := content_db.get_archetype(String(archetype_id))
-	var payload: Dictionary = archetype.get("payload", {})
-	var penalty: float = float(payload.get("wrong_item_patience_penalty", 0.0))
+	var client_def := content_db.get_client(String(client_def_id))
+	var client_payload: Dictionary = client_def.get("payload", {})
+	var archetype_id := StringName(str(client_payload.get("archetype_id", "human")))
+	var portrait_key := StringName(str(client_payload.get("portrait_key", "")))
+	var penalty: float = float(client_payload.get("wrong_item_patience_penalty", 0.0))
 	return {
-		"id": archetype_id,
+		"archetype_id": archetype_id,
+		"portrait_key": portrait_key,
 		"wrong_item_penalty": penalty,
 	}
 
@@ -179,9 +190,9 @@ func _apply_wave_settings() -> void:
 	var settings := _load_wave_settings()
 	var clients_value: Variant = settings.get("clients", [])
 	if clients_value is Array:
-		_wave_clients = clients_value as Array[StringName]
+		_wave_client_defs = clients_value as Array[StringName]
 	else:
-		_wave_clients = []
+		_wave_client_defs = []
 	_wave_client_count = max(0, int(settings.get("client_count", DEFAULT_CLIENT_COUNT)))
 	_wave_target_checkin = max(0, int(settings.get("target_checkin", DEFAULT_TARGET_CHECKIN)))
 	_wave_target_checkout = max(0, int(settings.get("target_checkout", DEFAULT_TARGET_CHECKOUT)))

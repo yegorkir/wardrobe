@@ -12,10 +12,13 @@ const WardrobeItemVisualsAdapterScript := preload("res://scripts/ui/wardrobe_ite
 const WardrobeDragDropAdapterScript := preload("res://scripts/ui/wardrobe_dragdrop_adapter.gd")
 const WardrobeInteractionContextScript := preload("res://scripts/ui/wardrobe_interaction_context.gd")
 const WardrobeWorldSetupAdapterScript := preload("res://scripts/ui/wardrobe_world_setup_adapter.gd")
-const WorkdeskHudAdapterScript := preload("res://scripts/ui/workdesk_hud_adapter.gd")
 const WardrobeInteractionLoggerScript := preload("res://scripts/ui/wardrobe_interaction_logger.gd")
 const WardrobeShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
 const WorkdeskClientsUIAdapterScript := preload("res://scripts/ui/workdesk_clients_ui_adapter.gd")
+const QueueHudAdapterScript := preload("res://scripts/ui/queue_hud_adapter.gd")
+const QueueHudViewScript := preload("res://scripts/ui/queue_hud_view.gd")
+const QueueHudSnapshotScript := preload("res://scripts/app/queue/queue_hud_snapshot.gd")
+const QueueHudClientVMScript := preload("res://scripts/app/queue/queue_hud_client_vm.gd")
 const ShelfSurfaceAdapterScript := preload("res://scripts/ui/shelf_surface_adapter.gd")
 const FloorZoneAdapterScript := preload("res://scripts/ui/floor_zone_adapter.gd")
 const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
@@ -25,14 +28,11 @@ const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_r
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
 @export var debug_logs_enabled: bool = false
+@export var queue_hud_max_visible: int = 6
+@export var queue_hud_preview_enabled: bool = false
 
-@onready var _wave_label: Label = %WaveValue
-@onready var _time_label: Label = %TimeValue
-@onready var _money_label: Label = %MoneyValue
-@onready var _magic_label: Label = %MagicValue
-@onready var _debt_label: Label = %DebtValue
-@onready var _strikes_label: Label = %StrikesValue
 @onready var _end_shift_button: Button = %EndShiftButton
+@onready var _queue_hud_view: Control = %QueueHudView
 @onready var _cursor_hand: CursorHand = %CursorHand
 @onready var _physics_tick: Node = %WardrobePhysicsTick
 @onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
@@ -48,10 +48,10 @@ var _item_visuals: WardrobeItemVisualsAdapter = WardrobeItemVisualsAdapterScript
 var _world_validator := WardrobeWorldValidatorScript.new()
 var _dragdrop_adapter := WardrobeDragDropAdapterScript.new()
 var _world_adapter := WardrobeWorldSetupAdapterScript.new()
-var _hud_adapter := WorkdeskHudAdapterScript.new()
 var _interaction_logger := WardrobeInteractionLoggerScript.new()
 var _shift_log: WardrobeShiftLog = WardrobeShiftLogScript.new()
 var _clients_ui: WorkdeskClientsUIAdapter = WorkdeskClientsUIAdapterScript.new()
+var _queue_hud_adapter = QueueHudAdapterScript.new()
 var _floor_resolver = FloorResolverScript.new()
 var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
@@ -67,18 +67,10 @@ var _clients_ready := false
 
 func _ready() -> void:
 	DebugFlags.set_enabled(debug_logs_enabled)
-	_hud_adapter.configure(
-		_run_manager,
-		_wave_label,
-		_time_label,
-		_money_label,
-		_magic_label,
-		_debt_label,
-		_strikes_label,
-		_end_shift_button,
-		Callable(self, "_on_end_shift_pressed")
-	)
-	_hud_adapter.setup_hud()
+	if _end_shift_button:
+		_end_shift_button.pressed.connect(_on_end_shift_pressed)
+	else:
+		push_warning("EndShiftButton missing; shift end disabled.")
 	if _cursor_hand == null:
 		push_warning("CursorHand node missing; drag-and-drop disabled.")
 		return
@@ -147,14 +139,38 @@ func _configure_floor_resolver() -> void:
 	if registry == null:
 		return
 	var floor_ids: Array = []
+	var floor_entries: Array = []
 	for floor_node in registry.get_floors():
 		if floor_node == null:
 			continue
-		floor_ids.append(StringName(String(floor_node.name)))
+		var floor_id := StringName(String(floor_node.name))
+		if floor_id == StringName():
+			continue
+		floor_ids.append(floor_id)
+		var floor_y := 0.0
+		if floor_node.has_method("get_surface_collision_y_global"):
+			floor_y = float(floor_node.call("get_surface_collision_y_global"))
+		floor_entries.append({
+			"id": floor_id,
+			"y": floor_y,
+		})
 	var default_floor_id := StringName()
-	if not floor_ids.is_empty():
-		default_floor_id = StringName(String(floor_ids[0]))
-	_floor_resolver.configure(floor_ids, default_floor_id)
+	if not floor_entries.is_empty():
+		var lowest_floor: Dictionary = floor_entries[0]
+		for entry in floor_entries:
+			var entry_dict: Dictionary = entry
+			if float(entry_dict.get("y", 0.0)) > float(lowest_floor.get("y", 0.0)):
+				lowest_floor = entry_dict
+		default_floor_id = StringName(str(lowest_floor.get("id", "")))
+	var desk_floor_map: Dictionary = {}
+	for desk_node in _world_adapter.get_desk_nodes():
+		if desk_node == null:
+			continue
+		var desk_slot_id: StringName = desk_node.get_slot_id()
+		if desk_slot_id == StringName() or default_floor_id == StringName():
+			continue
+		desk_floor_map[desk_slot_id] = default_floor_id
+	_floor_resolver.configure(floor_ids, default_floor_id, desk_floor_map)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("debug_reset"):
@@ -190,13 +206,15 @@ func _unhandled_input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	_dragdrop_adapter.update_drag_watchdog()
 	_tick_patience(_delta)
+	_queue_hud_adapter.update()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
 		_dragdrop_adapter.cancel_drag()
 
 func _exit_tree() -> void:
-	_hud_adapter.teardown_hud()
+	if _end_shift_button and _end_shift_button.pressed.is_connected(_on_end_shift_pressed):
+		_end_shift_button.pressed.disconnect(_on_end_shift_pressed)
 
 func _debug_validate_world() -> void:
 	if not OS.is_debug_build():
@@ -256,6 +274,40 @@ func _setup_clients_ui() -> void:
 	)
 	_clients_ui.refresh()
 	_clients_ready = true
+	_setup_queue_hud()
+
+func _setup_queue_hud() -> void:
+	if _queue_hud_view == null:
+		push_warning("Queue HUD view missing; queue HUD disabled.")
+		return
+	_queue_hud_adapter.configure(
+		_queue_hud_view,
+		_world_adapter.get_client_queue_state(),
+		_world_adapter.get_clients(),
+		_run_manager,
+		_patience_by_client_id,
+		queue_hud_max_visible
+	)
+	if queue_hud_preview_enabled:
+		_queue_hud_adapter.set_debug_snapshot(_build_queue_hud_preview_snapshot(), true)
+
+func _build_queue_hud_preview_snapshot():
+	var preview_clients: Array = []
+	var count: int = max(1, queue_hud_max_visible)
+	for i in range(count):
+		preview_clients.append(QueueHudClientVMScript.new(
+			StringName("Preview_%d" % i),
+			StringName(),
+			[],
+			StringName("queued")
+		))
+	return QueueHudSnapshotScript.new(
+		preview_clients,
+		2,
+		3,
+		1,
+		3
+	)
 
 func _apply_patience_snapshot(snapshot: Dictionary) -> void:
 	_patience_by_client_id.clear()

@@ -23,17 +23,17 @@ SaveManager="*res://scripts/autoload/save_manager.gd"
 Debug="*res://scripts/autoload/debug.gd"
 SurfaceRegistry="*res://scripts/wardrobe/surface/surface_registry.gd"
 
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/log_path="user://.godot.log"
+
 [display]
 
 window/size/viewport_width=720
 window/size/viewport_height=1280
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
-
-[debug]
-
-file_logging/enable_file_logging=true
-file_logging/log_path="user://.godot.log"
 
 [editor_plugins]
 

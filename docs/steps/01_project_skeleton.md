@@ -35,6 +35,7 @@
 		- `ui/`
 	- `content/`
 		- `archetypes/`
+		- `clients/`
 		- `waves/`
 		- `modifiers/`
 	- `assets/` (спрайты/звук позже)
@@ -105,6 +106,7 @@
 - `content/archetypes/human.json`
 - `content/archetypes/zombie.json`
 - `content/archetypes/vampire.json`
+- `content/clients/client_human.json`
 - `content/modifiers/example_1.json`
 - `content/waves/wave_1.json`
 
