@@ -130,6 +130,11 @@ func tick_patience(active_client_ids: Array, delta: float) -> Dictionary:
 		return _shift_service.tick_patience(active_client_ids, delta)
 	return {}
 
+func apply_patience_penalty(client_id: StringName, amount: float, reason_code: StringName) -> Dictionary:
+	if _shift_service:
+		return _shift_service.apply_patience_penalty(client_id, amount, reason_code)
+	return {}
+
 func _configure_input_map() -> void:
 	_ensure_action_with_events("tap", _create_tap_events())
 	_ensure_action_with_events("cancel", [_create_key_event(KEY_ESCAPE)])

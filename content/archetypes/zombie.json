@@ -2,5 +2,6 @@
   "id": "zombie",
   "display_name": "Zombie",
   "patience": 60,
-  "effect": "Spoils neighbors"
+  "effect": "Spoils neighbors",
+  "wrong_item_patience_penalty": 8
 }

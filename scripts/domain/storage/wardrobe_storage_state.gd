@@ -54,6 +54,9 @@ func pick(slot_id: StringName) -> Dictionary:
 	slot.item = null
 	return _result(true, REASON_OK, picked)
 
+func pop_slot_item(slot_id: StringName) -> Dictionary:
+	return pick(slot_id)
+
 func get_slot_item(slot_id: StringName) -> ItemInstance:
 	var slot := _slots.get(slot_id) as SlotState
 	return slot.item if slot else null

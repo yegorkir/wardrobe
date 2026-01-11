@@ -34,3 +34,27 @@ func tick_patience(state: ShiftPatienceState, active_client_ids: Array, delta: f
 	return {
 		"strike_client_ids": strike_client_ids,
 	}
+
+func apply_penalty(state: ShiftPatienceState, client_id: StringName, amount: float) -> Dictionary:
+	if state == null or client_id == StringName():
+		return {
+			"strike_client_ids": [],
+		}
+	if amount <= 0.0:
+		return {
+			"strike_client_ids": [],
+		}
+	if not state.has_client(client_id):
+		return {
+			"strike_client_ids": [],
+		}
+	var previous := state.get_patience_left(client_id)
+	var updated := maxf(previous - amount, 0.0)
+	state.set_patience_left(client_id, updated)
+	var strike_client_ids: Array = []
+	if previous > 0.0 and updated <= 0.0:
+		state.strikes_current += 1
+		strike_client_ids.append(client_id)
+	return {
+		"strike_client_ids": strike_client_ids,
+	}

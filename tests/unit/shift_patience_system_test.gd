@@ -41,6 +41,21 @@ func test_patience_ticks_only_for_active_clients() -> void:
 	assert_float(state.get_patience_left(StringName("Client_A"))).is_equal(0.5)
 	assert_float(state.get_patience_left(StringName("Client_B"))).is_equal(1.0)
 
+func test_apply_penalty_increments_strike_on_zero_transition() -> void:
+	var state := ShiftPatienceStateScript.new()
+	var system := ShiftPatienceSystemScript.new()
+	system.reset_for_shift(state, [StringName("Client_A")], 1.0, 3)
+
+	var result := system.apply_penalty(state, StringName("Client_A"), 0.4)
+	assert_float(state.get_patience_left(StringName("Client_A"))).is_equal(0.6)
+	assert_int(state.strikes_current).is_equal(0)
+	assert_int((result.get("strike_client_ids") as Array).size()).is_equal(0)
+
+	result = system.apply_penalty(state, StringName("Client_A"), 0.6)
+	assert_float(state.get_patience_left(StringName("Client_A"))).is_equal(0.0)
+	assert_int(state.strikes_current).is_equal(1)
+	assert_int((result.get("strike_client_ids") as Array).size()).is_equal(1)
+
 func test_shift_service_fails_at_strike_limit() -> void:
 	var shift_service := ShiftServiceScript.new()
 	var shift_config := {
