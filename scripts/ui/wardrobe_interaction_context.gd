@@ -3,7 +3,7 @@ class_name WardrobeInteractionContext
 
 const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
 
-var player: WardrobePlayerController
+var player: Node
 var interaction_service: WardrobeInteractionService
 var storage_state: WardrobeStorageState
 var slots: Array[WardrobeSlot] = []

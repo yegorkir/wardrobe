@@ -51,14 +51,14 @@
 	- Ответственность: главный контейнер, переключение экранов.
 2. `scenes/screens/MainMenu.tscn`
 	- Кнопки `Start Run`, `Quit` (на Web кнопку можно отключить).
-3. `scenes/screens/WardrobeScene.tscn`
-	- Фон + HUD-панель + кнопка `End Shift (debug)`.
+3. `scenes/screens/WorkdeskScene.tscn`
+	- Рабочий стол + HUD-панель + кнопка `End Shift (debug)`.
 4. `scenes/screens/ShiftSummary.tscn`
 	- Текст “Summary placeholder” + кнопка `Back to Menu`.
 5. `scenes/screens/ModifierSelect.tscn`
 	- Заглушка с текстом “Modifier select placeholder” + кнопка `Continue`, подключённая к `RunManager` (будет использоваться на шаге 7).
 
-Минимальный сценарий навигации: `MainMenu → WardrobeScene → ShiftSummary → MainMenu`.
+Минимальный сценарий навигации: `MainMenu → WorkdeskScene → ShiftSummary → MainMenu`.
 
 ---
 
@@ -90,7 +90,7 @@
 
 ## D. UI каркас (HUD)
 
-В `WardrobeScene.tscn` добавить HUD-панель:
+В `WorkdeskScene.tscn` добавить HUD-панель:
 
 - Лейблы: `Wave: -`, `Time: -`, `Money: -`, `Magic: -`, `Debt: -`.
 - Кнопка debug `End Shift`.
@@ -129,7 +129,7 @@
 Шаг считается завершённым, если:
 
 - Проект запускается без ошибок.
-- Переход `Меню → WardrobeScene → Summary → Меню` работает.
+- Переход `Меню → WorkdeskScene → Summary → Меню` работает.
 - Все autoload-сервисы инициализируются и логируют состояние.
 - Save/Load реально работает с JSON.
 - HUD обновляется тестовыми значениями.

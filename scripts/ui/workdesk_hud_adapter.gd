@@ -1,5 +1,5 @@
 extends RefCounted
-class_name WardrobeHudAdapter
+class_name WorkdeskHudAdapter
 
 var _run_manager: RunManagerBase
 var _wave_label: Label

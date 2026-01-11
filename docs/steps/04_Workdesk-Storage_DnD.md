@@ -38,17 +38,13 @@
 	- `ServiceZone (Node2D)` — нижняя часть
 		- `ServiceSlots (Node2D)` — контейнер N слотов обслуживания
 	- `CursorHand (Node2D)` — поверх всего, следует за pointer
-	- `HUDLayer (CanvasLayer)` — можно скопировать из `WardrobeScene.tscn` без изменений
+	- `HUDLayer (CanvasLayer)` — базовый HUD (можно переиспользовать текущую структуру HUD)
 
 ### 1.2 Переключение по умолчанию на новую сцену
 
 Минимальный безопасный путь без правок `RunManager`:
 
-- в `res://scripts/ui/main.gd` заменить маппинг `"wardrobe"` на новую сцену:
-	- было: `WardrobeScene.tscn`
-	- стало: `WorkdeskScene.tscn`
-
-Старую `WardrobeScene.tscn` не удалять (это debug harness/регрессия Step 2–3).
+- в `res://scripts/ui/main.gd` использовать маппинг `"wardrobe"` на `WorkdeskScene.tscn`.
 
 ---
 
@@ -95,7 +91,7 @@
 
 ### 3.1 Минимальный MVP
 
-На этом шаге можно оставить **2 service slots** (как сейчас в `WardrobeScene`), но разместить их в контейнер `ServiceSlots`, чтобы N стало очевидным масштабированием.
+На этом шаге можно оставить **2 service slots** (как сейчас в WorkdeskScene), но разместить их в контейнер `ServiceSlots`, чтобы N стало очевидным масштабированием.
 
 Рекомендуемый подход без новой логики:
 - инстансить `res://scenes/prefabs/DeskServicePoint.tscn` N раз;

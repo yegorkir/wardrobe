@@ -28,7 +28,7 @@
 - desk_id, desk_slot_id, текущий клиент.
 
 ## Сцена и префабы
-- WardrobeScene.tscn: Player, DeskA, DeskB, HookBoard (TicketSlot + CoatSlot + anchor_ticket), опц. debug overlay.
+- WorkdeskScene.tscn: DeskA, DeskB, HookBoard (TicketSlot + CoatSlot + anchor_ticket), опц. debug overlay.
 - Prefab `scenes/prefabs/DeskServicePoint.tscn`:
 	- Node2D с export desk_id.
 	- DeskSlot (Slot) + опц. ClientStandPoint.
@@ -74,7 +74,7 @@
 - DROP_OFF: desk может не принимать тикеты (reject), когда текущий клиент в DROP_OFF.
 - PICK_UP: desk может не принимать coat (reject/pending), когда текущий клиент в PICK_UP.
 
-## Обязательный адаптер (WardrobeScene)
+## Обязательный адаптер (WorkdeskScene)
 - На событиях InteractionEngine (item_picked/placed/swapped) — обновлять визуал через mapping.
 - На desk_* событиях — спавнить/деспавнить ItemNode и синхронизировать storage ↔ сцена.
 - Никаких storage_state.pick()/place() напрямую из сцены.
@@ -92,6 +92,6 @@
 - Реализовать DeskServicePointSystem (app) с описанными правилами и событиями.
 - Собрать prefab DeskServicePoint и HookBoard.
 - Инициализация Step 3 (seed → клиенты, очереди, стартовые предметы).
-- Обновить WardrobeScene/адаптер: триггер DeskSystem на PUT/SWAP, применять доменные события, debug-логи.
+- Обновить WorkdeskScene/адаптер: триггер DeskSystem на PUT/SWAP, применять доменные события, debug-логи.
 - Добавить unit-тесты на DeskServicePointSystem (drop-off, pick-up, reject неверного coat, назначение следующего клиента из очереди).
 - Вынести ключи команд/событий в StringName-константы и использовать их во всех местах.

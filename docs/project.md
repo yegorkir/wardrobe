@@ -35,16 +35,16 @@ res://
 Root `Control` (скрипт `scripts/ui/main.gd`), содержащий `ScreenRoot`. При получении сигнала `screen_requested` от `RunManager` загружает соответствующую сцену и вставляет в `ScreenRoot`. Поддерживаются идентификаторы:
 
 * `main_menu` → `scenes/screens/MainMenu.tscn`
-* `wardrobe` → `scenes/screens/WardrobeScene.tscn`
+* `wardrobe` → `scenes/screens/WorkdeskScene.tscn`
 * `shift_summary` → `scenes/screens/ShiftSummary.tscn`
 
 ### 2.2 Экраны
 
 1. **MainMenu** — кнопки `Start Run` и `Quit` (в Web кнопка «Quit» отключена). При старте дергает `RunManager.start_run()`.
-2. **WardrobeScene** — фон, базовый HUD (Wave/Time/Money/Magic/Debt) и debug-кнопка `End Shift`. Подписан на сигнал `RunManager.hud_updated` и отображает демо-данные.
+2. **WorkdeskScene** — рабочий стол, базовый HUD (Wave/Time/Money/Magic/Debt/Strikes) и debug-кнопка `End Shift`. Подписан на сигнал `RunManager.hud_updated` и отображает демо-данные.
 3. **ShiftSummary** — текстовый плейсхолдер итогов + кнопка `Back to Menu`, возвращающая в главное меню по сигналу `RunManager.go_to_menu()`.
 
-Последовательность переходов: `MainMenu → WardrobeScene → ShiftSummary → MainMenu`.
+Последовательность переходов: `MainMenu → WorkdeskScene → ShiftSummary → MainMenu`.
 
 ---
 
@@ -59,7 +59,7 @@ Root `Control` (скрипт `scripts/ui/main.gd`), содержащий `Screen
 
 ---
 
-## 4. HUD (WardrobeScene)
+## 4. HUD (WorkdeskScene)
 
 Панель `PanelContainer` с пятью `Label` и кнопкой `End Shift (debug)`. Методы:
 
@@ -101,10 +101,10 @@ Root `Control` (скрипт `scripts/ui/main.gd`), содержащий `Screen
 
 ## 8. Определение готовности (DoD)
 
-* Игра запускается без ошибок, экранное дерево: `MainMenu → WardrobeScene → ShiftSummary → MainMenu`.
+* Игра запускается без ошибок, экранное дерево: `MainMenu → WorkdeskScene → ShiftSummary → MainMenu`.
 * Все autoload-сервисы инициализируются и логируют статус (ContentDB, SaveManager, Debug).
 * `SaveManager` реально читает/пишет JSON (можно удалить файл и убедиться, что создается заново).
-* HUD в WardrobeScene показывает значения из RunManager.
+* HUD в WorkdeskScene показывает значения из RunManager.
 * Web preset собирается и прогоняется как smoke-тест.
 
 ---
