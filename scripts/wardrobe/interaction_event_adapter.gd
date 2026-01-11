@@ -6,7 +6,6 @@ const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 signal item_picked(slot_id: StringName, item: Dictionary, tick: int)
 signal item_placed(slot_id: StringName, item: Dictionary, tick: int)
-signal item_swapped(slot_id: StringName, incoming_item: Dictionary, outgoing_item: Dictionary, tick: int)
 signal action_rejected(slot_id: StringName, reason: StringName, tick: int)
 
 func emit_events(events: Array) -> void:
@@ -28,11 +27,6 @@ func emit_events(events: Array) -> void:
 				var placed_item: Variant = payload.get(EventSchema.PAYLOAD_ITEM, {})
 				if placed_item is Dictionary:
 					item_placed.emit(slot_id, placed_item as Dictionary, tick)
-			EventSchema.EVENT_ITEM_SWAPPED:
-				var incoming: Variant = payload.get(EventSchema.PAYLOAD_INCOMING_ITEM, {})
-				var outgoing: Variant = payload.get(EventSchema.PAYLOAD_OUTGOING_ITEM, {})
-				if incoming is Dictionary and outgoing is Dictionary:
-					item_swapped.emit(slot_id, incoming as Dictionary, outgoing as Dictionary, tick)
 			EventSchema.EVENT_ACTION_REJECTED:
 				var reason: StringName = payload.get(EventSchema.PAYLOAD_REASON, StringName())
 				action_rejected.emit(slot_id, reason, tick)

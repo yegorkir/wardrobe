@@ -23,7 +23,7 @@ func process_interaction_event(
 	if desk_state == null or storage_state == null:
 		return []
 	var event_type: StringName = interaction_event.get(EventSchema.EVENT_KEY_TYPE, StringName())
-	if event_type != EventSchema.EVENT_ITEM_PLACED and event_type != EventSchema.EVENT_ITEM_SWAPPED:
+	if event_type != EventSchema.EVENT_ITEM_PLACED:
 		return []
 	var payload: Dictionary = interaction_event.get(EventSchema.EVENT_KEY_PAYLOAD, {})
 	var slot_id: StringName = StringName(str(payload.get(EventSchema.PAYLOAD_SLOT_ID, "")))

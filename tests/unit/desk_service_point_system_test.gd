@@ -67,7 +67,7 @@ func test_pickup_consumes_correct_coat_and_spawns_next_ticket() -> void:
 	desk.current_client_id = client_a.client_id
 	queue.enqueue(client_b.client_id)
 	storage.put(desk.desk_slot_id, client_a.get_coat_item())
-	var event := _make_swap_event(desk.desk_slot_id)
+	var event := _make_put_event(desk.desk_slot_id)
 
 	var events := system.process_interaction_event(desk, queue, clients, storage, event)
 
@@ -87,7 +87,7 @@ func test_pickup_rejects_wrong_coat() -> void:
 	desk.current_client_id = client_a.client_id
 	var wrong_coat := ItemInstanceScript.new(StringName("coat_wrong"), ItemInstanceScript.KIND_COAT)
 	storage.put(desk.desk_slot_id, wrong_coat)
-	var event := _make_swap_event(desk.desk_slot_id)
+	var event := _make_put_event(desk.desk_slot_id)
 
 	var events := system.process_interaction_event(desk, queue, clients, storage, event)
 
@@ -107,14 +107,6 @@ func _make_client(id: String, coat_id: String, ticket_id: String) -> ClientState
 func _make_put_event(slot_id: StringName) -> Dictionary:
 	return {
 		EventSchema.EVENT_KEY_TYPE: EventSchema.EVENT_ITEM_PLACED,
-		EventSchema.EVENT_KEY_PAYLOAD: {
-			EventSchema.PAYLOAD_SLOT_ID: slot_id,
-		},
-	}
-
-func _make_swap_event(slot_id: StringName) -> Dictionary:
-	return {
-		EventSchema.EVENT_KEY_TYPE: EventSchema.EVENT_ITEM_SWAPPED,
 		EventSchema.EVENT_KEY_PAYLOAD: {
 			EventSchema.PAYLOAD_SLOT_ID: slot_id,
 		},
