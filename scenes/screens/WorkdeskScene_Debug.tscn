@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://c6kv1r1uwxk7g"]
+[gd_scene load_steps=10 format=3 uid="uid://c6kv1r1uwxk7g"]
 
 [ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://b1vy45o0cbxlk" path="res://scenes/prefabs/StorageCabinetLayout_Simple.tscn" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://c1jb2jnhticws" path="res://scripts/wardrobe/cursor_hand.gd" id="4"]
 [ext_resource type="Script" uid="uid://ce2nlf0hgoh2r" path="res://scripts/ui/wardrobe_physics_tick_adapter.gd" id="5"]
 [ext_resource type="Script" uid="uid://bpqv5b0mctves" path="res://scripts/ui/floor_zone_adapter.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/ui/queue_hud_view.gd" id="7"]
 
 [sub_resource type="RectangleShape2D" id="3"]
 size = Vector2(720, 6)
@@ -136,53 +137,71 @@ script = ExtResource("4")
 
 [node name="HUDLayer" type="CanvasLayer" parent="."]
 
-[node name="HUDContainer" type="MarginContainer" parent="HUDLayer"]
+[node name="QueueHudView" type="Control" parent="HUDLayer"]
 unique_name_in_owner = true
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 170.0
+offset_bottom = 64.0
+mouse_filter = 2
+script = ExtResource("7")
+
+[node name="QueueHudPanel" type="PanelContainer" parent="HUDLayer/QueueHudView"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 64.0
 mouse_filter = 2
 
-[node name="HUDPanel" type="PanelContainer" parent="HUDLayer/HUDContainer"]
-unique_name_in_owner = true
-layout_mode = 2
+[node name="QueueHudRow" type="HBoxContainer" parent="HUDLayer/QueueHudView/QueueHudPanel"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 64.0
 mouse_filter = 2
 
-[node name="VBox" type="VBoxContainer" parent="HUDLayer/HUDContainer/HUDPanel"]
-layout_mode = 2
+[node name="QueueItems" type="HBoxContainer" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="WaveValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Wave: -"
+[node name="QueueKpis" type="VBoxContainer" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow"]
+size_flags_horizontal = 4
+mouse_filter = 2
 
-[node name="TimeValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Time: -"
+[node name="CheckinRow" type="HBoxContainer" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow/QueueKpis"]
+mouse_filter = 2
 
-[node name="MoneyValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Money: -"
+[node name="CheckinLabel" type="Label" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow/QueueKpis/CheckinRow"]
+text = "In:"
 
-[node name="MagicValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+[node name="RemainingCheckinValue" type="Label" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow/QueueKpis/CheckinRow"]
 unique_name_in_owner = true
-layout_mode = 2
-text = "Magic: -"
+text = "-"
 
-[node name="DebtValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Debt: -"
+[node name="CheckoutRow" type="HBoxContainer" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow/QueueKpis"]
+mouse_filter = 2
 
-[node name="StrikesValue" type="Label" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Strikes: -"
+[node name="CheckoutLabel" type="Label" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow/QueueKpis/CheckoutRow"]
+text = "Out:"
 
-[node name="EndShiftButton" type="Button" parent="HUDLayer/HUDContainer/HUDPanel/VBox"]
+[node name="RemainingCheckoutValue" type="Label" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow/QueueKpis/CheckoutRow"]
 unique_name_in_owner = true
-layout_mode = 2
+text = "-"
+
+[node name="QueueIndicators" type="VBoxContainer" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow"]
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="QueueStrikesValue" type="Label" parent="HUDLayer/QueueHudView/QueueHudPanel/QueueHudRow/QueueIndicators"]
+unique_name_in_owner = true
+text = "Strikes: -/-"
+
+[node name="EndShiftButton" type="Button" parent="HUDLayer"]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -180.0
+offset_top = -60.0
+offset_right = -20.0
+offset_bottom = -20.0
 text = "End Shift (debug)"

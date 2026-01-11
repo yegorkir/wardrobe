@@ -17,6 +17,8 @@ var phase: StringName = PHASE_DROP_OFF
 var presence: StringName = PRESENCE_PRESENT
 var color_id: StringName = StringName()
 var archetype_id: StringName = StringName()
+var client_def_id: StringName = StringName()
+var portrait_key: StringName = StringName()
 var wrong_item_patience_penalty: float = 0.0
 
 var _coat_item: ItemInstance
@@ -29,7 +31,9 @@ func _init(
 	desk_id: StringName = StringName(),
 	client_color_id: StringName = StringName(),
 	client_archetype_id: StringName = StringName(),
-	wrong_item_penalty: float = 0.0
+	wrong_item_penalty: float = 0.0,
+	client_definition_id: StringName = StringName(),
+	client_portrait_key: StringName = StringName()
 ) -> void:
 	client_id = id
 	_coat_item = coat_item
@@ -38,6 +42,8 @@ func _init(
 	color_id = client_color_id
 	archetype_id = client_archetype_id
 	wrong_item_patience_penalty = wrong_item_penalty
+	client_def_id = client_definition_id
+	portrait_key = client_portrait_key
 
 func get_coat_item() -> ItemInstance:
 	return _coat_item

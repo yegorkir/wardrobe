@@ -53,7 +53,7 @@ Root `Control` (скрипт `scripts/ui/main.gd`), содержащий `Screen
 | Singleton | Скрипт | Ответственность |
 |-----------|--------|-----------------|
 | `RunManager` | `scripts/autoload/run_manager.gd` | Глобальное состояние забега: хранит демо-HUD, управляет переходами между экранами, конфигурирует `InputMap` (действия `tap`, `cancel`, `debug_toggle`). Эмитит сигналы `screen_requested`, `run_state_changed`, `hud_updated`. При завершении смены записывает очки в `SaveManager`. |
-| `ContentDB` | `scripts/autoload/content_db.gd` | Загружает JSON из `content/archetypes`, `content/modifiers`, `content/waves`. Предоставляет методы `get_archetype`, `get_modifier`, `get_wave`. |
+| `ContentDB` | `scripts/autoload/content_db.gd` | Загружает JSON из `content/archetypes`, `content/clients`, `content/modifiers`, `content/waves`. Предоставляет методы `get_archetype`, `get_client`, `get_modifier`, `get_wave`. |
 | `SaveManager` | `scripts/autoload/save_manager.gd` | Загружает/сохраняет мета-прогресс (`user://save_meta.json`). API: `load_meta`, `save_meta`, `clear_save`. |
 | `Debug` | `scripts/autoload/debug.gd` | Обрабатывает `debug_toggle` (F1) и шлет сигнал `debug_toggled(enabled)`. |
 
@@ -73,6 +73,7 @@ Root `Control` (скрипт `scripts/ui/main.gd`), содержащий `Screen
 ## 5. Заглушки данных (`content/`)
 
 * `content/archetypes/` — `human.json`, `zombie.json`, `vampire.json` с простыми полями (`id`, `display_name`, `patience`, `effect`).
+* `content/clients/` — `client_human.json`, `client_zombie.json`, `client_vampire.json` (ссылки на archetype + портреты).
 * `content/modifiers/` — `example_1.json` (`Lucky Day`).
 * `content/waves/` — `wave_1.json` (длительность, список клиентов, сложность).
 

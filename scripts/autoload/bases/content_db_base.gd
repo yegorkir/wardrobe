@@ -4,6 +4,7 @@ extends Node
 signal content_event(event_name, payload)
 
 var _archetypes: Dictionary = {}
+var _clients: Dictionary = {}
 var _modifiers: Dictionary = {}
 var _waves: Dictionary = {}
 var _seed_tables: Dictionary = {}
@@ -11,6 +12,7 @@ var _log_entries: Array = []
 
 func _ready() -> void:
 	_load_category("archetypes", _archetypes)
+	_load_category("clients", _clients)
 	_load_category("modifiers", _modifiers)
 	_load_category("waves", _waves)
 	_load_category("seeds", _seed_tables)
@@ -37,14 +39,16 @@ func _load_category(category: String, target: Dictionary) -> void:
 	})
 
 func _log_status() -> void:
-	print("ContentDB: loaded %d archetypes, %d modifiers, %d waves, %d seeds" % [
+	print("ContentDB: loaded %d archetypes, %d clients, %d modifiers, %d waves, %d seeds" % [
 		_archetypes.size(),
+		_clients.size(),
 		_modifiers.size(),
 		_waves.size(),
 		_seed_tables.size(),
 	])
 	_record_content_event("content_summary", {
 		"archetypes": _archetypes.size(),
+		"clients": _clients.size(),
 		"modifiers": _modifiers.size(),
 		"waves": _waves.size(),
 		"seeds": _seed_tables.size(),
@@ -52,6 +56,10 @@ func _log_status() -> void:
 
 func get_archetype(id: String) -> Dictionary:
 	var def: ContentDefinition = _archetypes.get(StringName(id))
+	return def.to_snapshot() if def else {}
+
+func get_client(id: String) -> Dictionary:
+	var def: ContentDefinition = _clients.get(StringName(id))
 	return def.to_snapshot() if def else {}
 
 func get_modifier(id: String) -> Dictionary:

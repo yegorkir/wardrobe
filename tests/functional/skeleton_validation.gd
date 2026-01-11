@@ -11,6 +11,7 @@ const REQUIRED_SCENES := [
 
 const CONTENT_DIRECTORIES := {
 	"archetypes": "res://content/archetypes",
+	"clients": "res://content/clients",
 	"modifiers": "res://content/modifiers",
 	"waves": "res://content/waves",
 }
@@ -68,6 +69,7 @@ var _content_samples := {}
 func before_test() -> void:
 	_content_samples = {
 		"archetypes": "",
+		"clients": "",
 		"modifiers": "",
 		"waves": "",
 	}
@@ -113,6 +115,12 @@ func test_content_db_registers_loaded_entries() -> void:
 		_content_samples.get("archetypes", ""),
 		func(id_value: String) -> bool:
 			return not content_db.get_archetype(id_value).is_empty()
+	)
+	_assert_content_entry_loaded(
+		"clients",
+		_content_samples.get("clients", ""),
+		func(id_value: String) -> bool:
+			return not content_db.get_client(id_value).is_empty()
 	)
 	_assert_content_entry_loaded(
 		"modifiers",
@@ -190,21 +198,16 @@ func test_save_manager_flow_and_run_manager_transitions() -> void:
 	var final_entries := _pop_new_entries(save_log_cursor)
 	assert_bool(_has_log_event(final_entries, "meta_cleared")).is_true()
 
-func test_workdesk_scene_receives_hud_updates() -> void:
-	# Directly instantiates WorkdeskScene and verifies HUD reacts to RunManager signals.
+func test_workdesk_scene_has_end_shift_button() -> void:
+	# Directly instantiates WorkdeskScene and verifies EndShift button exists.
 	var run_manager := _get_autoload("RunManager") as RunManagerBase
 	assert_object(run_manager).is_not_null()
 	run_manager.start_shift()
 	var workdesk: Node = auto_free(WORKDESK_SCENE.instantiate())
 	get_tree().root.add_child(workdesk)
 	await _wait_frames(1)
-	var money_label := workdesk.get_node("HUDLayer/HUDContainer/HUDPanel/VBox/MoneyValue") as Label
-	assert_object(money_label).is_not_null()
-	var initial_value := _extract_label_value(money_label.text)
-	run_manager.adjust_demo_money(3)
-	await _wait_frames(1)
-	var updated_value := _extract_label_value(money_label.text)
-	assert_int(updated_value).is_greater(initial_value)
+	var end_shift_button := workdesk.get_node("HUDLayer/EndShiftButton") as Button
+	assert_object(end_shift_button).is_not_null()
 	workdesk.queue_free()
 	await _wait_frames(1)
 
@@ -250,14 +253,6 @@ func _pop_new_entries(cursor: Dictionary) -> Array:
 	cursor["cursor"] = entries.size()
 	return result
 
-func _extract_label_value(text: String) -> int:
-	var parts := text.split(": ")
-	if parts.size() < 2:
-		return -1
-	var value_text := parts[1].strip_edges()
-	if value_text == "-":
-		return -1
-	return int(value_text)
 
 func _wait_frames(count: int) -> void:
 	for _i in range(count):
