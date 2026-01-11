@@ -2,12 +2,17 @@ class_name RunManagerBase
 
 extends Node
 
+const ShiftServiceScript := preload("res://scripts/app/shift/shift_service.gd")
+const LandingOutcomeScript := preload("res://scripts/app/wardrobe/landing/landing_outcome.gd")
+const ShiftHudSnapshotScript := preload("res://scripts/app/shift/shift_hud_snapshot.gd")
+const ShiftSummaryScript := preload("res://scripts/app/shift/shift_summary.gd")
+const ShiftFailurePayloadScript := preload("res://scripts/app/shift/shift_failure_payload.gd")
+const ShiftWinPayloadScript := preload("res://scripts/app/shift/shift_win_payload.gd")
+const MagicEventScript := preload("res://scripts/domain/magic/magic_event.gd")
+
 signal screen_requested(screen_id, payload)
 signal run_state_changed(state_name)
 signal hud_updated(snapshot)
-
-const ShiftServiceScript := preload("res://scripts/app/shift/shift_service.gd")
-const LandingOutcomeScript := preload("res://scripts/app/wardrobe/landing/landing_outcome.gd")
 
 const SCREEN_MAIN_MENU := "main_menu"
 const SCREEN_WARDROBE := "wardrobe"
@@ -34,24 +39,24 @@ func _ready() -> void:
 	_shift_service = ShiftServiceScript.new()
 	_shift_service.setup(
 		_save_manager,
-		ShiftService.MAGIC_DEFAULT_CONFIG,
-		ShiftService.INSPECTION_DEFAULT_CONFIG,
-		ShiftService.SHIFT_DEFAULT_CONFIG,
+		null,
+		null,
+		{},
 		_meta_data
 	)
 	_shift_service.hud_updated.connect(_on_shift_hud_updated)
-	_shift_service.shift_started.connect(func(_snapshot: Dictionary) -> void:
+	_shift_service.shift_started.connect(func(_snapshot) -> void:
 		emit_signal("run_state_changed", RUN_STATE_SHIFT)
 	)
-	_shift_service.shift_ended.connect(func(_summary: Dictionary) -> void:
+	_shift_service.shift_ended.connect(func(_summary) -> void:
 		emit_signal("run_state_changed", RUN_STATE_SUMMARY)
 	)
-	_shift_service.shift_failed.connect(func(_payload: Dictionary) -> void:
+	_shift_service.shift_failed.connect(func(_payload) -> void:
 		if _current_state != RUN_STATE_SHIFT:
 			return
 		end_shift()
 	)
-	_shift_service.shift_won.connect(func(_payload: Dictionary) -> void:
+	_shift_service.shift_won.connect(func(_payload) -> void:
 		if _current_state != RUN_STATE_SHIFT:
 			return
 		end_shift()
@@ -78,10 +83,10 @@ func start_shift_with_screen(screen_id: StringName) -> void:
 
 func end_shift() -> void:
 	_current_state = RUN_STATE_SUMMARY
-	var summary: Dictionary = _shift_service.end_shift()
+	var summary: RefCounted = _shift_service.end_shift()
 	emit_signal("screen_requested", SCREEN_SHIFT_SUMMARY, summary)
 
-func get_hud_snapshot() -> Dictionary:
+func get_hud_snapshot() -> RefCounted:
 	return _shift_service.get_hud_snapshot()
 
 func simulate_tick_for_demo() -> void:
@@ -96,19 +101,19 @@ func adjust_demo_money(amount: int) -> void:
 func record_demo_magic(value: int) -> void:
 	_shift_service.record_demo_magic(value)
 
-func get_last_summary() -> Dictionary:
+func get_last_summary() -> RefCounted:
 	return _shift_service.get_last_summary()
 
-func apply_insurance_link(ticket_number: int, item_ids: Array) -> Dictionary:
+func apply_insurance_link(ticket_number: int, item_ids: Array[StringName]) -> RefCounted:
 	return _shift_service.apply_insurance_link(ticket_number, item_ids)
 
-func request_emergency_locate(ticket_number: int) -> Dictionary:
+func request_emergency_locate(ticket_number: int) -> RefCounted:
 	return _shift_service.request_emergency_locate(ticket_number)
 
 func record_entropy(amount: float) -> void:
 	_shift_service.record_entropy(amount)
 
-func record_item_landed(payload: Dictionary) -> LandingOutcomeScript:
+func record_item_landed(payload: Dictionary) -> RefCounted:
 	return _shift_service.record_item_landed(payload)
 
 func get_shift_log() -> WardrobeShiftLog:
@@ -218,5 +223,5 @@ func _action_has_event(action_name: StringName, event: InputEvent) -> bool:
 			return true
 	return false
 
-func _on_shift_hud_updated(snapshot: Dictionary) -> void:
+func _on_shift_hud_updated(snapshot) -> void:
 	emit_signal("hud_updated", snapshot)

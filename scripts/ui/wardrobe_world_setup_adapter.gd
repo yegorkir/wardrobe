@@ -145,11 +145,11 @@ func place_item_instance_in_slot(slot_id: StringName, instance: ItemInstance) ->
 	if _storage_state.get_slot_item(slot_id) != null:
 		return
 	var put_result := _storage_state.put(slot_id, instance)
-	if not put_result.get(WardrobeStorageStateScript.RESULT_KEY_SUCCESS, false):
+	if not put_result.success:
 		push_warning("Step 3 failed to place item %s in slot %s: %s" % [
 			instance.id,
 			slot_id,
-			put_result.get(WardrobeStorageStateScript.RESULT_KEY_REASON, "unknown"),
+			put_result.reason,
 		])
 		return
 	_item_visuals.spawn_or_move_item_node(slot_id, instance)

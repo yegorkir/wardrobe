@@ -15,11 +15,9 @@ func test_build_auto_command_tracks_hand_and_slot() -> void:
 	service.set_hand_item(_make_item("coat_hand"))
 
 	var command := service.build_auto_command(StringName("Slot_A"), slot_item)
-	var payload: Dictionary = command.get("payload", {})
-
-	assert_that(payload.get("slot_id")).is_equal(StringName("Slot_A"))
-	assert_that(payload.get("hand_item_id")).is_equal("coat_hand")
-	assert_that(payload.get("slot_item_id")).is_equal("coat_slot")
+	assert_that(command.slot_id).is_equal(StringName("Slot_A"))
+	assert_that(command.hand_item_id).is_equal(StringName("coat_hand"))
+	assert_that(command.slot_item_id).is_equal(StringName("coat_slot"))
 
 func test_execute_command_updates_hand_state() -> void:
 	var service := InteractionService.new()
@@ -28,7 +26,7 @@ func test_execute_command_updates_hand_state() -> void:
 	storage.put(StringName("Slot_A"), _make_item("coat_slot"))
 
 	var command := service.build_auto_command(StringName("Slot_A"), storage.get_slot_item(StringName("Slot_A")))
-	var result: InteractionResult = service.execute_command(command)
+	var result: InteractionResultScript = service.execute_command(command)
 
 	assert_that(result.success).is_true()
 	assert_that(result.action).is_equal(Resolver.ACTION_PICK)

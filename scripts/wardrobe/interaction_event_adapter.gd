@@ -2,6 +2,7 @@ extends RefCounted
 
 class_name WardrobeInteractionEventAdapter
 
+const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 signal item_picked(slot_id: StringName, item: Dictionary, tick: int)
@@ -10,12 +11,10 @@ signal action_rejected(slot_id: StringName, reason: StringName, tick: int)
 
 func emit_events(events: Array) -> void:
 	for event in events:
-		if not (event is Dictionary):
+		if event == null:
 			continue
-		var event_dict: Dictionary = event as Dictionary
-		var event_type: StringName = event_dict.get(EventSchema.EVENT_KEY_TYPE, StringName())
-		var payload_variant: Variant = event_dict.get(EventSchema.EVENT_KEY_PAYLOAD, {})
-		var payload: Dictionary = payload_variant if payload_variant is Dictionary else {}
+		var event_type: StringName = event.event_type
+		var payload: Dictionary = event.payload
 		var slot_id: StringName = payload.get(EventSchema.PAYLOAD_SLOT_ID, StringName())
 		var tick: int = int(payload.get(EventSchema.PAYLOAD_TICK, 0))
 		match event_type:

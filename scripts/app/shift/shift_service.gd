@@ -2,37 +2,30 @@ extends RefCounted
 
 class_name ShiftService
 
-signal hud_updated(snapshot: Dictionary)
-signal shift_started(snapshot: Dictionary)
-signal shift_ended(summary: Dictionary)
-signal shift_failed(payload: Dictionary)
-signal shift_won(payload: Dictionary)
-
 const MagicSystemScript := preload("res://scripts/domain/magic/magic_system.gd")
+const MagicConfigScript := preload("res://scripts/domain/magic/magic_config.gd")
+const MagicEventScript := preload("res://scripts/domain/magic/magic_event.gd")
 const InspectionSystemScript := preload("res://scripts/domain/inspection/inspection_system.gd")
+const InspectionConfigScript := preload("res://scripts/domain/inspection/inspection_config.gd")
+const InspectionReportScript := preload("res://scripts/domain/inspection/inspection_report.gd")
 const LandingServiceScript := preload("res://scripts/app/wardrobe/landing/landing_service.gd")
 const LandingOutcomeScript := preload("res://scripts/app/wardrobe/landing/landing_outcome.gd")
 const ShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
+const ShiftHudSnapshotScript := preload("res://scripts/app/shift/shift_hud_snapshot.gd")
+const ShiftSummaryScript := preload("res://scripts/app/shift/shift_summary.gd")
+const ShiftFailurePayloadScript := preload("res://scripts/app/shift/shift_failure_payload.gd")
+const ShiftWinPayloadScript := preload("res://scripts/app/shift/shift_win_payload.gd")
+const ShiftWinResultScript := preload("res://scripts/app/shift/shift_win_result.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const ShiftPatienceStateScript := preload("res://scripts/domain/shift/shift_patience_state.gd")
 const ShiftPatienceSystemScript := preload("res://scripts/app/shift/shift_patience_system.gd")
 const ShiftWinPolicyScript := preload("res://scripts/app/shift/shift_win_policy.gd")
-const MAGIC_DEFAULT_CONFIG := {
-	"insurance_mode": MagicSystemScript.INSURANCE_MODE_FREE,
-	"emergency_cost_mode": MagicSystemScript.EMERGENCY_COST_DEBT,
-	"insurance_cost": 0,
-	"emergency_cost_value": 5,
-	"soft_limit": 0,
-	"search_effect": "REVEAL_SLOT",
-}
 
-const INSPECTION_DEFAULT_CONFIG := {
-	"inspection_mode": InspectionSystemScript.MODE_PER_SHIFT,
-	"inspection_interval": 3,
-	"mvp_emulation": true,
-	"thresholds": {},
-}
-
+signal hud_updated(snapshot)
+signal shift_started(snapshot)
+signal shift_ended(summary)
+signal shift_failed(payload)
+signal shift_won(payload)
 const SHIFT_DEFAULT_CONFIG := {
 	"strikes_limit": 3,
 	"patience_max": 30.0,
@@ -47,27 +40,50 @@ var _run_state: RunState
 var _patience_state: ShiftPatienceState = ShiftPatienceStateScript.new()
 var _patience_system: ShiftPatienceSystem = ShiftPatienceSystemScript.new()
 var _win_policy = ShiftWinPolicyScript.new()
-var _hud_snapshot: Dictionary = {}
-var _last_summary: Dictionary = {}
+var _hud_snapshot: RefCounted
+var _last_summary: RefCounted
 var _meta_data: Dictionary = {}
 var _shift_config: Dictionary = SHIFT_DEFAULT_CONFIG.duplicate(true)
 
 func setup(
 	save_manager,
-	magic_config: Dictionary = MAGIC_DEFAULT_CONFIG,
-	inspection_config: Dictionary = INSPECTION_DEFAULT_CONFIG,
-	shift_config: Dictionary = SHIFT_DEFAULT_CONFIG,
+	magic_config: RefCounted = null,
+	inspection_config: RefCounted = null,
+	shift_config: Dictionary = {},
 	meta_data: Dictionary = {}
 ) -> void:
 	_save_manager = save_manager
 	_meta_data = meta_data.duplicate(true)
-	_shift_config = shift_config.duplicate(true)
-	_magic_system.setup(magic_config)
-	_inspection_system.setup(inspection_config)
+	if shift_config.is_empty():
+		_shift_config = SHIFT_DEFAULT_CONFIG.duplicate(true)
+	else:
+		_shift_config = shift_config.duplicate(true)
+	var resolved_magic: RefCounted = magic_config if magic_config else build_default_magic_config()
+	var resolved_inspection: RefCounted = inspection_config if inspection_config else build_default_inspection_config()
+	_magic_system.setup(resolved_magic)
+	_inspection_system.setup(resolved_inspection)
 	_initialize_run_state()
 	_reset_demo_hud()
 
-func start_shift() -> Dictionary:
+static func build_default_magic_config() -> RefCounted:
+	return MagicConfigScript.new(
+		MagicSystemScript.INSURANCE_MODE_FREE,
+		MagicSystemScript.EMERGENCY_COST_DEBT,
+		0,
+		5,
+		0,
+		MagicSystemScript.SEARCH_EFFECT_REVEAL_SLOT
+	)
+
+static func build_default_inspection_config() -> RefCounted:
+	return InspectionConfigScript.new(
+		InspectionSystemScript.MODE_PER_SHIFT,
+		3,
+		true,
+		{}
+	)
+
+func start_shift() -> RefCounted:
 	_shift_log.clear()
 	_prepare_shift_state()
 	_reset_patience_state()
@@ -75,32 +91,32 @@ func start_shift() -> Dictionary:
 	emit_signal("shift_started", get_hud_snapshot())
 	return get_hud_snapshot()
 
-func end_shift() -> Dictionary:
+func end_shift() -> RefCounted:
 	if _run_state and _run_state.shift_status == RunState.SHIFT_STATUS_RUNNING:
 		_run_state.shift_status = RunState.SHIFT_STATUS_SUCCESS
-	var inspection_report := _inspection_system.build_inspection_report(
+	var inspection_report: RefCounted = _inspection_system.build_inspection_report(
 		_run_state,
 		_run_state.shift_index if _run_state else 1
 	)
-	_last_summary = {
-		"money": _hud_snapshot.get("money", 0),
-		"notes": ["Prototype summary placeholder"],
-		"cleanliness": _run_state.cleanliness_or_entropy if _run_state else 0.0,
-		"inspector_risk": _run_state.inspector_risk if _run_state else 0.0,
-		"status": _run_state.shift_status if _run_state else RunState.SHIFT_STATUS_SUCCESS,
-		"strikes_current": _patience_state.strikes_current,
-		"strikes_limit": _patience_state.strikes_limit,
-		"inspection_report": inspection_report,
-		"end_reasons": _collect_end_reasons(),
-	}
-	_meta_data["total_currency"] = _meta_data.get("total_currency", 0) + int(_hud_snapshot.get("money", 0))
+	_last_summary = ShiftSummaryScript.new(
+		_hud_snapshot.money if _hud_snapshot else 0,
+		["Prototype summary placeholder"],
+		_run_state.cleanliness_or_entropy if _run_state else 0.0,
+		_run_state.inspector_risk if _run_state else 0.0,
+		_run_state.shift_status if _run_state else RunState.SHIFT_STATUS_SUCCESS,
+		_patience_state.strikes_current,
+		_patience_state.strikes_limit,
+		inspection_report,
+		_collect_end_reasons()
+	)
+	_meta_data["total_currency"] = _meta_data.get("total_currency", 0) + (_hud_snapshot.money if _hud_snapshot else 0)
 	if _save_manager:
 		_save_manager.save_meta(_meta_data)
-	emit_signal("shift_ended", _last_summary.duplicate(true))
-	return _last_summary.duplicate(true)
+	emit_signal("shift_ended", _last_summary.duplicate_summary())
+	return _last_summary.duplicate_summary()
 
-func get_hud_snapshot() -> Dictionary:
-	return _hud_snapshot.duplicate(true)
+func get_hud_snapshot() -> RefCounted:
+	return _hud_snapshot.duplicate_snapshot() if _hud_snapshot else null
 
 func get_patience_snapshot() -> Dictionary:
 	return _patience_state.get_patience_snapshot()
@@ -124,27 +140,33 @@ func get_queue_mix_snapshot() -> Dictionary:
 func reset_demo_hud() -> void:
 	_reset_demo_hud()
 
-func get_last_summary() -> Dictionary:
-	return _last_summary.duplicate(true)
+func get_last_summary() -> RefCounted:
+	return _last_summary.duplicate_summary() if _last_summary else null
 
 func simulate_tick_for_demo() -> void:
-	_hud_snapshot["time"] = max(0, _hud_snapshot.get("time", 0) - 1)
+	if _hud_snapshot == null:
+		return
+	_hud_snapshot.time = max(0, _hud_snapshot.time - 1)
 	emit_signal("hud_updated", get_hud_snapshot())
 
 func adjust_demo_money(amount: int) -> void:
-	_hud_snapshot["money"] = int(_hud_snapshot.get("money", 0)) + amount
+	if _hud_snapshot == null:
+		return
+	_hud_snapshot.money = _hud_snapshot.money + amount
 	emit_signal("hud_updated", get_hud_snapshot())
 
 func record_demo_magic(value: int) -> void:
-	_hud_snapshot["magic"] = value
+	if _hud_snapshot == null:
+		return
+	_hud_snapshot.magic = value
 	emit_signal("hud_updated", get_hud_snapshot())
 
-func apply_insurance_link(ticket_number: int, item_ids: Array) -> Dictionary:
+func apply_insurance_link(ticket_number: int, item_ids: Array[StringName]) -> RefCounted:
 	var result := _magic_system.apply_insurance(_run_state, ticket_number, item_ids)
 	_log_magic_event(result)
 	return result
 
-func request_emergency_locate(ticket_number: int) -> Dictionary:
+func request_emergency_locate(ticket_number: int) -> RefCounted:
 	var result := _magic_system.request_emergency_locate(_run_state, ticket_number)
 	_process_emergency_cost(result)
 	_log_magic_event(result)
@@ -153,7 +175,7 @@ func request_emergency_locate(ticket_number: int) -> Dictionary:
 func record_entropy(amount: float) -> void:
 	_inspection_system.record_entropy(_run_state, amount)
 
-func record_item_landed(payload: Dictionary) -> LandingOutcomeScript:
+func record_item_landed(payload: Dictionary) -> RefCounted:
 	_shift_log.record(EventSchema.EVENT_ITEM_LANDED, payload)
 	return _landing_service.record_item_landed(payload)
 
@@ -233,27 +255,30 @@ func _prepare_shift_state() -> void:
 	_run_state.reset_for_shift()
 
 func _reset_demo_hud() -> void:
-	_hud_snapshot = {
-		"wave": 1,
-		"time": 180,
-		"money": 42,
-		"magic": 3,
-		"debt": _run_state.shift_payout_debt if _run_state else 0,
-		"strikes_current": _patience_state.strikes_current,
-		"strikes_limit": _patience_state.strikes_limit,
-	}
+	_hud_snapshot = ShiftHudSnapshotScript.new(
+		1,
+		180,
+		42,
+		3,
+		_run_state.shift_payout_debt if _run_state else 0,
+		_patience_state.strikes_current,
+		_patience_state.strikes_limit
+	)
 	emit_signal("hud_updated", get_hud_snapshot())
 
-func _process_emergency_cost(event_data: Dictionary) -> void:
-	var cost_type: String = event_data.get("cost_type", "")
-	var value: int = int(event_data.get("cost_value", 0))
+func _process_emergency_cost(event_data: RefCounted) -> void:
+	if event_data == null:
+		return
+	var cost_type: StringName = event_data.cost_type
+	var value: int = event_data.cost_value
 	if cost_type == MagicSystemScript.EMERGENCY_COST_DEBT and value != 0:
 		var debt: int = _run_state.shift_payout_debt + value
 		_run_state.shift_payout_debt = debt
-		_hud_snapshot["debt"] = debt
+		if _hud_snapshot:
+			_hud_snapshot.debt = debt
 		emit_signal("hud_updated", get_hud_snapshot())
 
-func _log_magic_event(event_data: Dictionary) -> void:
+func _log_magic_event(event_data: RefCounted) -> void:
 	print("MagicSystem event:", event_data)
 
 func _reset_patience_state() -> void:
@@ -262,8 +287,10 @@ func _reset_patience_state() -> void:
 	_patience_state.reset([], patience_max, strikes_limit)
 
 func _update_strikes_hud() -> void:
-	_hud_snapshot["strikes_current"] = _patience_state.strikes_current
-	_hud_snapshot["strikes_limit"] = _patience_state.strikes_limit
+	if _hud_snapshot == null:
+		return
+	_hud_snapshot.strikes_current = _patience_state.strikes_current
+	_hud_snapshot.strikes_limit = _patience_state.strikes_limit
 	emit_signal("hud_updated", get_hud_snapshot())
 
 func _record_patience_zero_events(strike_clients: Array) -> void:
@@ -290,19 +317,22 @@ func _apply_strike_failure_if_needed() -> void:
 		EventSchema.PAYLOAD_STRIKES_CURRENT: _patience_state.strikes_current,
 		EventSchema.PAYLOAD_STRIKES_LIMIT: _patience_state.strikes_limit,
 	})
-	emit_signal("shift_failed", {
-		"reason": "strikes",
-		"strikes_current": _patience_state.strikes_current,
-		"strikes_limit": _patience_state.strikes_limit,
-	})
+	emit_signal(
+		"shift_failed",
+		ShiftFailurePayloadScript.new(
+			StringName("strikes"),
+			_patience_state.strikes_current,
+			_patience_state.strikes_limit
+		)
+	)
 
 func _try_finish_shift_success() -> void:
 	if _run_state == null:
 		return
 	if _run_state.shift_status != RunState.SHIFT_STATUS_RUNNING:
 		return
-	var result: Dictionary = _win_policy.evaluate(_run_state)
-	if not bool(result.get("can_win", false)):
+	var result: RefCounted = _win_policy.evaluate(_run_state)
+	if result == null or not result.can_win:
 		return
 	_run_state.shift_status = RunState.SHIFT_STATUS_SUCCESS
 	_shift_log.record(EventSchema.EVENT_SHIFT_WON, {
@@ -311,17 +341,20 @@ func _try_finish_shift_success() -> void:
 		EventSchema.PAYLOAD_TARGET_CHECKIN: _run_state.target_checkin,
 		EventSchema.PAYLOAD_TARGET_CHECKOUT: _run_state.target_checkout,
 	})
-	emit_signal("shift_won", {
-		EventSchema.PAYLOAD_CHECKIN_DONE: _run_state.checkin_done,
-		EventSchema.PAYLOAD_CHECKOUT_DONE: _run_state.checkout_done,
-		EventSchema.PAYLOAD_TARGET_CHECKIN: _run_state.target_checkin,
-		EventSchema.PAYLOAD_TARGET_CHECKOUT: _run_state.target_checkout,
-	})
+	emit_signal(
+		"shift_won",
+		ShiftWinPayloadScript.new(
+			_run_state.checkin_done,
+			_run_state.checkout_done,
+			_run_state.target_checkin,
+			_run_state.target_checkout
+		)
+	)
 
 func _collect_end_reasons() -> Array:
 	var reasons: Array = []
 	for event in _shift_log.get_events():
-		var event_type: StringName = StringName(str(event.get("type", "")))
+		var event_type: StringName = event.event_type
 		if event_type == EventSchema.EVENT_SHIFT_WON:
 			reasons.append("SHIFT_WON")
 		elif event_type == EventSchema.EVENT_SHIFT_FAILED:

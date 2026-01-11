@@ -2,6 +2,7 @@ extends GdUnitTestSuite
 
 const Adapter := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
+const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
 
 var _picked: Array = []
 var _placed: Array = []
@@ -17,30 +18,21 @@ func test_emit_events_routes_signals() -> void:
 	adapter.action_rejected.connect(_on_action_rejected)
 
 	var events := [
-		{
-			EventSchema.EVENT_KEY_TYPE: EventSchema.EVENT_ITEM_PICKED,
-			EventSchema.EVENT_KEY_PAYLOAD: {
-				EventSchema.PAYLOAD_SLOT_ID: StringName("Slot_A"),
-				EventSchema.PAYLOAD_ITEM: {"id": StringName("coat_1")},
-				EventSchema.PAYLOAD_TICK: 1,
-			},
-		},
-		{
-			EventSchema.EVENT_KEY_TYPE: EventSchema.EVENT_ITEM_PLACED,
-			EventSchema.EVENT_KEY_PAYLOAD: {
-				EventSchema.PAYLOAD_SLOT_ID: StringName("Slot_B"),
-				EventSchema.PAYLOAD_ITEM: {"id": StringName("coat_2")},
-				EventSchema.PAYLOAD_TICK: 2,
-			},
-		},
-		{
-			EventSchema.EVENT_KEY_TYPE: EventSchema.EVENT_ACTION_REJECTED,
-			EventSchema.EVENT_KEY_PAYLOAD: {
-				EventSchema.PAYLOAD_SLOT_ID: StringName("Slot_D"),
-				EventSchema.PAYLOAD_REASON: StringName("slot_missing"),
-				EventSchema.PAYLOAD_TICK: 3,
-			},
-		},
+		InteractionEventScript.new(EventSchema.EVENT_ITEM_PICKED, {
+			EventSchema.PAYLOAD_SLOT_ID: StringName("Slot_A"),
+			EventSchema.PAYLOAD_ITEM: {"id": StringName("coat_1")},
+			EventSchema.PAYLOAD_TICK: 1,
+		}),
+		InteractionEventScript.new(EventSchema.EVENT_ITEM_PLACED, {
+			EventSchema.PAYLOAD_SLOT_ID: StringName("Slot_B"),
+			EventSchema.PAYLOAD_ITEM: {"id": StringName("coat_2")},
+			EventSchema.PAYLOAD_TICK: 2,
+		}),
+		InteractionEventScript.new(EventSchema.EVENT_ACTION_REJECTED, {
+			EventSchema.PAYLOAD_SLOT_ID: StringName("Slot_D"),
+			EventSchema.PAYLOAD_REASON: StringName("slot_missing"),
+			EventSchema.PAYLOAD_TICK: 3,
+		}),
 	]
 
 	adapter.emit_events(events)

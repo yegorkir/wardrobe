@@ -56,7 +56,7 @@ func _handle_reject(payload: Dictionary) -> Array:
 	if slot_item == null or slot_item.id != item_instance_id:
 		return []
 	var pop_result := _storage_state.pop_slot_item(desk_slot_id)
-	if not pop_result.get(StorageStateScript.RESULT_KEY_SUCCESS, false):
+	if not pop_result.success:
 		return []
 	var events: Array = []
 	if apply_penalty:

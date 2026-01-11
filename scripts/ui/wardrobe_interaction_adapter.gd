@@ -6,6 +6,9 @@ const PickPutSwapResolverScript := preload("res://scripts/app/interaction/pick_p
 const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/interaction_event_adapter.gd")
 const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardrobe_interaction_events.gd")
 const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
+const InteractionCommandScript := preload("res://scripts/domain/interaction/interaction_command.gd")
+const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
+const InteractionResultScript := preload("res://scripts/domain/interaction/interaction_result.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
@@ -24,7 +27,7 @@ var _interaction_events: WardrobeInteractionEventsAdapter
 var _desk_event_dispatcher: DeskEventDispatcher
 var _item_visuals: WardrobeItemVisualsAdapter
 var _interaction_logger
-var _last_interaction_command: Dictionary = {}
+var _last_interaction_command: InteractionCommandScript
 var _event_connected := false
 var _find_item_instance: Callable
 
@@ -64,18 +67,18 @@ func perform_interact() -> void:
 		print("NO ACTION reason=no_slot slot=none")
 		return
 	var command := build_interaction_command(slot)
-	var exec_result: InteractionResult = execute_interaction(command)
+	var exec_result: InteractionResultScript = execute_interaction(command)
 	apply_interaction_events(exec_result.events)
 	log_interaction(exec_result, slot)
 
-func build_interaction_command(slot: WardrobeSlot) -> Dictionary:
+func build_interaction_command(slot: WardrobeSlot) -> InteractionCommandScript:
 	var slot_id := StringName(slot.get_slot_identifier())
 	var slot_item_instance := _storage_state.get_slot_item(slot_id)
-	var command: Dictionary = _interaction_service.build_auto_command(slot_id, slot_item_instance)
+	var command: InteractionCommandScript = _interaction_service.build_auto_command(slot_id, slot_item_instance)
 	_last_interaction_command = command
 	return command
 
-func execute_interaction(command: Dictionary) -> InteractionResult:
+func execute_interaction(command: InteractionCommandScript) -> InteractionResultScript:
 	return _interaction_service.execute_command(command)
 
 func apply_interaction_events(events: Array) -> void:
@@ -83,10 +86,11 @@ func apply_interaction_events(events: Array) -> void:
 	var desk_events: Array = _desk_event_dispatcher.process_interaction_events(events)
 	_interaction_events.apply_desk_events(desk_events)
 
-func log_interaction(result: InteractionResult, slot: WardrobeSlot) -> void:
+func log_interaction(result: InteractionResultScript, slot: WardrobeSlot) -> void:
 	var action: String = result.action
 	if result.success:
-		_last_interaction_command[WardrobeInteractionCommandScript.KEY_TYPE] = _resolve_command_type(action)
+		if _last_interaction_command:
+			_last_interaction_command.action = _resolve_command_type(action)
 		var slot_label := slot.get_slot_identifier()
 		var held := _player.get_active_hand_item()
 		var item_name := held.item_id if held else (slot.get_item().item_id if slot.get_item() else "none")

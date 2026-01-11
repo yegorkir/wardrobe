@@ -147,15 +147,14 @@ func _create_shelf_surface(shelf_y: float, width: float, height: float) -> Shelf
 
 func _has_landing_event(events: Array, item_id: StringName) -> bool:
 	for event in events:
-		if event is Dictionary:
-			var event_dict: Dictionary = event as Dictionary
-			var event_type: StringName = event_dict.get(EventSchema.EVENT_KEY_TYPE, StringName())
-			if event_type != EventSchema.EVENT_ITEM_LANDED:
-				continue
-			var payload: Dictionary = event_dict.get(EventSchema.EVENT_KEY_PAYLOAD, {})
-			var landed_id: StringName = payload.get(EventSchema.PAYLOAD_ITEM_ID, StringName())
-			if landed_id == item_id:
-				return true
+		if event == null:
+			continue
+		if event.event_type != EventSchema.EVENT_ITEM_LANDED:
+			continue
+		var payload: Dictionary = event.payload
+		var landed_id: StringName = payload.get(EventSchema.PAYLOAD_ITEM_ID, StringName())
+		if landed_id == item_id:
+			return true
 	return false
 
 func _await_physics_frames(count: int) -> void:

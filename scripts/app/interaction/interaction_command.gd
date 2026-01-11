@@ -2,16 +2,11 @@ extends RefCounted
 
 class_name WardrobeInteractionCommand
 
-const KEY_TYPE := &"type"
-const KEY_TICK := &"tick"
-const KEY_PAYLOAD := &"payload"
-const PAYLOAD_SLOT_ID := &"slot_id"
-const PAYLOAD_HAND_ITEM_ID := &"hand_item_id"
-const PAYLOAD_SLOT_ITEM_ID := &"slot_item_id"
+const InteractionCommandScript := preload("res://scripts/domain/interaction/interaction_command.gd")
 
-const TYPE_AUTO := &"interaction_auto"
-const TYPE_PICK := &"interaction_pick"
-const TYPE_PUT := &"interaction_put"
+const TYPE_AUTO := InteractionCommandScript.TYPE_AUTO
+const TYPE_PICK := InteractionCommandScript.TYPE_PICK
+const TYPE_PUT := InteractionCommandScript.TYPE_PUT
 
 static func build(
 	action: StringName,
@@ -19,13 +14,11 @@ static func build(
 	slot_id: StringName,
 	hand_item_id: String = "",
 	slot_item_id: String = ""
-) -> Dictionary:
-	return {
-		KEY_TYPE: action,
-		KEY_TICK: tick,
-		KEY_PAYLOAD: {
-			PAYLOAD_SLOT_ID: slot_id,
-			PAYLOAD_HAND_ITEM_ID: hand_item_id,
-			PAYLOAD_SLOT_ITEM_ID: slot_item_id,
-		},
-	}
+) -> InteractionCommandScript:
+	return InteractionCommandScript.new(
+		action,
+		tick,
+		slot_id,
+		StringName(hand_item_id),
+		StringName(slot_item_id)
+	)
