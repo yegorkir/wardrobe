@@ -101,6 +101,7 @@ func on_pointer_down(cursor_pos: Vector2) -> void:
 		_get_hover_slot_id(),
 		_get_hand_item_id(),
 	])
+	_log_click_snapshot("down", cursor_pos)
 	if _cursor_hand == null:
 		return
 	if _cursor_hand.get_active_hand_item() == null:
@@ -120,6 +121,7 @@ func on_pointer_up(cursor_pos: Vector2) -> void:
 		_get_hover_slot_id(),
 		_get_hand_item_id(),
 	])
+	_log_click_snapshot("up", cursor_pos)
 	if not _drag_active:
 		return
 	if _cursor_hand and _cursor_hand.get_active_hand_item() != null:
@@ -129,7 +131,9 @@ func on_pointer_up(cursor_pos: Vector2) -> void:
 				_try_drop_to_floor(cursor_pos)
 				_drag_active = false
 				return
-			_perform_slot_interaction(_hover_slot)
+			var exec_result := _perform_slot_interaction(_hover_slot)
+			if exec_result and not exec_result.success and _cursor_hand.get_active_hand_item() != null:
+				_try_drop_to_floor(cursor_pos)
 		elif _try_drop_to_shelf(cursor_pos):
 			pass
 		elif _try_drop_to_floor(cursor_pos):
@@ -173,12 +177,13 @@ func apply_interaction_events(events: Array) -> void:
 	var desk_events: Array = _desk_event_dispatcher.process_interaction_events(events)
 	_interaction_events.apply_desk_events(desk_events)
 
-func _perform_slot_interaction(slot: WardrobeSlot) -> void:
+func _perform_slot_interaction(slot: WardrobeSlot) -> InteractionResult:
 	var command := build_interaction_command(slot)
 	var exec_result: InteractionResult = execute_interaction(command)
 	apply_interaction_events(exec_result.events)
 	log_interaction(exec_result, slot)
 	_debug_validate_world()
+	return exec_result
 
 func log_interaction(result: InteractionResult, slot: WardrobeSlot) -> void:
 	var action: String = result.action
@@ -204,8 +209,6 @@ func _resolve_command_type(action: String) -> StringName:
 			return WardrobeInteractionCommandScript.TYPE_PICK
 		PickPutSwapResolverScript.ACTION_PUT:
 			return WardrobeInteractionCommandScript.TYPE_PUT
-		PickPutSwapResolverScript.ACTION_SWAP:
-			return WardrobeInteractionCommandScript.TYPE_SWAP
 		_:
 			return WardrobeInteractionCommandScript.TYPE_AUTO
 
@@ -572,7 +575,6 @@ func _connect_event_adapter() -> void:
 		return
 	_event_adapter.item_picked.connect(_on_event_item_picked)
 	_event_adapter.item_placed.connect(_on_event_item_placed)
-	_event_adapter.item_swapped.connect(_on_event_item_swapped)
 	_event_adapter.action_rejected.connect(_on_event_action_rejected)
 	_event_connected = true
 
@@ -606,6 +608,7 @@ func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) ->
 
 func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
+	var hand_before := _cursor_hand.get_active_hand_item() if _cursor_hand else null
 	var node: ItemNode = _cursor_hand.take_item_from_hand() if _cursor_hand else null
 	var item_id: StringName = item.get("id", StringName())
 	if node == null:
@@ -613,24 +616,9 @@ func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) ->
 	if slot and node:
 		node.freeze = true
 		slot.put_item(node)
-	_interaction_service.clear_hand_item()
-
-func _on_event_item_swapped(
-	slot_id: StringName,
-	_incoming_item: Dictionary,
-	outgoing_item: Dictionary,
-	_tick: int
-) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
-	var slot_outgoing: ItemNode = slot.take_item() if slot else null
-	var incoming_node: ItemNode = _cursor_hand.take_item_from_hand() if _cursor_hand else null
-	if slot and incoming_node:
-		incoming_node.freeze = true
-		slot.put_item(incoming_node)
-	if slot_outgoing and _cursor_hand:
-		slot_outgoing.enter_drag_mode()
-		_cursor_hand.hold_item(slot_outgoing)
-	_interaction_service.set_hand_item(_instance_from_snapshot(outgoing_item))
+		_interaction_service.clear_hand_item()
+	else:
+		_log_put_missing("placed", slot_id, item_id, slot, hand_before, node)
 
 func _on_event_action_rejected(_slot_id: StringName, _reason: StringName, _tick: int) -> void:
 	pass
@@ -651,3 +639,62 @@ func _get_hand_item_id() -> String:
 	if item == null:
 		return "none"
 	return item.item_id
+
+func _log_put_missing(
+	context: String,
+	slot_id: StringName,
+	item_id: StringName,
+	slot: WardrobeSlot,
+	hand_before: ItemNode,
+	node: ItemNode
+) -> void:
+	if not DebugLog.enabled():
+		return
+	var reasons: Array[String] = []
+	if slot == null:
+		reasons.append("missing_slot")
+	if node == null:
+		reasons.append("missing_node")
+	var hand_id := hand_before.item_id if hand_before else "none"
+	var node_id := node.item_id if node else "none"
+	var slot_has_item := slot.has_item() if slot else false
+	DebugLog.logf("PutMissing ctx=%s slot=%s item=%s reasons=%s hand_before=%s node=%s slot_has_item=%s", [
+		context,
+		String(slot_id),
+		String(item_id),
+		"|".join(reasons),
+		hand_id,
+		node_id,
+		str(slot_has_item),
+	])
+
+func _log_click_snapshot(label: String, cursor_pos: Vector2) -> void:
+	if not DebugLog.enabled():
+		return
+	var hand := _cursor_hand.get_active_hand_item() if _cursor_hand else null
+	var parts: Array[String] = []
+	var keys := _item_nodes.keys()
+	keys.sort()
+	for key in keys:
+		var node: ItemNode = _item_nodes.get(key, null)
+		if node == null:
+			continue
+		var pos := node.global_position
+		var parent_name: String = String(node.get_parent().name) if node.get_parent() else "none"
+		var in_hand := _cursor_hand != null and _cursor_hand.get_active_hand_item() == node
+		parts.append("%s state=%s pos=%.1f,%.1f parent=%s hand=%s" % [
+			node.item_id,
+			node.get_debug_state_label(),
+			pos.x,
+			pos.y,
+			parent_name,
+			"yes" if in_hand else "no",
+		])
+	DebugLog.logf("ClickSnapshot %s pos=%.1f,%.1f hover=%s hand=%s items=%s", [
+		label,
+		cursor_pos.x,
+		cursor_pos.y,
+		_get_hover_slot_id(),
+		hand.item_id if hand else "none",
+		"; ".join(parts),
+	])

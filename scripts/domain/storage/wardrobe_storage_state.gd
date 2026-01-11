@@ -5,7 +5,6 @@ class_name WardrobeStorageState
 const RESULT_KEY_SUCCESS := "success"
 const RESULT_KEY_REASON := "reason"
 const RESULT_KEY_ITEM := "item"
-const RESULT_KEY_OUTGOING := "outgoing_item"
 const REASON_SLOT_MISSING := StringName("slot_missing")
 const REASON_SLOT_EMPTY := StringName("slot_empty")
 const REASON_SLOT_BLOCKED := StringName("slot_blocked")
@@ -54,23 +53,6 @@ func pick(slot_id: StringName) -> Dictionary:
 	var picked := slot.item
 	slot.item = null
 	return _result(true, REASON_OK, picked)
-
-func swap(slot_id: StringName, incoming: ItemInstance) -> Dictionary:
-	if incoming == null:
-		return _result(false, REASON_ITEM_MISSING, null)
-	var slot := _slots.get(slot_id) as SlotState
-	if slot == null:
-		return _result(false, REASON_SLOT_MISSING, null)
-	if slot.item == null:
-		return _result(false, REASON_SLOT_EMPTY, null)
-	var outgoing := slot.item
-	slot.item = incoming
-	return {
-		RESULT_KEY_SUCCESS: true,
-		RESULT_KEY_REASON: REASON_OK,
-		RESULT_KEY_ITEM: incoming,
-		RESULT_KEY_OUTGOING: outgoing,
-	}
 
 func get_slot_item(slot_id: StringName) -> ItemInstance:
 	var slot := _slots.get(slot_id) as SlotState

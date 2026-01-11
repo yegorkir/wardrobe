@@ -7,6 +7,7 @@ const WardrobeInteractionEventAdapterScript := preload("res://scripts/wardrobe/i
 const WardrobeInteractionEventsAdapterScript := preload("res://scripts/ui/wardrobe_interaction_events.gd")
 const DeskEventDispatcherScript := preload("res://scripts/ui/desk_event_dispatcher.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 
 const DISTANCE_TIE_THRESHOLD := 6.0
 
@@ -103,8 +104,6 @@ func _resolve_command_type(action: String) -> StringName:
 			return WardrobeInteractionCommandScript.TYPE_PICK
 		PickPutSwapResolverScript.ACTION_PUT:
 			return WardrobeInteractionCommandScript.TYPE_PUT
-		PickPutSwapResolverScript.ACTION_SWAP:
-			return WardrobeInteractionCommandScript.TYPE_SWAP
 		_:
 			return WardrobeInteractionCommandScript.TYPE_AUTO
 
@@ -186,7 +185,6 @@ func _connect_event_adapter() -> void:
 		return
 	_event_adapter.item_picked.connect(_on_event_item_picked)
 	_event_adapter.item_placed.connect(_on_event_item_placed)
-	_event_adapter.item_swapped.connect(_on_event_item_swapped)
 	_event_adapter.action_rejected.connect(_on_event_action_rejected)
 	_event_connected = true
 
@@ -219,6 +217,7 @@ func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) ->
 
 func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
+	var hand_before := _player.get_active_hand_item() if _player else null
 	var node: ItemNode = _player.take_item_from_hand() if _player else null
 	var item_id: StringName = item.get("id", StringName())
 	if node == null:
@@ -226,21 +225,36 @@ func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) ->
 	if slot and node:
 		slot.put_item(node)
 	_interaction_service.clear_hand_item()
-
-func _on_event_item_swapped(
-	slot_id: StringName,
-	_incoming_item: Dictionary,
-	outgoing_item: Dictionary,
-	_tick: int
-) -> void:
-	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
-	var slot_outgoing: ItemNode = slot.take_item() if slot else null
-	var incoming_node: ItemNode = _player.take_item_from_hand() if _player else null
-	if slot and incoming_node:
-		slot.put_item(incoming_node)
-	if slot_outgoing and _player:
-		_player.hold_item(slot_outgoing)
-	_interaction_service.set_hand_item(_instance_from_snapshot(outgoing_item))
+	if not slot or node == null:
+		_log_put_missing("placed", slot_id, item_id, slot, hand_before, node)
 
 func _on_event_action_rejected(_slot_id: StringName, _reason: StringName, _tick: int) -> void:
 	pass
+
+func _log_put_missing(
+	context: String,
+	slot_id: StringName,
+	item_id: StringName,
+	slot: WardrobeSlot,
+	hand_before: ItemNode,
+	node: ItemNode
+) -> void:
+	if not DebugLog.enabled():
+		return
+	var reasons: Array[String] = []
+	if slot == null:
+		reasons.append("missing_slot")
+	if node == null:
+		reasons.append("missing_node")
+	var hand_id := hand_before.item_id if hand_before else "none"
+	var node_id := node.item_id if node else "none"
+	var slot_has_item := slot.has_item() if slot else false
+	DebugLog.logf("PutMissing ctx=%s slot=%s item=%s reasons=%s hand_before=%s node=%s slot_has_item=%s", [
+		context,
+		String(slot_id),
+		String(item_id),
+		"|".join(reasons),
+		hand_id,
+		node_id,
+		str(slot_has_item),
+	])
