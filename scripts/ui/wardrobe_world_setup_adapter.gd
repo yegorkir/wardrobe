@@ -14,6 +14,7 @@ var _storage_state: WardrobeStorageState
 var _step3_setup: WardrobeStep3SetupAdapter
 var _item_visuals: WardrobeItemVisualsAdapter
 var _apply_desk_events: Callable
+var _register_item: Callable
 
 var _slots: Array[WardrobeSlot] = []
 var _slot_lookup: Dictionary = {}
@@ -34,7 +35,8 @@ func configure(
 	storage_state: WardrobeStorageState,
 	step3_setup: WardrobeStep3SetupAdapter,
 	item_visuals: WardrobeItemVisualsAdapter,
-	apply_desk_events: Callable
+	apply_desk_events: Callable,
+	register_item: Callable = Callable()
 ) -> void:
 	_root = root
 	_interaction_service = interaction_service
@@ -42,6 +44,7 @@ func configure(
 	_step3_setup = step3_setup
 	_item_visuals = item_visuals
 	_apply_desk_events = apply_desk_events
+	_register_item = register_item
 	_setup_step3_context()
 
 func get_slots() -> Array[WardrobeSlot]:
@@ -186,4 +189,6 @@ func _setup_step3_context() -> void:
 	step3_context.get_ticket_slots = Callable(self, "get_ticket_slots")
 	step3_context.place_item_instance_in_slot = Callable(self, "place_item_instance_in_slot")
 	step3_context.apply_desk_events = _apply_desk_events
+	step3_context.register_item = _register_item
 	_step3_setup.configure(step3_context)
+	

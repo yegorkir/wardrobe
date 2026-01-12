@@ -4,6 +4,7 @@ class_name RunState
 
 const MagicConfigScript := preload("res://scripts/domain/magic/magic_config.gd")
 const InspectionConfigScript := preload("res://scripts/domain/inspection/inspection_config.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 
 const SHIFT_STATUS_RUNNING := StringName("running")
 const SHIFT_STATUS_FAILED := StringName("failed")
@@ -27,6 +28,7 @@ var checkin_done: int = 0
 var checkout_done: int = 0
 var completed_checkins: Dictionary = {}
 var completed_checkouts: Dictionary = {}
+var item_registry: Dictionary = {} # item_id -> ItemInstance
 
 func reset_for_shift() -> void:
 	shift_index += 1
@@ -45,6 +47,15 @@ func reset_for_shift() -> void:
 	checkout_done = 0
 	completed_checkins.clear()
 	completed_checkouts.clear()
+	item_registry.clear()
+
+func register_item(item: ItemInstanceScript) -> void:
+	if item == null:
+		return
+	item_registry[item.id] = item
+
+func find_item(item_id: StringName) -> ItemInstanceScript:
+	return item_registry.get(item_id) as ItemInstanceScript
 
 func set_magic_links(ticket_number: int, item_ids: Array[StringName]) -> void:
 	magic_links[ticket_number] = item_ids.duplicate(true)

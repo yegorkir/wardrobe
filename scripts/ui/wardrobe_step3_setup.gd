@@ -29,6 +29,7 @@ var _storage_state: WardrobeStorageState
 var _get_ticket_slots: Callable
 var _place_item_instance_in_slot: Callable
 var _apply_desk_events: Callable
+var _register_item: Callable
 var _wave_client_defs: Array[StringName] = []
 var _wave_client_count: int = DEFAULT_CLIENT_COUNT
 var _wave_target_checkin: int = DEFAULT_TARGET_CHECKIN
@@ -50,6 +51,7 @@ func configure(context: RefCounted) -> void:
 	_get_ticket_slots = context.get_ticket_slots
 	_place_item_instance_in_slot = context.place_item_instance_in_slot
 	_apply_desk_events = context.apply_desk_events
+	_register_item = context.register_item
 
 func initialize_step3() -> void:
 	if _clear_spawned_items.is_valid():
@@ -133,6 +135,11 @@ func _make_demo_client(index: int, client_id: StringName, color: Color) -> Clien
 		ItemInstanceScript.KIND_TICKET,
 		color
 	)
+	
+	if _register_item.is_valid():
+		_register_item.call(coat)
+		_register_item.call(ticket)
+		
 	var client_def_id := _resolve_client_def_id(index)
 	var client_def := _resolve_client_definition(client_def_id)
 	var archetype_id: StringName = client_def.get("archetype_id", StringName())

@@ -35,19 +35,22 @@ var _slot_lookup: Dictionary = {}
 var _item_nodes: Dictionary = {}
 var _spawned_items: Array = []
 var _detach_item_node: Callable
+var _find_item_instance: Callable
 
 func configure(
 	item_scene: PackedScene,
 	slot_lookup: Dictionary,
 	item_nodes: Dictionary,
 	spawned_items: Array,
-	detach_item_node: Callable
+	detach_item_node: Callable,
+	find_item_instance: Callable = Callable()
 ) -> void:
 	_item_scene = item_scene
 	_slot_lookup = slot_lookup
 	_item_nodes = item_nodes
 	_spawned_items = spawned_items
 	_detach_item_node = detach_item_node
+	_find_item_instance = find_item_instance
 
 func spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
@@ -66,6 +69,7 @@ func spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> voi
 	if _detach_item_node.is_valid():
 		_detach_item_node.call(node)
 	slot.put_item(node)
+	refresh_quality_stars(node)
 
 func apply_item_visuals(item: ItemNode, tint: Variant) -> void:
 	var sprite := item.get_node_or_null("Sprite") as Sprite2D
@@ -79,6 +83,69 @@ func apply_item_visuals(item: ItemNode, tint: Variant) -> void:
 			sprite.modulate = parse_color(tint)
 	item.configure_pick_box_from_sprite()
 	item.refresh_physics_shape_from_sprite()
+
+func refresh_quality_stars(item: ItemNode) -> void:
+	if item == null:
+		return
+	var instance: ItemInstance = null
+	if _find_item_instance.is_valid():
+		instance = _find_item_instance.call(StringName(item.item_id)) as ItemInstance
+	
+	if instance == null or instance.quality_state == null:
+		_hide_stars(item)
+		return
+	
+	_render_stars(item, instance.quality_state.current_stars, instance.quality_state.max_stars)
+
+func _render_stars(item: ItemNode, current: float, max_val: int) -> void:
+	var stars_container = item.get_node_or_null("QualityStars")
+	if stars_container == null:
+		stars_container = Node2D.new()
+		stars_container.name = "QualityStars"
+		item.add_child(stars_container)
+		# Position it under the item
+		stars_container.position = Vector2(0, item.get_visual_half_height() + 8)
+	
+	# Clear existing stars
+	for child in stars_container.get_children():
+		child.queue_free()
+	
+	var star_size := 16.0
+	var spacing := 4.0
+	var total_width := float(max_val) * star_size + float(max_val - 1) * spacing
+	var start_x := -total_width * 0.5 + star_size * 0.5
+	
+	for i in range(max_val):
+		# Background (empty slot)
+		var bg := ColorRect.new()
+		bg.size = Vector2(star_size, star_size)
+		bg.position = Vector2(start_x + i * (star_size + spacing) - star_size * 0.5, -star_size * 0.5)
+		bg.color = Color.GRAY
+		stars_container.add_child(bg)
+		
+		# Fill
+		if float(i) < current:
+			var fill := ColorRect.new()
+			fill.position = bg.position
+			fill.color = Color.GOLD
+			
+			if float(i) + 1.0 <= current:
+				# Full
+				fill.size = Vector2(star_size, star_size)
+			elif float(i) + 0.5 <= current:
+				# Half
+				fill.size = Vector2(star_size * 0.5, star_size)
+			else:
+				# Should not happen with 0.5 steps, but just in case
+				fill.size = Vector2(0, star_size)
+				
+			if fill.size.x > 0:
+				stars_container.add_child(fill)
+
+func _hide_stars(item: ItemNode) -> void:
+	var stars_container = item.get_node_or_null("QualityStars")
+	if stars_container:
+		stars_container.visible = false
 
 func get_item_texture(item_type: int) -> Texture2D:
 	var paths: Array = ITEM_TEXTURE_PATHS.get(item_type, ITEM_TEXTURE_PATHS[ItemNode.ItemType.COAT])

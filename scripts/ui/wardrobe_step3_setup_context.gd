@@ -16,3 +16,4 @@ var storage_state: WardrobeStorageState
 var get_ticket_slots: Callable
 var place_item_instance_in_slot: Callable
 var apply_desk_events: Callable
+var register_item: Callable
