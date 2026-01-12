@@ -8,6 +8,7 @@ const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config
 const LandingOutcomeScript := preload("res://scripts/app/wardrobe/landing/landing_outcome.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
+const LOG_DRAG_PROBE_ENABLED := false
 
 const TORQUE_BASE := 5.0
 const Y_SNAP_EPSILON := 2.0
@@ -31,6 +32,7 @@ var _overlap_cooldowns: Dictionary = {}
 var _placement_gate: PhysicsPlacementGate
 var _surface_registry: SurfaceRegistry
 var _run_manager: RunManagerBase
+var _item_visuals: WardrobeItemVisualsAdapter
 
 func _ready() -> void:
 	add_to_group(PhysicsLayers.GROUP_TICK)
@@ -44,6 +46,18 @@ func _ready() -> void:
 	)
 	_surface_registry = SurfaceRegistry.get_autoload()
 	_run_manager = get_node_or_null("/root/RunManager") as RunManagerBase
+
+func configure(item_visuals: WardrobeItemVisualsAdapter) -> void:
+	_item_visuals = item_visuals
+
+func on_item_impact(item: ItemNode, impact: float, collider: Node) -> void:
+	if item == null:
+		return
+	var ray_hit := {
+		"collider": collider,
+		"position": item.global_position
+	}
+	_handle_item_landed(item, ray_hit, item.global_position, impact)
 
 func enqueue_drop_check(item: ItemNode, preferred_surface: Node = null) -> void:
 	if item == null:
@@ -152,7 +166,7 @@ func _run_stability_check(
 		var bottom_y: float = item.get_bottom_y_global()
 		var snap_delta: float = abs(hit_pos.y - bottom_y)
 		if snap_delta <= Y_SNAP_EPSILON:
-			var impact: float = abs(item.linear_velocity.y)
+			var impact: float = item.get_effective_impact()
 			var before_x := item.global_position.x
 			var before_cog_x := item.get_global_cog().x
 			item.freeze = true
@@ -446,14 +460,15 @@ func _update_drag_probe_with_space(space: PhysicsDirectSpaceState2D) -> void:
 	var cog_global := _drag_probe_item.get_global_cog()
 	var ray_hit: Dictionary = _cast_support_ray(space, _drag_probe_item, cog_global)
 	_drag_probe_supported = not ray_hit.is_empty()
-	_log_debug(
-		"drag_probe item=%s supported=%s ray=%s",
-		[
-			_drag_probe_item.item_id,
-			str(_drag_probe_supported),
-			_ray_hit_debug(ray_hit),
-		]
-	)
+	if LOG_DRAG_PROBE_ENABLED:
+		_log_debug(
+			"drag_probe item=%s supported=%s ray=%s",
+			[
+				_drag_probe_item.item_id,
+				str(_drag_probe_supported),
+				_ray_hit_debug(ray_hit),
+			]
+		)
 
 func _resolve_surface_bounds_from_collider(collider: Node) -> Rect2:
 	var node := collider
@@ -499,6 +514,11 @@ func _apply_landing_outcome(
 ) -> void:
 	if item == null or outcome == null:
 		return
+	
+	if outcome.quality_delta != null and float(outcome.quality_delta) != 0.0:
+		if _item_visuals:
+			_item_visuals.refresh_quality_stars(item)
+			
 	for effect in outcome.effects:
 		if typeof(effect) != TYPE_DICTIONARY:
 			continue

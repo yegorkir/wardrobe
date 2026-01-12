@@ -9,6 +9,7 @@ const ShiftSummaryScript := preload("res://scripts/app/shift/shift_summary.gd")
 const ShiftFailurePayloadScript := preload("res://scripts/app/shift/shift_failure_payload.gd")
 const ShiftWinPayloadScript := preload("res://scripts/app/shift/shift_win_payload.gd")
 const MagicEventScript := preload("res://scripts/domain/magic/magic_event.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 
 signal screen_requested(screen_id, payload)
 signal run_state_changed(state_name)
@@ -111,6 +112,15 @@ func request_emergency_locate(ticket_number: int) -> RefCounted:
 
 func record_entropy(amount: float) -> void:
 	_shift_service.record_entropy(amount)
+
+func register_item(item: ItemInstanceScript) -> void:
+	if _shift_service:
+		_shift_service.register_item(item)
+
+func find_item(item_id: StringName) -> ItemInstanceScript:
+	if _shift_service:
+		return _shift_service.find_item(item_id)
+	return null
 
 func record_item_landed(payload: Dictionary) -> RefCounted:
 	return _shift_service.record_item_landed(payload)

@@ -11,6 +11,7 @@ const EVENT_RENDER := StringName("HUD_QUEUE_RENDER")
 const EVENT_APPEND := StringName("HUD_QUEUE_APPEND")
 const EVENT_POP := StringName("HUD_QUEUE_POP")
 const EVENT_TIMEOUT := StringName("HUD_QUEUE_TIMEOUT")
+const LOG_RENDER_ENABLED := false
 
 var _presenter = QueueHudPresenterScript.new()
 var _view
@@ -84,6 +85,8 @@ func _build_snapshot():
 	return result.snapshot
 
 func _log_diff(snapshot) -> void:
+	if not LOG_RENDER_ENABLED:
+		return
 	var ids: Array[StringName] = snapshot.get_client_ids()
 	DebugLogScript.event(EVENT_RENDER, {
 		"count": ids.size(),

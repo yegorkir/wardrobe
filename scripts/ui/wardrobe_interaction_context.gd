@@ -26,3 +26,4 @@ var find_item_instance: Callable
 var interaction_logger
 var floor_resolver
 var apply_patience_penalty: Callable
+var register_item: Callable

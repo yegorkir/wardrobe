@@ -4,6 +4,9 @@ extends RigidBody2D
 const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
+const LOG_TRANSFER_ENABLED := false
+const LOG_TRANSFER_END_ENABLED := false
+const LOG_UNSTABLE_POS_ENABLED := false
 
 enum ItemType {
 	COAT,
@@ -105,6 +108,7 @@ var _transfer_sink_frames := 0
 var _transfer_sink_logged := false
 var _landing_cause: StringName = EventSchema.CAUSE_ACCIDENT
 var _landing_armed := true
+var _stored_landing_impact: float = 0.0
 
 const PASS_THROUGH_RESTORE_EPS := 0.5
 
@@ -374,7 +378,7 @@ func start_floor_transfer(target_y: float, mode: int) -> void:
 		gravity_scale = 0.0
 		linear_velocity = Vector2(linear_velocity.x, -TRANSFER_RISE_SPEED)
 	else:
-		gravity_scale = _transfer_restore_gravity_scale
+		gravity_scale = 1.0
 		if linear_velocity.y < TRANSFER_FALL_MIN_SPEED:
 			linear_velocity = Vector2(linear_velocity.x, TRANSFER_FALL_MIN_SPEED)
 
@@ -405,6 +409,8 @@ func _capture_transfer_restore() -> void:
 	_transfer_restore_layer = collision_layer
 	_transfer_restore_mask = collision_mask
 	_transfer_restore_gravity_scale = gravity_scale
+	if _transfer_restore_gravity_scale <= 0.0:
+		_transfer_restore_gravity_scale = 1.0
 
 func _restore_transfer_settings() -> void:
 	collision_layer = _transfer_restore_layer
@@ -455,7 +461,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			_force_land_transfer("failsafe")
 			return
 		if _is_transfer_landed():
-			_finish_transfer()
+			_finish_transfer(state.linear_velocity.length())
 
 func _is_transfer_landed() -> bool:
 	if get_bottom_y_global() < _transfer_target_y - TRANSFER_TARGET_EPS:
@@ -465,8 +471,15 @@ func _is_transfer_landed() -> bool:
 		return true
 	return _transfer_crossed_frames >= TRANSFER_FORCE_LAND_FRAMES
 
-func _finish_transfer() -> void:
+func _finish_transfer(final_impact: float = 0.0) -> void:
 	snap_bottom_to_y(_transfer_target_y)
+	
+	var impact_to_report = final_impact if final_impact > 0.0 else linear_velocity.length()
+	if _landing_armed:
+		_landing_armed = false
+		get_tree().call_group(PhysicsLayers.GROUP_TICK, "on_item_impact", self, impact_to_report, current_surface)
+	
+	_stored_landing_impact = impact_to_report
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
 	_restore_transfer_settings()
@@ -479,7 +492,8 @@ func _finish_transfer() -> void:
 	_transfer_sink_logged = false
 	_state = State.SETTLING
 	_settle_grace_frames = SETTLE_GRACE_FRAMES
-	_log_debug("transfer_end item=%s", [item_id])
+	if LOG_TRANSFER_END_ENABLED:
+		_log_debug("transfer_end item=%s", [item_id])
 
 func _force_land_transfer(reason: String) -> void:
 	snap_bottom_to_y(_transfer_target_y)
@@ -632,6 +646,18 @@ func _on_body_entered(body: Node) -> void:
 		return
 	if _transfer_phase != TransferPhase.NONE:
 		return
+	
+	# Surface impact detection for damage
+	if _landing_armed and body is CollisionObject2D:
+		var col_obj := body as CollisionObject2D
+		var surface_mask := PhysicsLayers.LAYER_FLOOR_BIT | PhysicsLayers.LAYER_SHELF_BIT
+		if (col_obj.collision_layer & surface_mask) != 0:
+			var impact := linear_velocity.length()
+			# Ignore micro-impacts
+			if impact > 5.0:
+				_landing_armed = false
+				get_tree().call_group(PhysicsLayers.GROUP_TICK, "on_item_impact", self, impact, body)
+
 	if body is RigidBody2D:
 		var other := body as RigidBody2D
 		if other.collision_layer == 0 and other.collision_mask == 0:
@@ -679,6 +705,8 @@ func _log_debug(format: String, args: Array = []) -> void:
 	DebugLog.logf("ItemNode " + format, args)
 
 func _log_unstable_position() -> void:
+	if not LOG_UNSTABLE_POS_ENABLED:
+		return
 	if not DebugLog.enabled():
 		return
 	if _state == State.STABLE:
@@ -691,6 +719,8 @@ func _log_unstable_position() -> void:
 	])
 
 func _log_transfer_state(state: PhysicsDirectBodyState2D) -> void:
+	if not LOG_TRANSFER_ENABLED:
+		return
 	if not DebugLog.enabled():
 		return
 	_log_debug("transfer item=%s phase=%s bottom_y=%.2f target_y=%.2f vel_y=%.2f", [
@@ -757,6 +787,12 @@ func consume_landing_arm() -> bool:
 
 func arm_landing() -> void:
 	_landing_armed = true
+	_stored_landing_impact = 0.0
+
+func get_effective_impact() -> float:
+	if _stored_landing_impact > 0.0:
+		return _stored_landing_impact
+	return linear_velocity.length()
 
 func is_transfer_active() -> bool:
 	return _transfer_phase != TransferPhase.NONE

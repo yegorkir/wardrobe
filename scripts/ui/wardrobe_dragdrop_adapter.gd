@@ -545,7 +545,8 @@ func _setup_item_visuals(item_scene: PackedScene) -> void:
 		_slot_lookup,
 		_item_nodes,
 		_spawned_items,
-		Callable(self, "_detach_item_node")
+		Callable(self, "_detach_item_node"),
+		_find_item_instance
 	)
 
 func _setup_interaction_events(desk_by_id: Dictionary) -> void:

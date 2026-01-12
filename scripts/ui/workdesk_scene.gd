@@ -81,13 +81,22 @@ func _finish_ready_setup() -> void:
 		Callable(self, "_on_client_completed"),
 		Callable(self, "_on_client_checkin")
 	)
+	_item_visuals.configure(
+		ITEM_SCENE,
+		_world_adapter.get_slot_lookup(),
+		_world_adapter.get_item_nodes(),
+		_world_adapter.get_spawned_items(),
+		Callable(_dragdrop_adapter, "_detach_item_node"),
+		Callable(_run_manager, "find_item") if _run_manager else Callable()
+	)
 	_world_adapter.configure(
 		self,
 		_interaction_service,
 		_storage_state,
 		_step3_setup,
 		_item_visuals,
-		Callable(_interaction_events, "apply_desk_events")
+		Callable(_interaction_events, "apply_desk_events"),
+		Callable(_run_manager, "register_item") if _run_manager else Callable()
 	)
 	if _run_manager:
 		_world_adapter.get_desk_system().configure_queue_mix_provider(
@@ -121,13 +130,16 @@ func _finish_ready_setup() -> void:
 	interaction_context.desk_system = _world_adapter.get_desk_system()
 	interaction_context.client_queue_state = _world_adapter.get_client_queue_state()
 	interaction_context.clients = _world_adapter.get_clients()
-	interaction_context.find_item_instance = Callable(_world_adapter, "find_item_instance")
+	interaction_context.find_item_instance = Callable(_run_manager, "find_item") if _run_manager else Callable(_world_adapter, "find_item_instance")
 	interaction_context.floor_resolver = _floor_resolver
 	if _run_manager != null:
 		interaction_context.apply_patience_penalty = Callable(_run_manager, "apply_patience_penalty")
+		interaction_context.register_item = Callable(_run_manager, "register_item")
 	_interaction_logger.configure(Callable(_shift_log, "record"))
 	interaction_context.interaction_logger = _interaction_logger
 	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
+	if _physics_tick and _physics_tick.has_method("configure"):
+		_physics_tick.call("configure", _item_visuals)
 	_dragdrop_adapter.configure(interaction_context, _cursor_hand, Callable(self, "_debug_validate_world"))
 	_collect_surface_targets()
 	_dragdrop_adapter.configure_surface_targets(_shelf_surfaces, _floor_zone)

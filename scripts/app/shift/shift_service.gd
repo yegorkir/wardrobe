@@ -10,6 +10,8 @@ const InspectionConfigScript := preload("res://scripts/domain/inspection/inspect
 const InspectionReportScript := preload("res://scripts/domain/inspection/inspection_report.gd")
 const LandingServiceScript := preload("res://scripts/app/wardrobe/landing/landing_service.gd")
 const LandingOutcomeScript := preload("res://scripts/app/wardrobe/landing/landing_outcome.gd")
+const ItemQualityServiceScript := preload("res://scripts/domain/quality/item_quality_service.gd")
+const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const ShiftLogScript := preload("res://scripts/app/logging/shift_log.gd")
 const ShiftHudSnapshotScript := preload("res://scripts/app/shift/shift_hud_snapshot.gd")
 const ShiftSummaryScript := preload("res://scripts/app/shift/shift_summary.gd")
@@ -20,6 +22,7 @@ const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const ShiftPatienceStateScript := preload("res://scripts/domain/shift/shift_patience_state.gd")
 const ShiftPatienceSystemScript := preload("res://scripts/app/shift/shift_patience_system.gd")
 const ShiftWinPolicyScript := preload("res://scripts/app/shift/shift_win_policy.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 
 signal hud_updated(snapshot)
 signal shift_started(snapshot)
@@ -30,6 +33,7 @@ const SHIFT_DEFAULT_CONFIG := {
 	"strikes_limit": 3,
 	"patience_max": 30.0,
 }
+const FALL_IMPACT_TO_DAMAGE_DIVISOR := 100.0
 
 var _save_manager
 var _magic_system := MagicSystemScript.new()
@@ -175,9 +179,47 @@ func request_emergency_locate(ticket_number: int) -> RefCounted:
 func record_entropy(amount: float) -> void:
 	_inspection_system.record_entropy(_run_state, amount)
 
+func register_item(item: ItemInstanceScript) -> void:
+	if _run_state == null:
+		return
+	_run_state.register_item(item)
+
+func find_item(item_id: StringName) -> ItemInstanceScript:
+	if _run_state == null:
+		return null
+	return _run_state.find_item(item_id)
+
 func record_item_landed(payload: Dictionary) -> RefCounted:
 	_shift_log.record(EventSchema.EVENT_ITEM_LANDED, payload)
-	return _landing_service.record_item_landed(payload)
+	
+	var outcome := _landing_service.record_item_landed(payload)
+	
+	# Apply quality damage if item exists in domain
+	if _run_state:
+		var item_id: StringName = payload.get(EventSchema.PAYLOAD_ITEM_ID, StringName())
+		var impact: float = float(payload.get(EventSchema.PAYLOAD_IMPACT, 0.0))
+		var damage_amount := impact / FALL_IMPACT_TO_DAMAGE_DIVISOR
+		var instance := _run_state.find_item(item_id)
+		if instance and instance.quality_state:
+			var result := ItemQualityServiceScript.apply_damage(
+				instance.quality_state,
+				StringName("Fall"),
+				damage_amount
+			)
+			if result and result.delta != 0:
+				outcome.quality_delta = result.delta
+				if DebugLog.enabled():
+					DebugLog.logf("ITEM_QUALITY_CHANGED item=%s delta=%.1f old=%.1f new=%.1f source=%s", [
+						item_id, result.delta, result.old_stars, result.new_stars, result.source
+					])
+				_shift_log.record(EventSchema.EVENT_ITEM_QUALITY_CHANGED, {
+					EventSchema.PAYLOAD_ITEM_ID: item_id,
+					EventSchema.PAYLOAD_OLD_VALUE: result.old_stars,
+					EventSchema.PAYLOAD_NEW_VALUE: result.new_stars,
+					EventSchema.PAYLOAD_SOURCE: result.source,
+				})
+				
+	return outcome
 
 func get_shift_log() -> WardrobeShiftLog:
 	return _shift_log
