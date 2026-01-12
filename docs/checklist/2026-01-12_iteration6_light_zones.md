@@ -1,0 +1,33 @@
+# Checklist: Iteration 6 (Light Zones)
+
+## Plan
+- [x] 1. Create `LightService` (App Layer)
+    - [x] Define `LightSourceState` class/dict structure
+    - [x] Implement `set_curtain_open_ratio(ratio)`
+    - [x] Implement `toggle_bulb(row_index)`
+    - [x] Implement `get_source_states()` (Implemented as getters)
+    - [x] Implement log emission (`LIGHT_ADJUSTED`, `LIGHT_TOGGLED`)
+    - [x] Add event constants to `EventSchema`
+- [x] 2. Add scene zones to `WorkdeskScene`
+    - [x] Add `CurtainZone` (Area2D)
+    - [x] Add `BulbRow0Zone` (Area2D)
+    - [x] Add `BulbRow1Zone` (Area2D)
+- [x] 3. Implement `LightZonesAdapter`
+    - [x] Read zones from scene
+    - [x] Compute active Rect2s (considering curtain ratio)
+    - [x] Implement `is_item_in_light(item)` (Pivot check)
+    - [x] Implement `which_sources_affect(item)`
+- [x] 4. Implement Curtain Controls & Visuals
+    - [x] Add `HSlider` to HUD
+    - [x] Implement `CurtainLightAdapter`
+    - [x] Create placeholder accordion visuals
+- [x] 5. Implement Bulb Controls & Visuals
+    - [x] Add bulb nodes
+    - [x] Implement `BulbLightAdapter`
+    - [x] Implement click handling and visual toggle
+- [x] 6. Wiring & Logging
+    - [x] Connect `LightService` to `ShiftLog`
+    - [x] Verify event emission (Code review: done via LightService constructor)
+- [x] 7. Tests
+    - [x] Unit tests for `LightService`
+    - [x] Integration tests for zones
