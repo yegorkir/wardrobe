@@ -6,6 +6,7 @@
 - **Light Zones**: `CurtainZone`, `BulbRow0Zone`, `BulbRow1Zone` added to `WorkdeskScene` (StorageHall).
 - **LightZonesAdapter**: Determines if items are in light based on zones and source states (Pivot check). Includes `@tool` support for editor preview.
 - **Curtain Controls**: Added VSlider to HUD and accordion visual placeholders.
+- **Curtain Prefabs**: `CurtainStrip` and `CurtainRig` prefabs for segment-driven curtains and zone wiring.
 - **Bulb Controls**: Added clickable bulbs (visual toggle) for right column rows.
 - **Events**: `LIGHT_ADJUSTED` and `LIGHT_TOGGLED` events in `EventSchema` and `ShiftLog` (with console debug output).
 - **Debug Draw**: Enabled real-time debug visualization of active light zones in `LightZonesAdapter` (Editor & Runtime).
@@ -15,3 +16,5 @@
 - Synced `WorkdeskScene_Debug.tscn` with `WorkdeskScene.tscn` to prevent crashes when running via Debug menu.
 - Restored missing properties in `CurtainLightAdapter` within the scene file to ensure slider connectivity.
 - Corrected slider layout and visibility by switching to `VSlider`.
+- Fixed `LightZonesAdapter` zone NodePaths to reference sibling nodes in Workdesk scenes.
+- Replaced curtain scaling with segment-based motion anchored to the curtain zone.

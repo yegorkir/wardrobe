@@ -1,0 +1,42 @@
+# Checklist: Iteration 6 Light Zones (Bug Investigation)
+
+- [x] Launched Godot to inspect runtime logs for light controls and events.
+- [x] Reviewed iteration 6 plan/analysis notes for expected light-zone wiring.
+- [x] Audited Workdesk scene wiring for LightZonesAdapter NodePaths.
+- [x] Fixed LightZonesAdapter NodePaths to reference sibling zone nodes in Workdesk scenes.
+- [x] Added WorkdeskScene integration test to validate curtain zone detection.
+- [x] Wrote a bugfix note documenting root cause and fix with Godot doc links.
+- [x] Run canonical tests via Taskfile (`GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`).
+- [x] Launch Godot once after tests to validate startup (`"$GODOT_BIN" --path .`).
+- [x] Updated curtain visuals to use 6 segment rectangles with varied tint per curtain.
+- [x] Added opposite-direction travel for curtains based on open ratio.
+- [x] Added a design note with relevant Godot references for curtain visuals.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after curtain visual updates.
+- [x] Launched `"$GODOT_BIN" --path .` after curtain visual updates to validate startup.
+- [x] Built `CurtainStrip.tscn` with 12 color-varied segments.
+- [x] Built `CurtainRig.tscn` to bundle both curtains with the curtain zone.
+- [x] Rewired Workdesk scenes to instance the curtain rig prefab.
+- [x] Updated `CurtainLightAdapter` to anchor segment 1 to the curtain zone and animate segments 2..N with speed-gradient offsets.
+- [x] Updated Workdesk light zone integration test to use the new curtain rig path.
+- [x] Renamed `_segment_index` parameter to avoid shadowing Node.name warnings.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after the curtain rig changes.
+- [x] Launched `"$GODOT_BIN" --path .` after the curtain rig changes to validate startup.
+- [x] Added editor-time slider binding so curtain segments update live in the editor.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after editor binding changes.
+- [x] Launched `"$GODOT_BIN" --path .` after editor binding changes to validate startup.
+- [x] Clamped curtain segment travel to the curtain zone midline to prevent crossing.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after midline clamp change.
+- [x] Launched `"$GODOT_BIN" --path .` after midline clamp change to validate startup.
+- [x] Added per-segment midline clamping so individual segments cannot cross.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after per-segment clamp change.
+- [x] Launched `"$GODOT_BIN" --path .` after per-segment clamp change to validate startup.
+- [x] Kept CurtainZone collision shape fixed so light gap sizing no longer shifts curtain anchors.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after curtain zone shape change.
+- [x] Launched `"$GODOT_BIN" --path .` after curtain zone shape change to validate startup.
+- [x] Wired LightZonesAdapter to derive curtain light bounds from the curtain gap adapter.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after curtain gap change.
+- [x] Launched `"$GODOT_BIN" --path .` after curtain gap change to validate startup.
+- [x] Clamped curtain gap rect to the base curtain zone bounds to prevent light spill.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after gap clamp change.
+- [x] Launched `"$GODOT_BIN" --path .` after gap clamp change to validate startup.
+- [x] Rotated CurtainSlider by 180 degrees in Workdesk and Debug scenes.

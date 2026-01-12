@@ -24,6 +24,8 @@ const FloorZoneAdapterScript := preload("res://scripts/ui/floor_zone_adapter.gd"
 const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
 const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
 const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
+const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_adapter.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -37,8 +39,14 @@ const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_r
 @onready var _physics_tick: Node = %WardrobePhysicsTick
 @onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
 
+@onready var _light_zones_adapter: Node2D = $StorageHall/LightZonesAdapter
+@onready var _curtain_light_adapter: Node = $StorageHall/CurtainRig/CurtainsColumn/CurtainLightAdapter
+@onready var _bulb_row0: Node2D = $StorageHall/BulbsColumn/BulbRow0
+@onready var _bulb_row1: Node2D = $StorageHall/BulbsColumn/BulbRow1
+
 var _interaction_service := WardrobeInteractionServiceScript.new()
 var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
+var _light_service: LightService
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
 var _interaction_events_bridge: WorkdeskDeskEventsBridge = WorkdeskDeskEventsBridgeScript.new()
@@ -77,6 +85,17 @@ func _ready() -> void:
 	call_deferred("_finish_ready_setup")
 
 func _finish_ready_setup() -> void:
+	_light_service = LightServiceScript.new(Callable(_shift_log, "record"))
+
+	if _light_zones_adapter:
+		_light_zones_adapter.setup(_light_service)
+	if _curtain_light_adapter:
+		_curtain_light_adapter.setup(_light_service, LightZonesAdapterScript.CURTAIN_SOURCE_ID)
+	if _bulb_row0:
+		_bulb_row0.setup(_light_service, LightZonesAdapterScript.BULB_SOURCE_ID_ROW0)
+	if _bulb_row1:
+		_bulb_row1.setup(_light_service, LightZonesAdapterScript.BULB_SOURCE_ID_ROW1)
+
 	_interaction_events_bridge.configure_bridge(
 		Callable(self, "_on_client_completed"),
 		Callable(self, "_on_client_checkin")
