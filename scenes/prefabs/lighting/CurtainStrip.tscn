@@ -1,0 +1,98 @@
+[gd_scene format=3]
+
+[node name="CurtainStrip" type="Node2D"]
+
+[node name="Segment1" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_right = 30.0
+offset_bottom = 40.0
+color = Color(0.56, 0.08, 0.14, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment2" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 40.0
+offset_right = 30.0
+offset_bottom = 80.0
+color = Color(0.58, 0.09, 0.15, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment3" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 80.0
+offset_right = 30.0
+offset_bottom = 120.0
+color = Color(0.55, 0.08, 0.13, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment4" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 120.0
+offset_right = 30.0
+offset_bottom = 160.0
+color = Color(0.57, 0.09, 0.14, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment5" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 160.0
+offset_right = 30.0
+offset_bottom = 200.0
+color = Color(0.54, 0.08, 0.13, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment6" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 200.0
+offset_right = 30.0
+offset_bottom = 240.0
+color = Color(0.56, 0.09, 0.15, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment7" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 240.0
+offset_right = 30.0
+offset_bottom = 280.0
+color = Color(0.55, 0.08, 0.14, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment8" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 280.0
+offset_right = 30.0
+offset_bottom = 320.0
+color = Color(0.58, 0.09, 0.14, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment9" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 320.0
+offset_right = 30.0
+offset_bottom = 360.0
+color = Color(0.54, 0.08, 0.13, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment10" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 360.0
+offset_right = 30.0
+offset_bottom = 400.0
+color = Color(0.57, 0.09, 0.15, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment11" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 400.0
+offset_right = 30.0
+offset_bottom = 440.0
+color = Color(0.55, 0.08, 0.14, 1)
+metadata/_edit_use_anchors_ = true
+
+[node name="Segment12" type="ColorRect" parent="."]
+offset_left = -30.0
+offset_top = 440.0
+offset_right = 30.0
+offset_bottom = 480.0
+color = Color(0.56, 0.09, 0.14, 1)
+metadata/_edit_use_anchors_ = true

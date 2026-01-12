@@ -1,0 +1,41 @@
+# Changelog: Iteration 6 Light Zones (Bug Investigation)
+
+## 2026-01-12
+- Launched Godot to inspect startup logs and light control output; captured curtain slider and bulb toggle events.
+- Reviewed iteration 6 plan/analysis notes and current scene wiring for LightZonesAdapter.
+- Identified incorrect relative NodePaths for light zones in Workdesk scenes, causing zones to resolve as null.
+- Updated `WorkdeskScene.tscn` and `WorkdeskScene_Debug.tscn` to point at sibling zone nodes via `..` paths.
+- Added a WorkdeskScene integration test to assert curtain zone lighting is detected when the curtain is fully open.
+- Added a bugfix note documenting root cause, fix, and references.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; process timed out after logging startup and light-control output.
+- Updated curtain visuals to use 6 segment rectangles with varied tint per curtain and added opposite-direction travel on open ratio.
+- Added a design note for curtain visuals and references.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; process timed out after logging startup and light-control output.
+- Rebuilt curtain visuals into `CurtainStrip.tscn` (12 segments) and `CurtainRig.tscn` (two strips + zone) prefabs.
+- Updated Workdesk scenes to instance the curtain rig prefab and repointed light zone paths accordingly.
+- Reworked `CurtainLightAdapter` to anchor Segment1 to the curtain zone bounds and animate Segment2..N with speed-gradient motion.
+- Updated Workdesk scene wiring and integration test to locate the curtain zone under the new prefab.
+- Renamed `_segment_index` parameter to avoid shadowing Node.name and keep headless warnings down.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; process timed out after logging startup and curtain slider output.
+- Added editor-time slider binding so curtain segments update live in the editor via `@tool`.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; process timed out after logging startup.
+- Clamped curtain segment travel to the zone midline to prevent top and bottom strips crossing.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; process timed out after logging startup and curtain slider output.
+- Added per-segment midline clamping to keep individual curtain segments from crossing.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; completed successfully with curtain slider logs.
+- Decoupled curtain anchors from light zone resizing by keeping CurtainZone collision shape fixed and updating LightVisual only.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; process timed out after logging startup and curtain slider output.
+- LightZonesAdapter now derives curtain light bounds from the curtain adapter gap to keep the light zone inside the curtain opening.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; process timed out after logging startup and curtain slider output.
+- Clamped curtain gap rect to the base curtain zone bounds to prevent light spill.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`; tests passed with pre-existing warnings in the log output.
+- Launched `"$GODOT_BIN" --path .` for runtime validation; completed successfully with curtain slider logs.
+- Rotated CurtainSlider by 180 degrees in Workdesk scenes.

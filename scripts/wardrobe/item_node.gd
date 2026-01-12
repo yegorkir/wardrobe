@@ -152,6 +152,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		_settle_time = 0.0
 
+func is_dragging() -> bool:
+	return _is_dragging
+
 func attach_to_anchor(anchor: Node2D) -> void:
 	if anchor == null:
 		return
