@@ -97,8 +97,8 @@ class TransferEffectData:
 
 var _transfer_effects: Dictionary = {} # target_id -> TransferEffectData
 const TRANSFER_RETURN_SPEED := 2.0
-const AURA_DENSITY_FACTOR := 0.6
-const MIN_AURA_PARTICLES := 12
+const AURA_DENSITY_FACTOR := 0.02
+const MIN_AURA_PARTICLES := 1
 
 @onready var _pick_shape: CollisionShape2D = $PickArea/CollisionShape2D
 @onready var _sprite: Sprite2D = $Sprite
@@ -240,16 +240,24 @@ func _create_transfer_particle_node() -> GPUParticles2D:
 	var particles = GPUParticles2D.new()
 	particles.name = "TransferParticles"
 	
-	var proc_mat = ParticleProcessMaterial.new()
-	proc_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	proc_mat.emission_sphere_radius = 24.0
-	proc_mat.gravity = Vector3(0, -5, 0) # Less gravity than main aura
-	proc_mat.color = Color(0.2, 0.9, 0.2, 0.5) # Translucent green
-	proc_mat.scale_min = 1.5
-	proc_mat.scale_max = 3.5
+	# Use fly texture
+	particles.texture = _generate_fly_texture()
+	
+	# Use shared fly material logic
+	var proc_mat = _create_fly_process_material()
+	
+	# Transfer specific adjustments
+	proc_mat.color = Color(1.0, 1.0, 1.0, 0.5) # Semi-transparent flies for transfer
+	proc_mat.gravity = Vector3(0, -5, 0) # Gentle rise for transfer visual
+	proc_mat.radial_accel_min = 0.0 # No attraction for transfer
+	proc_mat.radial_accel_max = 0.0
+	proc_mat.orbit_velocity_min = 0.0
+	proc_mat.orbit_velocity_max = 0.0
+	proc_mat.damping_min = 2.0
+	proc_mat.damping_max = 5.0
 	
 	particles.process_material = proc_mat
-	particles.amount = 24
+	particles.amount = 4 # A small group of flies moving
 	particles.lifetime = 0.8
 	particles.local_coords = true
 	
@@ -259,28 +267,101 @@ func _create_aura_particles() -> void:
 	_aura_particles = GPUParticles2D.new()
 	_aura_particles.name = "AuraParticles"
 	
-	var proc_mat = ParticleProcessMaterial.new()
-	proc_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	proc_mat.emission_sphere_radius = 24.0
-	proc_mat.gravity = Vector3(0, -10, 0)
-	proc_mat.color = Color(0.2, 0.9, 0.2, 0.9) # Brighter green for visibility
-	proc_mat.scale_min = 2.0
-	proc_mat.scale_max = 5.0
+	# Create fly texture procedurally
+	_aura_particles.texture = _generate_fly_texture()
+	
+	var proc_mat = _create_fly_process_material()
+	
+	# Aura specific adjustments (already set in helper, but explicit here for clarity if needed)
+	# Keeping them confined and orbiting
 	
 	_aura_particles.process_material = proc_mat
-	_aura_particles.amount = 36
-	_aura_particles.lifetime = 1.2
-	_aura_particles.local_coords = true # Move with item
+	_aura_particles.amount = 1 # Only one fly at a time
+	_aura_particles.lifetime = 4.5 # Lives 3x longer
+	_aura_particles.local_coords = true
 	
 	add_child(_aura_particles)
 	move_child(_aura_particles, 0)
+
+func _create_fly_process_material() -> ParticleProcessMaterial:
+	var proc_mat = ParticleProcessMaterial.new()
+	proc_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	proc_mat.emission_sphere_radius = 24.0
+	
+	# Swarm behavior (hovering/buzzing)
+	proc_mat.gravity = Vector3.ZERO # No gravity, keep them local
+	proc_mat.direction = Vector3(0, -1, 0)
+	proc_mat.spread = 180.0 # Emit in all directions
+	
+	# Fast movement
+	proc_mat.initial_velocity_min = 40.0
+	proc_mat.initial_velocity_max = 100.0
+	proc_mat.damping_min = 5.0
+	proc_mat.damping_max = 10.0
+	
+	# Keep them inside: Orbit + Attraction to center
+	proc_mat.orbit_velocity_min = 0.2
+	proc_mat.orbit_velocity_max = 0.5
+	proc_mat.radial_accel_min = -60.0
+	proc_mat.radial_accel_max = -30.0
+	
+	# Rotation for realistic movement
+	proc_mat.angle_min = -180.0
+	proc_mat.angle_max = 180.0
+	proc_mat.angular_velocity_min = -400.0
+	proc_mat.angular_velocity_max = 400.0
+	
+	# Use white so the texture colors (black/gray) are preserved
+	proc_mat.color = Color.WHITE
+	
+	# Scale curve: starts small, peaks at mid-life, ends small
+	var scale_curve := Curve.new()
+	scale_curve.add_point(Vector2(0.0, 0.0)) # pos 0.0, value 0.0
+	scale_curve.add_point(Vector2(0.5, 1.0)) # pos 0.5, value 1.0
+	scale_curve.add_point(Vector2(1.0, 0.0)) # pos 1.0, value 0.0
+	
+	var scale_tex := CurveTexture.new()
+	scale_tex.curve = scale_curve
+	proc_mat.scale_curve = scale_tex
+	
+	proc_mat.scale_min = 2.0
+	proc_mat.scale_max = 3.0
+	
+	return proc_mat
+
+func _generate_fly_texture() -> ImageTexture:
+	var w := 8
+	var h := 8
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	
+	var body_color := Color.BLACK
+	var wing_color := Color(0.5, 0.5, 0.5, 0.8) # Grey, slightly transparent
+	
+	# Draw Body (Vertical block in center)
+	for y in range(3, 7):
+		img.set_pixel(3, y, body_color)
+		img.set_pixel(4, y, body_color)
+	
+	# Draw Wings (Angled pixels)
+	# Left wing
+	img.set_pixel(1, 2, wing_color)
+	img.set_pixel(2, 3, wing_color)
+	img.set_pixel(2, 4, wing_color)
+	
+	# Right wing
+	img.set_pixel(6, 2, wing_color)
+	img.set_pixel(5, 3, wing_color)
+	img.set_pixel(5, 4, wing_color)
+	
+	return ImageTexture.create_from_image(img)
 
 func _set_aura_radius(radius: float) -> void:
 	if _aura_particles == null:
 		return
 	if _aura_particles.process_material is ParticleProcessMaterial:
 		var material := _aura_particles.process_material as ParticleProcessMaterial
-		material.emission_sphere_radius = radius
+		# Emit closer to center so they have room to fly outwards without leaving the aura
+		material.emission_sphere_radius = radius * 0.5
 
 func _show_aura_debug_ring(show_ring: bool) -> void:
 	if not DebugFlags.enabled:
