@@ -360,8 +360,8 @@ func _set_aura_radius(radius: float) -> void:
 		return
 	if _aura_particles.process_material is ParticleProcessMaterial:
 		var material := _aura_particles.process_material as ParticleProcessMaterial
-		# Emit closer to center so they have room to fly outwards without leaving the aura
-		material.emission_sphere_radius = radius * 0.5
+		# Match the aura radius more closely visually (90%)
+		material.emission_sphere_radius = radius * 0.9
 
 func _show_aura_debug_ring(show_ring: bool) -> void:
 	if not DebugFlags.enabled:

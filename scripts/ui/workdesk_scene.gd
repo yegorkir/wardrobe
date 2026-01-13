@@ -37,9 +37,9 @@ const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_e
 @export var queue_hud_preview_enabled: bool = false
 
 @export_group("Zombie Balance")
-@export var zombie_radius_per_stage: float = 50.0
-@export var zombie_quality_loss_per_stage: float = 0.5
-@export var zombie_exposure_threshold: float = 3.0
+@export var zombie_radius_per_stage: float = ZombieExposureConfigScript.DEFAULT_RADIUS
+@export var zombie_quality_loss_per_stage: float = ZombieExposureConfigScript.DEFAULT_LOSS
+@export var zombie_exposure_threshold: float = ZombieExposureConfigScript.DEFAULT_THRESHOLD
 
 @onready var _end_shift_button: Button = %EndShiftButton
 @onready var _queue_hud_view: Control = %QueueHudView
