@@ -6,8 +6,8 @@ const ItemEffectTypes := preload("res://scripts/domain/effects/item_effect_types
 const VampireExposureState := preload("res://scripts/domain/magic/vampire_exposure_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
 const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
-const EXPOSURE_THRESHOLD := 1.0 
-const QUALITY_LOSS_PER_STAGE := 1
+const EXPOSURE_THRESHOLD := 2.0 
+const QUALITY_LOSS_PER_STAGE := 0.5
 
 var _logger: Callable
 

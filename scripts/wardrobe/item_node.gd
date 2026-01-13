@@ -82,6 +82,8 @@ var durability: float = 100.0
 
 var _item_instance: RefCounted
 var _aura_particles: GPUParticles2D
+var _smoke_particles: GPUParticles2D
+var _sparks_particles: GPUParticles2D
 var _aura_debug_ring: Line2D
 
 # Transfer effect metadata structure
@@ -158,6 +160,17 @@ func get_item_instance() -> RefCounted:
 func get_item_radius() -> float:
 	return maxf(get_visual_half_width(), get_visual_half_height())
 
+func set_burning(enabled: bool) -> void:
+	if enabled:
+		if _smoke_particles == null:
+			_create_burning_effects()
+		_smoke_particles.emitting = true
+		_sparks_particles.emitting = true
+	else:
+		if _smoke_particles != null:
+			_smoke_particles.emitting = false
+			_sparks_particles.emitting = false
+
 func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
 	if enabled:
 		if _aura_particles == null:
@@ -178,6 +191,63 @@ func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
 		if _aura_particles != null:
 			_aura_particles.emitting = false
 		_show_aura_debug_ring(false)
+
+func _create_burning_effects() -> void:
+	# 1. Smoke
+	_smoke_particles = GPUParticles2D.new()
+	_smoke_particles.name = "SmokeParticles"
+	
+	var smoke_mat = ParticleProcessMaterial.new()
+	smoke_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	smoke_mat.emission_sphere_radius = 16.0
+	smoke_mat.gravity = Vector3(0, -40, 0) # Rise up
+	smoke_mat.direction = Vector3(0, -1, 0)
+	smoke_mat.spread = 20.0
+	smoke_mat.initial_velocity_min = 10.0
+	smoke_mat.initial_velocity_max = 30.0
+	smoke_mat.scale_min = 2.0
+	smoke_mat.scale_max = 6.0
+	# Dark grey smoke, fading out
+	smoke_mat.color = Color(0.2, 0.2, 0.2, 0.6)
+	smoke_mat.color_ramp = _create_fade_out_gradient()
+	
+	_smoke_particles.process_material = smoke_mat
+	_smoke_particles.amount = 32
+	_smoke_particles.lifetime = 1.5
+	_smoke_particles.local_coords = true
+	add_child(_smoke_particles)
+	
+	# 2. Sparks
+	_sparks_particles = GPUParticles2D.new()
+	_sparks_particles.name = "SparksParticles"
+	
+	var spark_mat = ParticleProcessMaterial.new()
+	spark_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	spark_mat.emission_sphere_radius = 14.0
+	spark_mat.gravity = Vector3(0, 98, 0) # Sparks fall/fly
+	spark_mat.direction = Vector3(0, -1, 0)
+	spark_mat.spread = 120.0 # Explode outwards/up
+	spark_mat.initial_velocity_min = 40.0
+	spark_mat.initial_velocity_max = 100.0
+	spark_mat.damping_min = 10.0
+	spark_mat.scale_min = 1.5
+	spark_mat.scale_max = 2.5
+	spark_mat.color = Color(1.0, 0.6, 0.1, 1.0) # Orange/Yellow
+	
+	_sparks_particles.process_material = spark_mat
+	_sparks_particles.amount = 16
+	_sparks_particles.lifetime = 0.6
+	_sparks_particles.explosiveness = 0.2
+	_sparks_particles.local_coords = true
+	add_child(_sparks_particles)
+
+func _create_fade_out_gradient() -> GradientTexture1D:
+	var grad = Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 1))
+	grad.set_color(1, Color(1, 1, 1, 0)) # Fade to transparent
+	var tex = GradientTexture1D.new()
+	tex.gradient = grad
+	return tex
 
 func update_transfer_effect(target_id: StringName, target_global_pos: Vector2, progress: float, target_item_radius: float) -> void:
 	var data: TransferEffectData

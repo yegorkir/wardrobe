@@ -357,6 +357,13 @@ func _tick_exposure(delta: float) -> void:
 		if item_node.has_method("set_emitting_aura"):
 			item_node.set_emitting_aura(emit_aura, aura_radius)
 			
+		# Burning effect for vampires in light
+		if item_node.has_method("set_burning"):
+			var arch = _get_item_archetype(item_instance.id)
+			var is_vampire = arch and arch.is_vampire
+			var is_in_light = light_states.get(item_instance.id, false)
+			item_node.set_burning(is_vampire and is_in_light)
+			
 		# Transfer effects visualization
 		if source_usage.has(item_instance.id):
 			var active_targets: Array = []
