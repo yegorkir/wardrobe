@@ -15,11 +15,13 @@ position = Vector2(40, 603)
 position = Vector2(0, -250)
 
 [node name="CurtainStrip" parent="CurtainsColumn/CurtainTop" instance=ExtResource("1")]
+position = Vector2(0, -22)
 
 [node name="CurtainBottom" type="Node2D" parent="CurtainsColumn"]
 position = Vector2(0, 250)
 
 [node name="CurtainStrip" parent="CurtainsColumn/CurtainBottom" instance=ExtResource("1")]
+position = Vector2(0, 24)
 
 [node name="CurtainLightAdapter" type="Node" parent="CurtainsColumn"]
 script = ExtResource("2")

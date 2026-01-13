@@ -80,12 +80,16 @@ const TRANSFER_SINK_LOG_FRAMES := 6
 var ticket_number: int = -1
 var durability: float = 100.0
 
+const GHOST_SHADER := preload("res://assets/shaders/ghost_item.gdshader")
+
 var _item_instance: RefCounted
 var _aura_particles: GPUParticles2D
 var _smoke_particles: GPUParticles2D
 var _sparks_particles: GPUParticles2D
 var _burn_overlay: Sprite2D
 var _aura_debug_ring: Line2D
+var _reject_tween: Tween
+var _ghost_tween: Tween
 
 # Transfer effect metadata structure
 class TransferEffectData:
@@ -262,6 +266,49 @@ func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
 		if _aura_particles != null:
 			_aura_particles.emitting = false
 		_show_aura_debug_ring(false)
+
+func set_ghost_appearance(is_in_light: bool, dark_alpha: float) -> void:
+	if _sprite == null:
+		return
+		
+	# Ensure material is set up
+	var mat := _sprite.material as ShaderMaterial
+	if mat == null or mat.shader != GHOST_SHADER:
+		mat = ShaderMaterial.new()
+		mat.shader = GHOST_SHADER
+		# Copy current modulate to avoid jump? No, shader uses COLOR.
+		_sprite.material = mat
+	
+	var target_alpha := 1.0 if is_in_light else dark_alpha
+	var target_glow := 0.8 if is_in_light else 0.0
+	
+	# Check if we need to tween (optimization: don't retween if close)
+	var current_alpha := float(mat.get_shader_parameter("transparency")) if mat.get_shader_parameter("transparency") != null else 1.0
+	var current_glow := float(mat.get_shader_parameter("glow_power")) if mat.get_shader_parameter("glow_power") != null else 0.0
+	
+	if is_equal_approx(current_alpha, target_alpha) and is_equal_approx(current_glow, target_glow):
+		return
+
+	if _ghost_tween and _ghost_tween.is_valid():
+		_ghost_tween.kill()
+	
+	_ghost_tween = create_tween()
+	_ghost_tween.set_parallel(true)
+	_ghost_tween.tween_method(func(val): mat.set_shader_parameter("transparency", val), current_alpha, target_alpha, 0.3)
+	_ghost_tween.tween_method(func(val): mat.set_shader_parameter("glow_power", val), current_glow, target_glow, 0.3)
+
+func play_reject_effect() -> void:
+	if _reject_tween and _reject_tween.is_valid():
+		_reject_tween.kill()
+	
+	_reject_tween = create_tween()
+	var original_modulate := Color.WHITE
+	if _sprite:
+		original_modulate = _sprite.modulate
+		
+		# Flash transparent red
+		_reject_tween.tween_property(_sprite, "modulate", Color(1.0, 0.2, 0.2, 0.4), 0.1)
+		_reject_tween.tween_property(_sprite, "modulate", original_modulate, 0.2)
 
 func _create_burning_effects() -> void:
 	# 1. Smoke

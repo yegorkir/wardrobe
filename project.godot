@@ -26,7 +26,6 @@ SurfaceRegistry="*res://scripts/wardrobe/surface/surface_registry.gd"
 [debug]
 
 file_logging/enable_file_logging=true
-file_logging/log_path="user://logs/godot.log"
 
 [display]
 

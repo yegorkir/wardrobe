@@ -24,7 +24,8 @@
       "cwd": "/Users/yegorkir/pet/godot/wardrobe",
       "env": {
         "GODOT_WORKSPACE_PATH": "/Users/yegorkir/pet/godot/wardrobe",
-        "GODOT_LSP_PORT": "6007"
+        "GODOT_LSP_PORT": "6005",
+        "NODE_OPTIONS": "--dns-result-order=ipv4first"
       },
       "trust": true
     }

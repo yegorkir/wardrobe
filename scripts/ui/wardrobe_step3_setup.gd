@@ -138,6 +138,8 @@ func _make_demo_client(index: int, client_id: StringName, color: Color) -> Clien
 		item_archetype_id = "vampire_cloak"
 	elif client_archetype_id == "zombie" or client_archetype_id == "client_zombie":
 		item_archetype_id = "zombie_rag"
+	elif client_archetype_id == "ghost" or client_archetype_id == "client_ghost":
+		item_archetype_id = "ghost_sheet"
 
 	var coat := ItemInstanceScript.new(
 		item_id,

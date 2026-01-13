@@ -1,0 +1,6 @@
+{
+  "id": "client_ghost",
+  "archetype_id": "ghost",
+  "portrait_key": "client_ghost",
+  "wrong_item_patience_penalty": 0.0
+}

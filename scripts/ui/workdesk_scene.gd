@@ -29,6 +29,8 @@ const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_ada
 const ExposureServiceScript := preload("res://scripts/domain/magic/exposure_service.gd")
 const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
+const InteractionRulesScript := preload("res://scripts/domain/interaction/interaction_rules.gd")
+const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -183,6 +185,7 @@ func _finish_ready_setup() -> void:
 	if _physics_tick and _physics_tick.has_method("configure"):
 		_physics_tick.call("configure", _item_visuals)
 	_dragdrop_adapter.configure(interaction_context, _cursor_hand, Callable(self, "_debug_validate_world"))
+	_dragdrop_adapter.configure_rules(Callable(self, "_validate_pick_rule"))
 	_collect_surface_targets()
 	_dragdrop_adapter.configure_surface_targets(_shelf_surfaces, _floor_zone)
 	_world_adapter.initialize_world()
@@ -374,8 +377,12 @@ func _tick_exposure(delta: float) -> void:
 		if item_node.has_method("set_burning"):
 			var arch = _get_item_archetype(item_instance.id)
 			var is_vampire = arch and arch.is_vampire
+			var is_ghost = arch and arch.is_ghost
 			var is_in_light = light_states.get(item_instance.id, false)
 			item_node.set_burning(is_vampire and is_in_light)
+			
+			if is_ghost:
+				item_node.set_ghost_appearance(is_in_light, arch.ghost_dark_alpha)
 			
 			# Apply burn marks based on ACTUAL vampire exposure stage
 			if is_vampire and item_node.has_method("set_burn_damage"):
@@ -405,8 +412,42 @@ func _tick_exposure(delta: float) -> void:
 		# Also update quality visuals if changed
 		_item_visuals.refresh_quality_stars(item_node)
 
+func _validate_pick_rule(item_id: StringName) -> bool:
+	var arch = _get_item_archetype(item_id)
+	var is_in_light = false
+	
+	# We need the node to check light
+	var item_node: Node2D = null
+	var spawned = _world_adapter.get_spawned_items()
+	for node in spawned:
+		if is_instance_valid(node) and node.has_method("get_item_instance"):
+			var inst = node.get_item_instance()
+			if inst and inst.id == item_id:
+				item_node = node
+				break
+	
+	if item_node and _light_zones_adapter:
+		is_in_light = _light_zones_adapter.is_item_in_light(item_node)
+	
+	var allowed = InteractionRulesScript.can_pick(arch, is_in_light)
+	
+	if not allowed:
+		if DebugFlags.enabled:
+			DebugLog.log("GHOST_PICK_BLOCKED item=%s reason=darkness" % item_id)
+			
+	return allowed
+
 func _get_item_archetype(item_id: StringName) -> ItemArchetypeDefinitionScript:
 	var item_instance = _world_adapter.find_item_instance(item_id)
+	
+	if not item_instance:
+		for node in _world_adapter.get_spawned_items():
+			if is_instance_valid(node) and node.has_method("get_item_instance"):
+				var inst = node.get_item_instance()
+				if inst and inst.id == item_id:
+					item_instance = inst
+					break
+	
 	if not item_instance: return null
 
 	var arch_id = item_instance.archetype_id
@@ -415,11 +456,23 @@ func _get_item_archetype(item_id: StringName) -> ItemArchetypeDefinitionScript:
 	if _archetype_cache.has(arch_id):
 		return _archetype_cache[arch_id]
 
+	var db = get_node_or_null("/root/ContentDB")
+	if db and db.has_method("get_archetype"):
+		var arch_data = db.call("get_archetype", String(arch_id))
+		if not arch_data.is_empty():
+			var payload = arch_data.get("payload", {})
+			var loaded_def = ItemArchetypeDefinitionScript.from_json(payload)
+			_archetype_cache[arch_id] = loaded_def
+			return loaded_def
+
+	# Fallback for known legacy IDs if DB fails
 	var def: ItemArchetypeDefinitionScript
 	if arch_id == "vampire_cloak":
 		def = ItemArchetypeDefinitionScript.new(arch_id, true, false, 0)
 	elif arch_id == "zombie_rag":
-		def = ItemArchetypeDefinitionScript.new(arch_id, false, true, 5) # innate stage 5
+		def = ItemArchetypeDefinitionScript.new(arch_id, false, true, 5)
+	elif arch_id == "ghost_sheet":
+		def = ItemArchetypeDefinitionScript.new(arch_id, false, false, 0, true)
 	else:
 		def = ItemArchetypeDefinitionScript.new(arch_id)
 
