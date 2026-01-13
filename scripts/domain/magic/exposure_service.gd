@@ -10,6 +10,10 @@ const CorruptionAuraService := preload("res://scripts/domain/magic/corruption_au
 const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
 const ZOMBIE_SOURCE_STAGE := 999
+const TRANSFER_SPEED := 100.0
+const TRANSFER_TIME_MIN := 0.5
+const TRANSFER_TIME_MAX := 2.0
+const EMPTY_SOURCES: Array[StringName] = []
 
 var _vampire_system: VampireExposureSystem
 var _zombie_system: ZombieExposureSystem
@@ -41,7 +45,7 @@ func tick(
 ) -> void:
 	# items: Array[ItemInstance]
 	
-	# 1. Calculate Zombie Aura Rates
+	# 1. Prepare Zombie Aura Sources
 	var zombie_sources: Array[CorruptionAuraService.AuraSource] = []
 	var target_stages: Dictionary = {}
 	var source_stages: Dictionary = {}
@@ -49,15 +53,14 @@ func tick(
 	for item in items:
 		register_item(item.id) # Ensure state exists
 		
-		if drag_states.get(item.id, false):
-			continue
-			
 		var arch = archetype_provider.call(item.id) as ItemArchetypeDefinition
-		
 		var pos = positions.get(item.id, Vector2.ZERO)
 		var z_state = _item_states[item.id]["zombie"] as ZombieExposureState
 		target_stages[item.id] = z_state.stage_index
 		
+		if drag_states.get(item.id, false):
+			continue
+			
 		var radius = arch.corruption_aura_radius if arch else 0.0
 		var is_source = false
 		
@@ -78,17 +81,62 @@ func tick(
 				1.0
 			))
 	
-	var zombie_results = _corruption_service.calculate_exposure_rates(
+	# 2. Update Transfer Delays and Calculate Rates
+	var potential_map = _corruption_service.get_potential_sources(
 		positions,
 		zombie_sources,
 		target_stages,
 		source_stages
 	)
 	
-	# 2. Tick Systems
+	var zombie_results: Dictionary = {} # { item_id: ExposureResult }
+	
+	for item in items:
+		var z_state = _item_states[item.id]["zombie"] as ZombieExposureState
+		var potential: Array = potential_map.get(item.id, [])
+		
+		if drag_states.get(item.id, false):
+			# Dragging pauses exposure AND propagation
+			continue
+			
+		var current_potential_ids: Array[StringName] = []
+		var total_exposure_in_tick := 0.0
+		
+		for source in potential:
+			current_potential_ids.append(source.id)
+			if not z_state.pending_transfers.has(source.id):
+				var target_pos = positions.get(item.id, Vector2.ZERO)
+				var dist = target_pos.distance_to(source.position)
+				var t = clampf(dist / TRANSFER_SPEED, TRANSFER_TIME_MIN, TRANSFER_TIME_MAX)
+				z_state.set_pending(source.id, t)
+			
+			var remaining = z_state.pending_transfers[source.id]
+			var active_time = clampf(delta - remaining, 0.0, delta)
+			total_exposure_in_tick += source.strength * active_time
+		
+		# Clear sources no longer in range
+		var to_remove: Array[StringName] = []
+		for source_id in z_state.pending_transfers:
+			if not source_id in current_potential_ids:
+				to_remove.append(source_id)
+		for id in to_remove:
+			z_state.clear_pending(id)
+			
+		# Tick delays
+		z_state.tick_pending(delta)
+		
+		# Capping and calculating effective rate
+		var max_exposure_in_tick = CorruptionAuraService.MAX_STACK_RATE * delta
+		if total_exposure_in_tick > max_exposure_in_tick:
+			total_exposure_in_tick = max_exposure_in_tick
+			
+		var effective_rate = total_exposure_in_tick / delta if delta > 0.0 else 0.0
+		var active_sources = z_state.get_active_sources()
+		zombie_results[item.id] = CorruptionAuraService.ExposureResult.new(effective_rate, active_sources)
+	
+	# 3. Tick Systems
 	for item in items:
 		var arch = archetype_provider.call(item.id) as ItemArchetypeDefinition
-		
 		var states = _item_states[item.id]
 		
 		# Vampire
@@ -98,14 +146,14 @@ func tick(
 				item,
 				arch,
 				light_states.get(item.id, false),
-				light_sources.get(item.id, []),
+				light_sources.get(item.id, EMPTY_SOURCES),
 				drag_states.get(item.id, false),
 				delta
 			)
 		
 		var z_res = zombie_results.get(item.id, null)
 		var z_rate = z_res.rate if z_res else 0.0
-		var z_sources = z_res.sources if z_res else []
+		var z_sources = z_res.sources if z_res else EMPTY_SOURCES
 		var is_dragging: bool = drag_states.get(item.id, false)
 		
 		# Zombie: zombie archetypes emit aura but do not get corrupted themselves.

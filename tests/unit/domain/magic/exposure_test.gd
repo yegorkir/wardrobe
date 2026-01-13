@@ -210,12 +210,18 @@ func test_zombie_domino_aura_propagation() -> void:
 	var archetype_provider := Callable(self, "_get_domino_archetype").bind(zombie_id)
 	
 	# Tick 1: normal_a gets corrupted from zombie source, enabling weak aura.
-	exposure.tick(items, positions, drag_states, light_states, light_sources, archetype_provider, 3.0)
+	# Distance 50, Speed 100 -> t=0.5. 
+	# To reach threshold 3.0, we need 3.0s of active exposure.
+	# Total time needed = 0.5 + 3.0 = 3.5s.
+	exposure.tick(items, positions, drag_states, light_states, light_sources, archetype_provider, 3.5)
 	assert_float(normal_a.quality_state.current_stars).is_equal(2.0)
 	assert_float(normal_b.quality_state.current_stars).is_equal(3.0)
 	
 	# Tick 2: normal_b gets corrupted via weak aura from normal_a.
-	exposure.tick(items, positions, drag_states, light_states, light_sources, archetype_provider, 3.0)
+	# normal_a (50,0) to normal_b (140,0) is dist 90.
+	# t = 90 / 100 = 0.9.
+	# Total time needed = 0.9 + 3.0 = 3.9s.
+	exposure.tick(items, positions, drag_states, light_states, light_sources, archetype_provider, 3.9)
 	assert_float(normal_b.quality_state.current_stars).is_equal(2.0)
 
 func _get_domino_archetype(item_id: StringName, zombie_id: StringName) -> ItemArchetypeDefinitionScript:

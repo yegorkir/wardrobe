@@ -59,3 +59,35 @@ func calculate_exposure_rates(
 		results[item_id] = ExposureResult.new(total_rate, affecting_sources)
 		
 	return results
+
+func get_potential_sources(
+	target_positions: Dictionary,
+	sources: Array[AuraSource],
+	target_stages: Dictionary,
+	source_stages: Dictionary
+) -> Dictionary:
+	# target_positions: { item_id: Vector2 }
+	# returns: { target_id: Array[AuraSource] }
+	var results := {}
+	
+	for item_id in target_positions:
+		var pos: Vector2 = target_positions[item_id]
+		var target_stage: int = int(target_stages.get(item_id, 0))
+		var potential: Array[AuraSource] = []
+		
+		for source in sources:
+			if source.id == item_id:
+				continue
+			var source_stage: int = int(source_stages.get(source.id, 0))
+			if source_stage <= target_stage:
+				continue
+			
+			var dist_sq = pos.distance_squared_to(source.position)
+			var rad_sq = source.radius * source.radius
+			
+			if dist_sq < rad_sq:
+				potential.append(source)
+		
+		results[item_id] = potential
+		
+	return results
