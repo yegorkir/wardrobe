@@ -1,3 +1,4 @@
+# GEMINI.md
 # Instructions for Gemini CLI agent (repo: wardrobe)
 
 ## Base rules (mandatory)
@@ -5,6 +6,32 @@
 - When refactoring or editing code, also follow `docs/code_guidelines.md`.
 - Format GDScript with tabs (unless `.editorconfig` says otherwise).
 - Do not invent alternative test commands: run only the canonical command from `AGENTS.md`.
+
+## MCP policy (repo-specific, mandatory)
+
+### Use MCP like a power tool, not like a chainsaw
+- Never hand-edit `.tscn`. Any scene structure change must go through `godot_tools`:
+  - `create_scene` / `add_node` / `save_scene`
+- `.gd` can be edited directly, but must be validated after each logical change:
+  - run `gdscript_diag.get_diagnostics`
+  - use `scan_workspace_diagnostics` only for broad changes (expensive)
+
+### UID / reference safety
+- Run `godot_tools.update_project_uids` only when there is evidence of broken UID refs or after UID-sensitive changes.
+- If you run it, explicitly report which files were modified.
+
+### API correctness workflow (Godot 4.5)
+- If unsure: `godot_docs_search` → `godot_docs_get_class` → implement only after signature is verified.
+
+### Debug workflow
+- `godot_tools.run_project` → `godot_tools.get_debug_output`
+- If stuck/hanging: `godot_tools.stop_project`, then inspect latest logs under `.godot/logs/` and `reports/`.
+
+### Canonical repo checks (must be used)
+- Tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`
+- Then launch: `"$GODOT_BIN" --path .`
+- Do not invent or recommend alternative commands.
+
 
 ## My practical tips (repo-specific)
 ### How to avoid waiting on hung tests

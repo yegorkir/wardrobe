@@ -84,6 +84,21 @@ var _item_instance: RefCounted
 var _aura_particles: GPUParticles2D
 var _aura_debug_ring: Line2D
 
+# Transfer effect metadata structure
+class TransferEffectData:
+	var node: GPUParticles2D
+	var progress: float = 0.0
+	var target_local_pos: Vector2 = Vector2.ZERO
+	var target_radius: float = 0.0
+	var is_returning: bool = false
+	
+	func _init(p_node: GPUParticles2D) -> void:
+		node = p_node
+
+var _transfer_effects: Dictionary = {} # target_id -> TransferEffectData
+var _is_aura_dimmed: bool = false
+const TRANSFER_RETURN_SPEED := 2.0
+
 @onready var _pick_shape: CollisionShape2D = $PickArea/CollisionShape2D
 @onready var _sprite: Sprite2D = $Sprite
 @onready var _physics_shape: CollisionShape2D = get_node_or_null("PhysicsShape") as CollisionShape2D
@@ -139,6 +154,9 @@ func set_item_instance(instance: RefCounted) -> void:
 func get_item_instance() -> RefCounted:
 	return _item_instance
 
+func get_item_radius() -> float:
+	return maxf(get_visual_half_width(), get_visual_half_height())
+
 func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
 	if enabled:
 		if _aura_particles == null:
@@ -154,19 +172,109 @@ func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
 			_aura_particles.emitting = false
 		_show_aura_debug_ring(false)
 
+func set_aura_dimmed(dimmed: bool) -> void:
+	if _is_aura_dimmed == dimmed:
+		return
+	_is_aura_dimmed = dimmed
+	if _aura_particles:
+		var proc_mat = _aura_particles.process_material as ParticleProcessMaterial
+		if proc_mat:
+			if dimmed:
+				proc_mat.color.a = 0.3
+				_aura_particles.amount_ratio = 0.5
+			else:
+				proc_mat.color.a = 0.9
+				_aura_particles.amount_ratio = 1.0
+
+func update_transfer_effect(target_id: StringName, target_global_pos: Vector2, progress: float, target_item_radius: float) -> void:
+	var data: TransferEffectData
+	if _transfer_effects.has(target_id):
+		data = _transfer_effects[target_id]
+	else:
+		var node = _create_transfer_particle_node()
+		add_child(node)
+		data = TransferEffectData.new(node)
+		_transfer_effects[target_id] = data
+	
+	data.is_returning = false
+	data.progress = progress
+	data.target_local_pos = to_local(target_global_pos)
+	data.target_radius = target_item_radius
+	
+	_update_effect_visuals(data)
+
+func clear_unused_transfers(active_ids: Array) -> void:
+	for id in _transfer_effects:
+		if not id in active_ids:
+			var data = _transfer_effects[id] as TransferEffectData
+			data.is_returning = true
+
+func _process_transfer_effects(delta: float) -> void:
+	if _transfer_effects.is_empty():
+		return
+		
+	var to_remove: Array = []
+	for id in _transfer_effects:
+		var data = _transfer_effects[id] as TransferEffectData
+		if data.is_returning:
+			data.progress -= delta * TRANSFER_RETURN_SPEED
+			if data.progress <= 0.0:
+				data.node.queue_free()
+				to_remove.append(id)
+			else:
+				_update_effect_visuals(data)
+	
+	for id in to_remove:
+		_transfer_effects.erase(id)
+
+func _update_effect_visuals(data: TransferEffectData) -> void:
+	data.node.position = Vector2.ZERO.lerp(data.target_local_pos, data.progress)
+	
+	var source_radius := 24.0
+	if _aura_particles:
+		var aura_mat = _aura_particles.process_material as ParticleProcessMaterial
+		if aura_mat:
+			source_radius = aura_mat.emission_sphere_radius
+	
+	# Target emission radius is 90% of the target item radius
+	var target_radius_effective = data.target_radius * 0.9
+	
+	var effect_mat = data.node.process_material as ParticleProcessMaterial
+	if effect_mat:
+		effect_mat.emission_sphere_radius = lerpf(source_radius, target_radius_effective, data.progress)
+
+func _create_transfer_particle_node() -> GPUParticles2D:
+	var particles = GPUParticles2D.new()
+	particles.name = "TransferParticles"
+	
+	var proc_mat = ParticleProcessMaterial.new()
+	proc_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	proc_mat.emission_sphere_radius = 24.0
+	proc_mat.gravity = Vector3(0, -5, 0) # Less gravity than main aura
+	proc_mat.color = Color(0.2, 0.9, 0.2, 0.5) # Translucent green
+	proc_mat.scale_min = 1.5
+	proc_mat.scale_max = 3.5
+	
+	particles.process_material = proc_mat
+	particles.amount = 24
+	particles.lifetime = 0.8
+	particles.local_coords = true
+	
+	return particles
+
 func _create_aura_particles() -> void:
 	_aura_particles = GPUParticles2D.new()
 	_aura_particles.name = "AuraParticles"
 	
-	var material = ParticleProcessMaterial.new()
-	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	material.emission_sphere_radius = 24.0
-	material.gravity = Vector3(0, -10, 0)
-	material.color = Color(0.2, 0.9, 0.2, 0.9) # Brighter green for visibility
-	material.scale_min = 2.0
-	material.scale_max = 5.0
+	var proc_mat = ParticleProcessMaterial.new()
+	proc_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	proc_mat.emission_sphere_radius = 24.0
+	proc_mat.gravity = Vector3(0, -10, 0)
+	proc_mat.color = Color(0.2, 0.9, 0.2, 0.9) # Brighter green for visibility
+	proc_mat.scale_min = 2.0
+	proc_mat.scale_max = 5.0
 	
-	_aura_particles.process_material = material
+	_aura_particles.process_material = proc_mat
 	_aura_particles.amount = 36
 	_aura_particles.lifetime = 1.2
 	_aura_particles.local_coords = true # Move with item
@@ -210,6 +318,7 @@ func _set_aura_debug_ring_radius(radius: float) -> void:
 	_aura_debug_ring.points = points
 
 func _physics_process(delta: float) -> void:
+	_process_transfer_effects(delta)
 	if _transfer_phase != TransferPhase.NONE:
 		_settle_time = 0.0
 		return

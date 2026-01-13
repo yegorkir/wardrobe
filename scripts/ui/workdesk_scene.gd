@@ -286,6 +286,53 @@ func _tick_exposure(delta: float) -> void:
 			delta
 		)
 
+	# Calculate source usage for visualization
+	# source_id -> Array of { target_id, target_pos, progress, target_radius }
+	var source_usage: Dictionary = {} 
+	
+	for item_instance in items:
+		var result = _exposure_service.get_exposure_result(item_instance.id)
+		if result and not result.pending_sources.is_empty():
+			var target_pos = positions.get(item_instance.id, Vector2.ZERO)
+			
+			# Determine target radius once per target
+			var target_radius := ExposureServiceScript.WEAK_AURA_RADIUS
+			
+			# If we can find the node, get its exact visual radius
+			var target_node: Node2D = null
+			for node in spawned_items:
+				if is_instance_valid(node) and node.has_method("get_item_instance"):
+					var inst = node.get_item_instance()
+					if inst and inst.id == item_instance.id:
+						target_node = node
+						break
+			
+			if target_node and target_node.has_method("get_item_radius"):
+				target_radius = target_node.get_item_radius()
+			
+			# Visualize ALL pending sources, not just the closest
+			for source_id in result.pending_sources:
+				var remaining = result.pending_sources[source_id]
+				var s_pos = positions.get(source_id, Vector2.ZERO)
+				var dist = target_pos.distance_to(s_pos)
+				
+				var total_delay = clampf(
+					dist / ExposureServiceScript.TRANSFER_SPEED, 
+					ExposureServiceScript.TRANSFER_TIME_MIN, 
+					ExposureServiceScript.TRANSFER_TIME_MAX
+				)
+				var progress = 1.0 - (remaining / total_delay) if total_delay > 0.0 else 1.0
+				progress = clampf(progress, 0.0, 1.0)
+				
+				if not source_usage.has(source_id):
+					source_usage[source_id] = []
+				source_usage[source_id].append({
+					"target_id": item_instance.id,
+					"target_pos": target_pos,
+					"progress": progress,
+					"target_radius": target_radius
+				})
+
 	for item_node in spawned_items:
 		if not is_instance_valid(item_node): continue
 		var item_instance = item_node.get_item_instance()
@@ -303,6 +350,23 @@ func _tick_exposure(delta: float) -> void:
 		if item_node.has_method("set_emitting_aura"):
 			item_node.set_emitting_aura(emit_aura, aura_radius)
 			
+		# Transfer effects visualization
+		if source_usage.has(item_instance.id):
+			item_node.set_aura_dimmed(true)
+			var active_targets: Array = []
+			for usage in source_usage[item_instance.id]:
+				item_node.update_transfer_effect(
+					usage.target_id, 
+					usage.target_pos, 
+					usage.progress,
+					usage.target_radius
+				)
+				active_targets.append(usage.target_id)
+			item_node.clear_unused_transfers(active_targets)
+		else:
+			item_node.set_aura_dimmed(false)
+			item_node.clear_unused_transfers([])
+
 		# Also update quality visuals if changed
 		_item_visuals.refresh_quality_stars(item_node)
 

@@ -95,8 +95,12 @@ func tick(
 		var z_state = _item_states[item.id]["zombie"] as ZombieExposureState
 		var potential: Array = potential_map.get(item.id, [])
 		
-		if drag_states.get(item.id, false):
-			# Dragging pauses exposure AND propagation
+		# Skip processing if dragging or fully corrupted
+		var is_corrupted = item.quality_state and item.quality_state.current_stars <= 0.0
+		if drag_states.get(item.id, false) or is_corrupted:
+			if is_corrupted:
+				# Clear any pending transfers so visuals stop immediately
+				z_state.pending_transfers.clear()
 			continue
 			
 		var current_potential_ids: Array[StringName] = []
@@ -132,7 +136,9 @@ func tick(
 			
 		var effective_rate = total_exposure_in_tick / delta if delta > 0.0 else 0.0
 		var active_sources = z_state.get_active_sources()
-		zombie_results[item.id] = CorruptionAuraService.ExposureResult.new(effective_rate, active_sources)
+		zombie_results[item.id] = CorruptionAuraService.ExposureResult.new(effective_rate, active_sources, z_state.pending_transfers.duplicate())
+	
+	_last_zombie_results = zombie_results
 	
 	# 3. Tick Systems
 	for item in items:
@@ -174,3 +180,13 @@ func is_emitting_weak_aura(item_id: StringName) -> bool:
 
 func get_weak_aura_radius() -> float:
 	return WEAK_AURA_RADIUS
+
+func get_exposure_result(item_id: StringName) -> CorruptionAuraService.ExposureResult:
+	# We don't store the result from the last tick in a persistent way, 
+	# but we can re-construct it from state if needed, or better, 
+	# we should store the last calculated result if UI needs it.
+	# For now, let's assume the UI calls this RIGHT after tick?
+	# No, tick() is local. We should store the last results in a member variable.
+	return _last_zombie_results.get(item_id, null)
+
+var _last_zombie_results: Dictionary = {}

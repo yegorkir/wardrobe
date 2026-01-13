@@ -22,6 +22,11 @@ func tick(state: ZombieExposureState, item: ItemInstance, exposure_rate: float, 
 		state.reset_exposure_only()
 		return
 		
+	# Stop processing if item is already fully corrupted
+	if item.quality_state.current_stars <= 0.0:
+		state.reset_exposure_only()
+		return
+
 	state.current_stage_exposure += exposure_rate * delta
 	
 	if state.current_stage_exposure >= EXPOSURE_THRESHOLD:

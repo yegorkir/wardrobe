@@ -1,3 +1,4 @@
+# docs/code_guidelines.md
 # Code Guidelines (Lessons Learned)
 
 These notes capture recurring pitfalls from recent refactors; follow them whenever writing new code.
@@ -8,4 +9,8 @@ These notes capture recurring pitfalls from recent refactors; follow them whenev
 - Preload collaborator classes used inside a script (e.g., domain state depending on `ItemInstance`) to guarantee availability during headless test runs.
 
 ## Testing discipline
-- After modifying domain code, run the targeted GdUnit4 suites (e.g., `./addons/gdUnit4/runtest.sh -a ./tests/unit/...`) and fix parse warnings immediately; treat headless parser warnings as signals to clean up typing.
+- In this repo, tests must be run via the canonical Taskfile command from `AGENTS.md` only:
+  - `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`
+- Do not suggest or document alternative test runner commands (including direct GdUnit4 scripts),
+  to avoid repo-wide drift and agent confusion.
+- Treat headless parser warnings as signals to clean up typing.

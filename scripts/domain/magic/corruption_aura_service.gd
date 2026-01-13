@@ -18,10 +18,12 @@ const MAX_STACK_RATE := 3.0
 class ExposureResult:
 	var rate: float
 	var sources: Array[StringName]
+	var pending_sources: Dictionary # { source_id: remaining_time }
 	
-	func _init(p_rate: float, p_sources: Array[StringName]) -> void:
+	func _init(p_rate: float, p_sources: Array[StringName], p_pending: Dictionary = {}) -> void:
 		rate = p_rate
 		sources = p_sources
+		pending_sources = p_pending
 
 func calculate_exposure_rates(
 	target_positions: Dictionary,
