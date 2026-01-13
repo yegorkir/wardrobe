@@ -6,7 +6,7 @@ var stage_index: int = 0
 
 func reset() -> void:
 	current_stage_exposure = 0.0
-	stage_index = 0
+	# stage_index is NOT reset, preserving cumulative damage level
 
 func duplicate_state() -> VampireExposureState:
 	var dup = get_script().new()

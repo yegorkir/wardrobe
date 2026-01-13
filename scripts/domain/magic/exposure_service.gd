@@ -189,6 +189,12 @@ func tick(
 func get_exposure_result(item_id: StringName) -> CorruptionAuraService.ExposureResult:
 	return _last_zombie_results.get(item_id, null)
 
+func get_vampire_stage(item_id: StringName) -> int:
+	if not _item_states.has(item_id):
+		return 0
+	var v_state = _item_states[item_id]["vampire"] as VampireExposureState
+	return v_state.stage_index
+
 func get_item_aura_radius(item_id: StringName, archetype_provider: Callable) -> float:
 	if not _item_states.has(item_id):
 		return 0.0

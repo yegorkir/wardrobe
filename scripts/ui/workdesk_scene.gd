@@ -364,6 +364,16 @@ func _tick_exposure(delta: float) -> void:
 			var is_in_light = light_states.get(item_instance.id, false)
 			item_node.set_burning(is_vampire and is_in_light)
 			
+			# Apply burn marks based on ACTUAL vampire exposure stage
+			if is_vampire and item_node.has_method("set_burn_damage"):
+				var v_stage = _exposure_service.get_vampire_stage(item_instance.id)
+				if v_stage > 0:
+					# Assuming 3 stages is max damage (matches 3 stars usually)
+					var damage = clampf(float(v_stage) / 3.0, 0.0, 1.0)
+					item_node.set_burn_damage(damage)
+				else:
+					item_node.set_burn_damage(0.0)
+			
 		# Transfer effects visualization
 		if source_usage.has(item_instance.id):
 			var active_targets: Array = []

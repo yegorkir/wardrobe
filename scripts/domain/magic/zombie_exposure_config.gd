@@ -3,7 +3,7 @@ class_name ZombieExposureConfig
 
 const DEFAULT_RADIUS := 30.0
 const DEFAULT_LOSS := 0.5
-const DEFAULT_THRESHOLD := 10.0
+const DEFAULT_THRESHOLD := 5.0
 
 var radius_per_stage: float
 var quality_loss_per_stage: float

@@ -84,6 +84,7 @@ var _item_instance: RefCounted
 var _aura_particles: GPUParticles2D
 var _smoke_particles: GPUParticles2D
 var _sparks_particles: GPUParticles2D
+var _burn_overlay: Sprite2D
 var _aura_debug_ring: Line2D
 
 # Transfer effect metadata structure
@@ -160,10 +161,80 @@ func get_item_instance() -> RefCounted:
 func get_item_radius() -> float:
 	return maxf(get_visual_half_width(), get_visual_half_height())
 
+func set_burn_damage(damage_ratio: float) -> void:
+	# damage_ratio: 0.0 (clean) -> 1.0 (fully burnt)
+	if _burn_overlay == null and damage_ratio > 0.0:
+		_create_burn_overlay()
+	
+	if _burn_overlay != null:
+		_burn_overlay.visible = damage_ratio > 0.0
+		# Map ratio to opacity, but keep it subtle at first
+		_burn_overlay.modulate.a = clampf(damage_ratio * 0.8, 0.0, 0.9)
+
+func _create_burn_overlay() -> void:
+	if _sprite == null: return
+	
+	_burn_overlay = Sprite2D.new()
+	_burn_overlay.name = "BurnOverlay"
+	
+	# Generate texture matching the item size
+	var base_tex = _sprite.texture
+	if base_tex:
+		var size = base_tex.get_size()
+		var img = Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
+		
+		var noise = FastNoiseLite.new()
+		noise.seed = randi()
+		noise.frequency = 0.02 # Much lower frequency for larger blotches
+		noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+		noise.fractal_octaves = 2 # Less detail inside blotches
+		
+		# Draw burn marks only where the original sprite is visible (alpha > 0)
+		var base_img = base_tex.get_image()
+		if base_img:
+			for y in range(size.y):
+				for x in range(size.x):
+					if base_img.get_pixel(x, y).a > 0.1:
+						var n = noise.get_noise_2d(x, y)
+						if n > 0.1: # Lower threshold to catch more area
+							# Dark char color
+							img.set_pixel(x, y, Color(0.1, 0.05, 0.05, 0.95))
+		
+		_burn_overlay.texture = ImageTexture.create_from_image(img)
+		_burn_overlay.scale = _sprite.scale
+		_burn_overlay.position = _sprite.position
+		_burn_overlay.centered = _sprite.centered
+		_burn_overlay.offset = _sprite.offset
+		
+		add_child(_burn_overlay)
+		# Place it right above the sprite but below physics shapes if possible
+		move_child(_burn_overlay, _sprite.get_index() + 1)
+
 func set_burning(enabled: bool) -> void:
 	if enabled:
 		if _smoke_particles == null:
 			_create_burning_effects()
+		
+		# Update emission shapes to match current sprite size
+		if _sprite and _sprite.texture:
+			var size = _sprite.texture.get_size() * _sprite.scale
+			var half_size = size * 0.5
+			
+			# Sparks: Cover entire sprite
+			var spark_mat = _sparks_particles.process_material as ParticleProcessMaterial
+			if spark_mat:
+				spark_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+				spark_mat.emission_box_extents = Vector3(half_size.x, half_size.y, 1.0)
+			
+			# Smoke: Top half only, slightly wider
+			var smoke_mat = _smoke_particles.process_material as ParticleProcessMaterial
+			if smoke_mat:
+				smoke_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+				# x: full width, y: top part only
+				smoke_mat.emission_box_extents = Vector3(half_size.x * 0.8, half_size.y * 0.4, 1.0)
+				# Offset smoke emitter to the top of the sprite
+				_smoke_particles.position = Vector2(0, -half_size.y * 0.5)
+		
 		_smoke_particles.emitting = true
 		_sparks_particles.emitting = true
 	else:
@@ -212,7 +283,7 @@ func _create_burning_effects() -> void:
 	smoke_mat.color_ramp = _create_fade_out_gradient()
 	
 	_smoke_particles.process_material = smoke_mat
-	_smoke_particles.amount = 32
+	_smoke_particles.amount = 96 # Tripled
 	_smoke_particles.lifetime = 1.5
 	_smoke_particles.local_coords = true
 	add_child(_smoke_particles)
@@ -235,7 +306,7 @@ func _create_burning_effects() -> void:
 	spark_mat.color = Color(1.0, 0.6, 0.1, 1.0) # Orange/Yellow
 	
 	_sparks_particles.process_material = spark_mat
-	_sparks_particles.amount = 16
+	_sparks_particles.amount = 48 # Tripled
 	_sparks_particles.lifetime = 0.6
 	_sparks_particles.explosiveness = 0.2
 	_sparks_particles.local_coords = true
