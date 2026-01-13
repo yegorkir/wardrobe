@@ -9,6 +9,7 @@ const ZombieExposureSystem := preload("res://scripts/domain/magic/zombie_exposur
 const CorruptionAuraService := preload("res://scripts/domain/magic/corruption_aura_service.gd")
 const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
+const ZOMBIE_SOURCE_STAGE := 999
 
 var _vampire_system: VampireExposureSystem
 var _zombie_system: ZombieExposureSystem
@@ -42,6 +43,8 @@ func tick(
 	
 	# 1. Calculate Zombie Aura Rates
 	var zombie_sources: Array[CorruptionAuraService.AuraSource] = []
+	var target_stages: Dictionary = {}
+	var source_stages: Dictionary = {}
 	
 	for item in items:
 		register_item(item.id) # Ensure state exists
@@ -53,14 +56,17 @@ func tick(
 		
 		var pos = positions.get(item.id, Vector2.ZERO)
 		var z_state = _item_states[item.id]["zombie"] as ZombieExposureState
+		target_stages[item.id] = z_state.stage_index
 		
 		var radius = arch.corruption_aura_radius if arch else 0.0
 		var is_source = false
 		
 		if arch and arch.is_zombie:
 			is_source = true
+			source_stages[item.id] = ZOMBIE_SOURCE_STAGE
 		elif z_state.is_emitting_weak_aura:
 			is_source = true
+			source_stages[item.id] = z_state.stage_index
 			if radius <= 0.0:
 				radius = WEAK_AURA_RADIUS
 		
@@ -72,7 +78,12 @@ func tick(
 				1.0
 			))
 	
-	var zombie_results = _corruption_service.calculate_exposure_rates(positions, zombie_sources)
+	var zombie_results = _corruption_service.calculate_exposure_rates(
+		positions,
+		zombie_sources,
+		target_stages,
+		source_stages
+	)
 	
 	# 2. Tick Systems
 	for item in items:

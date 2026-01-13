@@ -23,7 +23,12 @@ class ExposureResult:
 		rate = p_rate
 		sources = p_sources
 
-func calculate_exposure_rates(target_positions: Dictionary, sources: Array[AuraSource]) -> Dictionary:
+func calculate_exposure_rates(
+	target_positions: Dictionary,
+	sources: Array[AuraSource],
+	target_stages: Dictionary,
+	source_stages: Dictionary
+) -> Dictionary:
 	# target_positions: { item_id: Vector2 }
 	# returns: { item_id: ExposureResult }
 	
@@ -31,11 +36,15 @@ func calculate_exposure_rates(target_positions: Dictionary, sources: Array[AuraS
 	
 	for item_id in target_positions:
 		var pos: Vector2 = target_positions[item_id]
+		var target_stage: int = int(target_stages.get(item_id, 0))
 		var total_rate := 0.0
 		var affecting_sources: Array[StringName] = []
 		
 		for source in sources:
 			if source.id == item_id:
+				continue
+			var source_stage: int = int(source_stages.get(source.id, 0))
+			if source_stage <= target_stage:
 				continue
 			var dist_sq = pos.distance_squared_to(source.position)
 			var rad_sq = source.radius * source.radius

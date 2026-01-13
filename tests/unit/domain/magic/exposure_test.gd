@@ -95,7 +95,15 @@ func test_corruption_aura_service() -> void:
 		"edge": Vector2(99, 0)
 	}
 	
-	var results = service.calculate_exposure_rates(targets, [source])
+	var stages = {
+		&"near": 0,
+		&"far": 0,
+		&"edge": 0,
+	}
+	var source_stages = {
+		&"s1": 1,
+	}
+	var results = service.calculate_exposure_rates(targets, [source], stages, source_stages)
 	
 	assert_float(results["near"].rate).is_equal(1.0)
 	assert_array(results["near"].sources).contains_exactly([&"s1"])
@@ -107,7 +115,18 @@ func test_corruption_aura_service() -> void:
 	var source3 = CorruptionAuraServiceScript.AuraSource.new(&"s3", Vector2(20, 0), 100.0, 1.0)
 	var source4 = CorruptionAuraServiceScript.AuraSource.new(&"s4", Vector2(30, 0), 100.0, 1.0)
 	
-	var stacked_results = service.calculate_exposure_rates(targets, [source, source2, source3, source4])
+	var stacked_source_stages = {
+		&"s1": 1,
+		&"s2": 1,
+		&"s3": 1,
+		&"s4": 1,
+	}
+	var stacked_results = service.calculate_exposure_rates(
+		targets,
+		[source, source2, source3, source4],
+		stages,
+		stacked_source_stages
+	)
 	
 	# 4 sources overlapping "near"
 	assert_float(stacked_results["near"].rate).is_equal(3.0) # Cap at 3.0
@@ -120,12 +139,41 @@ func test_corruption_aura_self_exclusion() -> void:
 		&"self": Vector2.ZERO,
 		&"other": Vector2(10, 0),
 	}
-	var results = service.calculate_exposure_rates(targets, [source])
+	var stages = {
+		&"self": 0,
+		&"other": 0,
+	}
+	var source_stages = {
+		&"self": 1,
+	}
+	var results = service.calculate_exposure_rates(targets, [source], stages, source_stages)
 	
 	assert_float(results[&"self"].rate).is_equal(0.0)
 	assert_bool(results[&"self"].sources.is_empty()).is_true()
 	assert_float(results[&"other"].rate).is_equal(1.0)
 	assert_array(results[&"other"].sources).contains_exactly([&"self"])
+
+func test_corruption_aura_respects_stage_gating() -> void:
+	var service = CorruptionAuraServiceScript.new()
+	var source = CorruptionAuraServiceScript.AuraSource.new(&"s1", Vector2.ZERO, 100.0, 1.0)
+	var targets = {
+		&"low": Vector2(10, 0),
+		&"equal": Vector2(10, 0),
+		&"higher": Vector2(10, 0),
+	}
+	var target_stages = {
+		&"low": 0,
+		&"equal": 1,
+		&"higher": 2,
+	}
+	var source_stages = {
+		&"s1": 1,
+	}
+	var results = service.calculate_exposure_rates(targets, [source], target_stages, source_stages)
+	
+	assert_float(results[&"low"].rate).is_equal(1.0)
+	assert_float(results[&"equal"].rate).is_equal(0.0)
+	assert_float(results[&"higher"].rate).is_equal(0.0)
 
 func test_zombie_domino_aura_propagation() -> void:
 	var exposure = ExposureServiceScript.new()
