@@ -26,12 +26,20 @@ const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.
 const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_adapter.gd")
+const ExposureServiceScript := preload("res://scripts/domain/magic/exposure_service.gd")
+const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
+const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
 @export var debug_logs_enabled: bool = false
 @export var queue_hud_max_visible: int = 6
 @export var queue_hud_preview_enabled: bool = false
+
+@export_group("Zombie Balance")
+@export var zombie_radius_per_stage: float = ZombieExposureConfigScript.DEFAULT_RADIUS
+@export var zombie_quality_loss_per_stage: float = ZombieExposureConfigScript.DEFAULT_LOSS
+@export var zombie_exposure_threshold: float = ZombieExposureConfigScript.DEFAULT_THRESHOLD
 
 @onready var _end_shift_button: Button = %EndShiftButton
 @onready var _queue_hud_view: Control = %QueueHudView
@@ -47,6 +55,9 @@ const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_ada
 var _interaction_service := WardrobeInteractionServiceScript.new()
 var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
 var _light_service: LightService
+var _exposure_service: ExposureServiceScript
+var _zombie_config: ZombieExposureConfigScript
+var _archetype_cache: Dictionary = {}
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
 var _interaction_events_bridge: WorkdeskDeskEventsBridge = WorkdeskDeskEventsBridgeScript.new()
@@ -85,7 +96,13 @@ func _ready() -> void:
 	call_deferred("_finish_ready_setup")
 
 func _finish_ready_setup() -> void:
+	_zombie_config = ZombieExposureConfigScript.new(
+		zombie_radius_per_stage,
+		zombie_quality_loss_per_stage,
+		zombie_exposure_threshold
+	)
 	_light_service = LightServiceScript.new(Callable(_shift_log, "record"))
+	_exposure_service = ExposureServiceScript.new(Callable(_shift_log, "record"), _zombie_config)
 
 	if _light_zones_adapter:
 		_light_zones_adapter.setup(_light_service)
@@ -154,6 +171,12 @@ func _finish_ready_setup() -> void:
 	if _run_manager != null:
 		interaction_context.apply_patience_penalty = Callable(_run_manager, "apply_patience_penalty")
 		interaction_context.register_item = Callable(_run_manager, "register_item")
+		
+		# Configure Queue System
+		var queue_system = _world_adapter.get_queue_system()
+		if queue_system:
+			queue_system.configure(_run_manager.get_shift_config(), _run_manager.get_seed())
+
 	_interaction_logger.configure(Callable(_shift_log, "record"))
 	interaction_context.interaction_logger = _interaction_logger
 	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
@@ -234,10 +257,175 @@ func _unhandled_input(event: InputEvent) -> void:
 		_dragdrop_adapter.on_pointer_move(drag.position)
 		return
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_dragdrop_adapter.update_drag_watchdog()
-	_tick_patience(_delta)
+	_tick_patience(delta)
+	_tick_exposure(delta)
+	
+	if not _shift_finished and _clients_ready:
+		var queue_system = _world_adapter.get_queue_system()
+		var queue_state = _world_adapter.get_client_queue_state()
+		if queue_system and queue_state:
+			queue_system.tick(queue_state, delta)
+
 	_queue_hud_adapter.update()
+
+func _tick_exposure(delta: float) -> void:
+	if _shift_finished or not _clients_ready: return
+
+	var items: Array = []
+	var positions: Dictionary = {}
+	var drag_states: Dictionary = {}
+	var light_states: Dictionary = {}
+	var light_sources: Dictionary = {}
+
+	var spawned_items = _world_adapter.get_spawned_items()
+	for item_node in spawned_items:
+		if not is_instance_valid(item_node): continue
+		if not item_node.has_method("get_item_instance"): continue
+
+		var item_instance = item_node.get_item_instance()
+		if not item_instance: continue
+
+		items.append(item_instance)
+		positions[item_instance.id] = item_node.global_position
+		drag_states[item_instance.id] = (item_node == _dragdrop_adapter.get_dragged_item())
+		
+		var is_in_light = false
+		if _light_zones_adapter:
+			is_in_light = _light_zones_adapter.is_item_in_light(item_node)
+			light_sources[item_instance.id] = _light_zones_adapter.which_sources_affect(item_node)
+		else:
+			light_sources[item_instance.id] = []
+		
+		light_states[item_instance.id] = is_in_light
+
+	if not items.is_empty():
+		_exposure_service.tick(
+			items,
+			positions,
+			drag_states,
+			light_states,
+			light_sources,
+			Callable(self, "_get_item_archetype"),
+			delta
+		)
+
+	# Calculate source usage for visualization
+	# source_id -> Array of { target_id, target_pos, progress, target_radius }
+	var source_usage: Dictionary = {} 
+	
+	for item_instance in items:
+		var result = _exposure_service.get_exposure_result(item_instance.id)
+		if result and not result.pending_sources.is_empty():
+			var target_pos = positions.get(item_instance.id, Vector2.ZERO)
+			
+			# Determine target radius once per target
+			var target_radius := 50.0 # Fallback
+			
+			# If we can find the node, get its exact visual radius
+			var target_node: Node2D = null
+			for node in spawned_items:
+				if is_instance_valid(node) and node.has_method("get_item_instance"):
+					var inst = node.get_item_instance()
+					if inst and inst.id == item_instance.id:
+						target_node = node
+						break
+			
+			if target_node and target_node.has_method("get_item_radius"):
+				target_radius = target_node.get_item_radius()
+			
+			# Visualize ALL pending sources, not just the closest
+			for source_id in result.pending_sources:
+				var remaining = result.pending_sources[source_id]
+				var s_pos = positions.get(source_id, Vector2.ZERO)
+				var dist = target_pos.distance_to(s_pos)
+				
+				var total_delay = clampf(
+					dist / ExposureServiceScript.TRANSFER_SPEED, 
+					ExposureServiceScript.TRANSFER_TIME_MIN, 
+					ExposureServiceScript.TRANSFER_TIME_MAX
+				)
+				var progress = 1.0 - (remaining / total_delay) if total_delay > 0.0 else 1.0
+				progress = clampf(progress, 0.0, 1.0)
+				
+				if not source_usage.has(source_id):
+					source_usage[source_id] = []
+				source_usage[source_id].append({
+					"target_id": item_instance.id,
+					"target_pos": target_pos,
+					"progress": progress,
+					"target_radius": target_radius
+				})
+
+	for item_node in spawned_items:
+		if not is_instance_valid(item_node): continue
+		var item_instance = item_node.get_item_instance()
+		if not item_instance: continue
+		
+		# Update aura emission using dynamic radius from service
+		var aura_radius = _exposure_service.get_item_aura_radius(item_instance.id, Callable(self, "_get_item_archetype"))
+		var emit_aura = aura_radius > 0.0
+		
+		if item_node.has_method("set_emitting_aura"):
+			item_node.set_emitting_aura(emit_aura, aura_radius)
+			
+		# Burning effect for vampires in light
+		if item_node.has_method("set_burning"):
+			var arch = _get_item_archetype(item_instance.id)
+			var is_vampire = arch and arch.is_vampire
+			var is_in_light = light_states.get(item_instance.id, false)
+			item_node.set_burning(is_vampire and is_in_light)
+			
+			# Apply burn marks based on ACTUAL vampire exposure stage
+			if is_vampire and item_node.has_method("set_burn_damage"):
+				var v_stage = _exposure_service.get_vampire_stage(item_instance.id)
+				if v_stage > 0:
+					# Assuming 3 stages is max damage (matches 3 stars usually)
+					var damage = clampf(float(v_stage) / 3.0, 0.0, 1.0)
+					item_node.set_burn_damage(damage)
+				else:
+					item_node.set_burn_damage(0.0)
+			
+		# Transfer effects visualization
+		if source_usage.has(item_instance.id):
+			var active_targets: Array = []
+			for usage in source_usage[item_instance.id]:
+				item_node.update_transfer_effect(
+					usage.target_id, 
+					usage.target_pos, 
+					usage.progress,
+					usage.target_radius
+				)
+				active_targets.append(usage.target_id)
+			item_node.clear_unused_transfers(active_targets)
+		else:
+			item_node.clear_unused_transfers([])
+
+		# Also update quality visuals if changed
+		_item_visuals.refresh_quality_stars(item_node)
+
+func _get_item_archetype(item_id: StringName) -> ItemArchetypeDefinitionScript:
+	var item_instance = _world_adapter.find_item_instance(item_id)
+	if not item_instance: return null
+
+	var arch_id = item_instance.archetype_id
+	if arch_id == StringName(): return null
+
+	if _archetype_cache.has(arch_id):
+		return _archetype_cache[arch_id]
+
+	var def: ItemArchetypeDefinitionScript
+	if arch_id == "vampire_cloak":
+		def = ItemArchetypeDefinitionScript.new(arch_id, true, false, 0)
+	elif arch_id == "zombie_rag":
+		def = ItemArchetypeDefinitionScript.new(arch_id, false, true, 5) # innate stage 5
+	else:
+		def = ItemArchetypeDefinitionScript.new(arch_id)
+
+	_archetype_cache[arch_id] = def
+	return def
+
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
@@ -317,6 +505,7 @@ func _setup_queue_hud() -> void:
 		_world_adapter.get_clients(),
 		_run_manager,
 		_patience_by_client_id,
+		_patience_max_by_client_id,
 		queue_hud_max_visible
 	)
 	if queue_hud_preview_enabled:
@@ -385,7 +574,20 @@ func _tick_patience(delta: float) -> void:
 			if client_id == StringName():
 				continue
 			active_clients.append(client_id)
-		_run_manager.tick_patience(active_clients, delta)
+			
+		var queue_state = _world_adapter.get_client_queue_state()
+		var queue_clients: Array = queue_state.get_snapshot() if queue_state else []
+		
+		# Filter out active clients from queue list (sanity check)
+		# Though usually if they are at desk they are NOT in queue state.
+		# ClientQueueState manages queue, DeskState manages active.
+		# But let's be safe.
+		var pure_queue_clients: Array = []
+		for cid in queue_clients:
+			if not cid in active_clients:
+				pure_queue_clients.append(cid)
+		
+		_run_manager.tick_patience(active_clients, pure_queue_clients, delta)
 		_apply_patience_snapshot(_run_manager.get_patience_snapshot())
 		_run_manager.update_active_client_count(active_clients.size())
 	_clients_ui.refresh()

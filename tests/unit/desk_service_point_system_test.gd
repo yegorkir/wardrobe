@@ -11,6 +11,7 @@ const InteractionEventScript := preload("res://scripts/domain/interaction/intera
 
 func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
 	var system := DeskServicePointSystemScript.new()
+	_configure_queue_system(system)
 	var storage := _make_storage()
 	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
 	var queue := ClientQueueStateScript.new()
@@ -36,6 +37,7 @@ func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
 
 func test_dropoff_empty_queue_requeues_client_for_pickup() -> void:
 	var system := DeskServicePointSystemScript.new()
+	_configure_queue_system(system)
 	var storage := _make_storage()
 	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
 	var queue := ClientQueueStateScript.new()
@@ -54,6 +56,7 @@ func test_dropoff_empty_queue_requeues_client_for_pickup() -> void:
 
 func test_pickup_consumes_correct_coat_and_spawns_next_ticket() -> void:
 	var system := DeskServicePointSystemScript.new()
+	_configure_queue_system(system)
 	var storage := _make_storage()
 	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
 	var queue := ClientQueueStateScript.new()
@@ -79,6 +82,7 @@ func test_pickup_consumes_correct_coat_and_spawns_next_ticket() -> void:
 
 func test_pickup_rejects_wrong_coat() -> void:
 	var system := DeskServicePointSystemScript.new()
+	_configure_queue_system(system)
 	var storage := _make_storage()
 	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
 	var queue := ClientQueueStateScript.new()
@@ -99,6 +103,7 @@ func test_pickup_rejects_wrong_coat() -> void:
 
 func test_dropoff_rejects_non_ticket_item() -> void:
 	var system := DeskServicePointSystemScript.new()
+	_configure_queue_system(system)
 	var storage := _make_storage()
 	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
 	var queue := ClientQueueStateScript.new()
@@ -120,6 +125,15 @@ func _make_storage() -> WardrobeStorageState:
 	var storage := StorageStateScript.new()
 	storage.register_slot(StringName("DeskSlot_A"))
 	return storage
+
+func _configure_queue_system(system: DeskServicePointSystem) -> void:
+	var queue_config := {
+		"queue_delay_checkin_min": 0.0,
+		"queue_delay_checkin_max": 0.0,
+		"queue_delay_checkout_min": 0.0,
+		"queue_delay_checkout_max": 0.0,
+	}
+	system.configure_queue_system(queue_config, 0)
 
 func _make_client(id: String, coat_id: String, ticket_id: String) -> ClientState:
 	var coat := ItemInstanceScript.new(StringName(coat_id), ItemInstanceScript.KIND_COAT)

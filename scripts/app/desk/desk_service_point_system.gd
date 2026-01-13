@@ -18,6 +18,9 @@ var _queue_mix_provider: Callable
 func configure_queue_mix_provider(provider: Callable) -> void:
 	_queue_mix_provider = provider
 
+func configure_queue_system(config: Dictionary, seed_value: int) -> void:
+	_queue_system.configure(config, seed_value)
+
 func process_interaction_event(
 	desk_state: DeskState,
 	queue_state: ClientQueueState,

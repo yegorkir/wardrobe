@@ -3,6 +3,7 @@ extends RigidBody2D
 
 const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
+const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const LOG_TRANSFER_ENABLED := false
 const LOG_TRANSFER_END_ENABLED := false
@@ -79,6 +80,29 @@ const TRANSFER_SINK_LOG_FRAMES := 6
 var ticket_number: int = -1
 var durability: float = 100.0
 
+var _item_instance: RefCounted
+var _aura_particles: GPUParticles2D
+var _smoke_particles: GPUParticles2D
+var _sparks_particles: GPUParticles2D
+var _burn_overlay: Sprite2D
+var _aura_debug_ring: Line2D
+
+# Transfer effect metadata structure
+class TransferEffectData:
+	var node: GPUParticles2D
+	var progress: float = 0.0
+	var target_local_pos: Vector2 = Vector2.ZERO
+	var target_radius: float = 0.0
+	var is_returning: bool = false
+	
+	func _init(p_node: GPUParticles2D) -> void:
+		node = p_node
+
+var _transfer_effects: Dictionary = {} # target_id -> TransferEffectData
+const TRANSFER_RETURN_SPEED := 2.0
+const AURA_DENSITY_FACTOR := 0.02
+const MIN_AURA_PARTICLES := 1
+
 @onready var _pick_shape: CollisionShape2D = $PickArea/CollisionShape2D
 @onready var _sprite: Sprite2D = $Sprite
 @onready var _physics_shape: CollisionShape2D = get_node_or_null("PhysicsShape") as CollisionShape2D
@@ -128,7 +152,388 @@ func _ready() -> void:
 	_update_center_of_mass()
 	body_entered.connect(_on_body_entered)
 
+func set_item_instance(instance: RefCounted) -> void:
+	_item_instance = instance
+
+func get_item_instance() -> RefCounted:
+	return _item_instance
+
+func get_item_radius() -> float:
+	return maxf(get_visual_half_width(), get_visual_half_height())
+
+func set_burn_damage(damage_ratio: float) -> void:
+	# damage_ratio: 0.0 (clean) -> 1.0 (fully burnt)
+	if _burn_overlay == null and damage_ratio > 0.0:
+		_create_burn_overlay()
+	
+	if _burn_overlay != null:
+		_burn_overlay.visible = damage_ratio > 0.0
+		# Map ratio to opacity, but keep it subtle at first
+		_burn_overlay.modulate.a = clampf(damage_ratio * 0.8, 0.0, 0.9)
+
+func _create_burn_overlay() -> void:
+	if _sprite == null: return
+	
+	_burn_overlay = Sprite2D.new()
+	_burn_overlay.name = "BurnOverlay"
+	
+	# Generate texture matching the item size
+	var base_tex = _sprite.texture
+	if base_tex:
+		var size = base_tex.get_size()
+		var img = Image.create(size.x, size.y, false, Image.FORMAT_RGBA8)
+		
+		var noise = FastNoiseLite.new()
+		noise.seed = randi()
+		noise.frequency = 0.02 # Much lower frequency for larger blotches
+		noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+		noise.fractal_octaves = 2 # Less detail inside blotches
+		
+		# Draw burn marks only where the original sprite is visible (alpha > 0)
+		var base_img = base_tex.get_image()
+		if base_img:
+			for y in range(size.y):
+				for x in range(size.x):
+					if base_img.get_pixel(x, y).a > 0.1:
+						var n = noise.get_noise_2d(x, y)
+						if n > 0.1: # Lower threshold to catch more area
+							# Dark char color
+							img.set_pixel(x, y, Color(0.1, 0.05, 0.05, 0.95))
+		
+		_burn_overlay.texture = ImageTexture.create_from_image(img)
+		_burn_overlay.scale = _sprite.scale
+		_burn_overlay.position = _sprite.position
+		_burn_overlay.centered = _sprite.centered
+		_burn_overlay.offset = _sprite.offset
+		
+		add_child(_burn_overlay)
+		# Place it right above the sprite but below physics shapes if possible
+		move_child(_burn_overlay, _sprite.get_index() + 1)
+
+func set_burning(enabled: bool) -> void:
+	if enabled:
+		if _smoke_particles == null:
+			_create_burning_effects()
+		
+		# Update emission shapes to match current sprite size
+		if _sprite and _sprite.texture:
+			var size = _sprite.texture.get_size() * _sprite.scale
+			var half_size = size * 0.5
+			
+			# Sparks: Cover entire sprite
+			var spark_mat = _sparks_particles.process_material as ParticleProcessMaterial
+			if spark_mat:
+				spark_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+				spark_mat.emission_box_extents = Vector3(half_size.x, half_size.y, 1.0)
+			
+			# Smoke: Top half only, slightly wider
+			var smoke_mat = _smoke_particles.process_material as ParticleProcessMaterial
+			if smoke_mat:
+				smoke_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+				# x: full width, y: top part only
+				smoke_mat.emission_box_extents = Vector3(half_size.x * 0.8, half_size.y * 0.4, 1.0)
+				# Offset smoke emitter to the top of the sprite
+				_smoke_particles.position = Vector2(0, -half_size.y * 0.5)
+		
+		_smoke_particles.emitting = true
+		_sparks_particles.emitting = true
+	else:
+		if _smoke_particles != null:
+			_smoke_particles.emitting = false
+			_sparks_particles.emitting = false
+
+func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
+	if enabled:
+		if _aura_particles == null:
+			_create_aura_particles()
+		if radius > 0.0:
+			_set_aura_radius(radius)
+			_set_aura_debug_ring_radius(radius)
+			
+			# Dynamic density: more particles for larger radius
+			var new_amount = max(MIN_AURA_PARTICLES, int(radius * AURA_DENSITY_FACTOR))
+			if _aura_particles.amount != new_amount:
+				_aura_particles.amount = new_amount
+				
+		if DebugFlags.enabled:
+			_show_aura_debug_ring(true)
+		_aura_particles.emitting = true
+	else:
+		if _aura_particles != null:
+			_aura_particles.emitting = false
+		_show_aura_debug_ring(false)
+
+func _create_burning_effects() -> void:
+	# 1. Smoke
+	_smoke_particles = GPUParticles2D.new()
+	_smoke_particles.name = "SmokeParticles"
+	
+	var smoke_mat = ParticleProcessMaterial.new()
+	smoke_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	smoke_mat.emission_sphere_radius = 16.0
+	smoke_mat.gravity = Vector3(0, -40, 0) # Rise up
+	smoke_mat.direction = Vector3(0, -1, 0)
+	smoke_mat.spread = 20.0
+	smoke_mat.initial_velocity_min = 10.0
+	smoke_mat.initial_velocity_max = 30.0
+	smoke_mat.scale_min = 2.0
+	smoke_mat.scale_max = 6.0
+	# Dark grey smoke, fading out
+	smoke_mat.color = Color(0.2, 0.2, 0.2, 0.6)
+	smoke_mat.color_ramp = _create_fade_out_gradient()
+	
+	_smoke_particles.process_material = smoke_mat
+	_smoke_particles.amount = 96 # Tripled
+	_smoke_particles.lifetime = 1.5
+	_smoke_particles.local_coords = true
+	add_child(_smoke_particles)
+	
+	# 2. Sparks
+	_sparks_particles = GPUParticles2D.new()
+	_sparks_particles.name = "SparksParticles"
+	
+	var spark_mat = ParticleProcessMaterial.new()
+	spark_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	spark_mat.emission_sphere_radius = 14.0
+	spark_mat.gravity = Vector3(0, 98, 0) # Sparks fall/fly
+	spark_mat.direction = Vector3(0, -1, 0)
+	spark_mat.spread = 120.0 # Explode outwards/up
+	spark_mat.initial_velocity_min = 40.0
+	spark_mat.initial_velocity_max = 100.0
+	spark_mat.damping_min = 10.0
+	spark_mat.scale_min = 1.5
+	spark_mat.scale_max = 2.5
+	spark_mat.color = Color(1.0, 0.6, 0.1, 1.0) # Orange/Yellow
+	
+	_sparks_particles.process_material = spark_mat
+	_sparks_particles.amount = 48 # Tripled
+	_sparks_particles.lifetime = 0.6
+	_sparks_particles.explosiveness = 0.2
+	_sparks_particles.local_coords = true
+	add_child(_sparks_particles)
+
+func _create_fade_out_gradient() -> GradientTexture1D:
+	var grad = Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 1))
+	grad.set_color(1, Color(1, 1, 1, 0)) # Fade to transparent
+	var tex = GradientTexture1D.new()
+	tex.gradient = grad
+	return tex
+
+func update_transfer_effect(target_id: StringName, target_global_pos: Vector2, progress: float, target_item_radius: float) -> void:
+	var data: TransferEffectData
+	if _transfer_effects.has(target_id):
+		data = _transfer_effects[target_id]
+	else:
+		var node = _create_transfer_particle_node()
+		add_child(node)
+		data = TransferEffectData.new(node)
+		_transfer_effects[target_id] = data
+	
+	data.is_returning = false
+	data.progress = progress
+	data.target_local_pos = to_local(target_global_pos)
+	data.target_radius = target_item_radius
+	
+	_update_effect_visuals(data)
+
+func clear_unused_transfers(active_ids: Array) -> void:
+	for id in _transfer_effects:
+		if not id in active_ids:
+			var data = _transfer_effects[id] as TransferEffectData
+			data.is_returning = true
+
+func _process_transfer_effects(delta: float) -> void:
+	if _transfer_effects.is_empty():
+		return
+		
+	var to_remove: Array = []
+	for id in _transfer_effects:
+		var data = _transfer_effects[id] as TransferEffectData
+		if data.is_returning:
+			data.progress -= delta * TRANSFER_RETURN_SPEED
+			if data.progress <= 0.0:
+				data.node.queue_free()
+				to_remove.append(id)
+			else:
+				_update_effect_visuals(data)
+	
+	for id in to_remove:
+		_transfer_effects.erase(id)
+
+func _update_effect_visuals(data: TransferEffectData) -> void:
+	data.node.position = Vector2.ZERO.lerp(data.target_local_pos, data.progress)
+	
+	var source_radius := 24.0
+	if _aura_particles:
+		var aura_mat = _aura_particles.process_material as ParticleProcessMaterial
+		if aura_mat:
+			source_radius = aura_mat.emission_sphere_radius
+	
+	# Target emission radius is 90% of the target item radius
+	var target_radius_effective = data.target_radius * 0.9
+	
+	var effect_mat = data.node.process_material as ParticleProcessMaterial
+	if effect_mat:
+		effect_mat.emission_sphere_radius = lerpf(source_radius, target_radius_effective, data.progress)
+
+func _create_transfer_particle_node() -> GPUParticles2D:
+	var particles = GPUParticles2D.new()
+	particles.name = "TransferParticles"
+	
+	# Use fly texture
+	particles.texture = _generate_fly_texture()
+	
+	# Use shared fly material logic
+	var proc_mat = _create_fly_process_material()
+	
+	# Transfer specific adjustments
+	proc_mat.color = Color(1.0, 1.0, 1.0, 0.5) # Semi-transparent flies for transfer
+	proc_mat.gravity = Vector3(0, -5, 0) # Gentle rise for transfer visual
+	proc_mat.radial_accel_min = 0.0 # No attraction for transfer
+	proc_mat.radial_accel_max = 0.0
+	proc_mat.orbit_velocity_min = 0.0
+	proc_mat.orbit_velocity_max = 0.0
+	proc_mat.damping_min = 2.0
+	proc_mat.damping_max = 5.0
+	
+	particles.process_material = proc_mat
+	particles.amount = 4 # A small group of flies moving
+	particles.lifetime = 0.8
+	particles.local_coords = true
+	
+	return particles
+
+func _create_aura_particles() -> void:
+	_aura_particles = GPUParticles2D.new()
+	_aura_particles.name = "AuraParticles"
+	
+	# Create fly texture procedurally
+	_aura_particles.texture = _generate_fly_texture()
+	
+	var proc_mat = _create_fly_process_material()
+	
+	# Aura specific adjustments (already set in helper, but explicit here for clarity if needed)
+	# Keeping them confined and orbiting
+	
+	_aura_particles.process_material = proc_mat
+	_aura_particles.amount = 1 # Only one fly at a time
+	_aura_particles.lifetime = 4.5 # Lives 3x longer
+	_aura_particles.local_coords = true
+	
+	add_child(_aura_particles)
+	move_child(_aura_particles, 0)
+
+func _create_fly_process_material() -> ParticleProcessMaterial:
+	var proc_mat = ParticleProcessMaterial.new()
+	proc_mat.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	proc_mat.emission_sphere_radius = 24.0
+	
+	# Swarm behavior (hovering/buzzing)
+	proc_mat.gravity = Vector3.ZERO # No gravity, keep them local
+	proc_mat.direction = Vector3(0, -1, 0)
+	proc_mat.spread = 180.0 # Emit in all directions
+	
+	# Fast movement
+	proc_mat.initial_velocity_min = 40.0
+	proc_mat.initial_velocity_max = 100.0
+	proc_mat.damping_min = 5.0
+	proc_mat.damping_max = 10.0
+	
+	# Keep them inside: Orbit + Attraction to center
+	proc_mat.orbit_velocity_min = 0.2
+	proc_mat.orbit_velocity_max = 0.5
+	proc_mat.radial_accel_min = -60.0
+	proc_mat.radial_accel_max = -30.0
+	
+	# Rotation for realistic movement
+	proc_mat.angle_min = -180.0
+	proc_mat.angle_max = 180.0
+	proc_mat.angular_velocity_min = -400.0
+	proc_mat.angular_velocity_max = 400.0
+	
+	# Use white so the texture colors (black/gray) are preserved
+	proc_mat.color = Color.WHITE
+	
+	# Scale curve: starts small, peaks at mid-life, ends small
+	var scale_curve := Curve.new()
+	scale_curve.add_point(Vector2(0.0, 0.0)) # pos 0.0, value 0.0
+	scale_curve.add_point(Vector2(0.5, 1.0)) # pos 0.5, value 1.0
+	scale_curve.add_point(Vector2(1.0, 0.0)) # pos 1.0, value 0.0
+	
+	var scale_tex := CurveTexture.new()
+	scale_tex.curve = scale_curve
+	proc_mat.scale_curve = scale_tex
+	
+	proc_mat.scale_min = 2.0
+	proc_mat.scale_max = 3.0
+	
+	return proc_mat
+
+func _generate_fly_texture() -> ImageTexture:
+	var w := 8
+	var h := 8
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	
+	var body_color := Color.BLACK
+	var wing_color := Color(0.5, 0.5, 0.5, 0.8) # Grey, slightly transparent
+	
+	# Draw Body (Vertical block in center)
+	for y in range(3, 7):
+		img.set_pixel(3, y, body_color)
+		img.set_pixel(4, y, body_color)
+	
+	# Draw Wings (Angled pixels)
+	# Left wing
+	img.set_pixel(1, 2, wing_color)
+	img.set_pixel(2, 3, wing_color)
+	img.set_pixel(2, 4, wing_color)
+	
+	# Right wing
+	img.set_pixel(6, 2, wing_color)
+	img.set_pixel(5, 3, wing_color)
+	img.set_pixel(5, 4, wing_color)
+	
+	return ImageTexture.create_from_image(img)
+
+func _set_aura_radius(radius: float) -> void:
+	if _aura_particles == null:
+		return
+	if _aura_particles.process_material is ParticleProcessMaterial:
+		var material := _aura_particles.process_material as ParticleProcessMaterial
+		# Match the aura radius more closely visually (90%)
+		material.emission_sphere_radius = radius * 0.9
+
+func _show_aura_debug_ring(show_ring: bool) -> void:
+	if not DebugFlags.enabled:
+		if _aura_debug_ring != null:
+			_aura_debug_ring.visible = false
+		return
+	if _aura_debug_ring == null and show_ring:
+		_create_aura_debug_ring()
+	if _aura_debug_ring != null:
+		_aura_debug_ring.visible = show_ring
+
+func _create_aura_debug_ring() -> void:
+	_aura_debug_ring = Line2D.new()
+	_aura_debug_ring.name = "AuraDebugRing"
+	_aura_debug_ring.width = 2.0
+	_aura_debug_ring.default_color = Color(0.2, 1.0, 0.2, 0.6)
+	add_child(_aura_debug_ring)
+	move_child(_aura_debug_ring, 0)
+
+func _set_aura_debug_ring_radius(radius: float) -> void:
+	if _aura_debug_ring == null:
+		return
+	var points: PackedVector2Array = []
+	var segments := 64
+	for i in range(segments + 1):
+		var angle := TAU * float(i) / float(segments)
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	_aura_debug_ring.points = points
+
 func _physics_process(delta: float) -> void:
+	_process_transfer_effects(delta)
 	if _transfer_phase != TransferPhase.NONE:
 		_settle_time = 0.0
 		return

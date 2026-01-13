@@ -61,10 +61,12 @@ func spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> voi
 		node = _item_scene.instantiate() as ItemNode
 		node.item_id = str(instance.id)
 		node.item_type = resolve_item_type(instance)
+		node.set_item_instance(instance)
 		apply_item_visuals(node, instance.color)
 		_item_nodes[instance.id] = node
 		_spawned_items.append(node)
 	else:
+		node.set_item_instance(instance)
 		apply_item_visuals(node, instance.color)
 	if _detach_item_node.is_valid():
 		_detach_item_node.call(node)

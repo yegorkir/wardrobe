@@ -45,7 +45,7 @@ tasks:
           status=0
           log_file="reports/test_run_$(date +%y%m%d_%H%M%S).log"
           GODOT_BIN="{{.GODOT_BIN}}" ./addons/gdUnit4/runtest.sh -a ./tests --verbose >"$log_file" 2>&1 || status=$?
-          rg -n "(ERROR|WARN|WARNING)|Exit code" "$log_file" || true
+          grep -nE "(ERROR|WARN|WARNING)|Exit code" "$log_file" || true
           exit $status
 
   check-only:

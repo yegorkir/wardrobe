@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GODOT_BIN: /usr/local/bin/godot
+      GODOT_TEST_HOME: ${{ github.workspace }}/.godot_test_home_persist
     steps:
       - uses: actions/checkout@v4
       - uses: arduino/setup-task@v2
@@ -28,6 +29,9 @@ jobs:
 
       - name: Warm up Godot import cache
         run: godot --headless --path . --import
+
+      - name: Prepare Godot test home
+        run: mkdir -p "${GODOT_TEST_HOME}"
 
       - name: Run tests
         run: task tests

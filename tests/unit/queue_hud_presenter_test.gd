@@ -24,6 +24,7 @@ func test_presenter_builds_remaining_counts_and_order() -> void:
 		clients,
 		queue_mix,
 		{},
+		{},
 		1,
 		3,
 		8,
@@ -54,6 +55,7 @@ func test_presenter_marks_timeouts_once() -> void:
 		clients,
 		{"need_in": 1, "need_out": 1},
 		patience_by,
+		{},
 		0,
 		0,
 		8,
@@ -68,12 +70,39 @@ func test_presenter_marks_timeouts_once() -> void:
 		clients,
 		{"need_in": 1, "need_out": 1},
 		patience_by,
+		{},
 		0,
 		0,
 		8,
 		timed_out
 	)
 	assert_array(second.snapshot.get_client_ids()).is_equal([StringName("Client_A")])
+
+func test_presenter_calculates_patience_ratio() -> void:
+	var presenter = QueueHudPresenterScript.new()
+	var queue_state := ClientQueueStateScript.new()
+	queue_state.enqueue_checkin(StringName("Client_A"))
+	var clients := {
+		StringName("Client_A"): _make_client(StringName("Client_A"))
+	}
+	var patience_by := {StringName("Client_A"): 15.0}
+	var patience_max_by := {StringName("Client_A"): 30.0}
+	
+	var result = presenter.call(
+		"build_result",
+		queue_state,
+		clients,
+		{},
+		patience_by,
+		patience_max_by,
+		0,
+		0,
+		8,
+		{}
+	)
+	
+	var vm = result.snapshot.upcoming_clients[0]
+	assert_float(vm.patience_ratio).is_equal(0.5)
 
 func _make_client(client_id: StringName) -> ClientState:
 	var coat := ItemInstanceScript.new(StringName("coat_%s" % client_id), ItemInstanceScript.KIND_COAT)

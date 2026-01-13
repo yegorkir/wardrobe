@@ -1,0 +1,33 @@
+{
+  "mcp": {
+    "allowed": ["godot_tools", "godot_docs", "gdscript_diag"]
+  },
+  "mcpServers": {
+    "godot_tools": {
+      "command": "node",
+      "args": ["/Users/yegorkir/mcp/godot-mcp/build/index.js"],
+      "cwd": "/Users/yegorkir/pet/godot/wardrobe",
+      "env": {
+        "GODOT_PATH": "$GODOT_BIN"
+      },
+      "trust": false
+    },
+    "godot_docs": {
+      "command": "deno",
+      "args": ["run", "-A", "jsr:@nuskey8/godot-docs-mcp"],
+      "cwd": "/Users/yegorkir/pet/godot/wardrobe",
+      "trust": true
+    },
+    "gdscript_diag": {
+      "command": "node",
+      "args": ["/Users/yegorkir/mcp/minimal-godot-mcp/dist/index.js"],
+      "cwd": "/Users/yegorkir/pet/godot/wardrobe",
+      "env": {
+        "GODOT_WORKSPACE_PATH": "/Users/yegorkir/pet/godot/wardrobe",
+        "GODOT_LSP_PORT": "6007"
+      },
+      "trust": true
+    }
+  }
+}
+

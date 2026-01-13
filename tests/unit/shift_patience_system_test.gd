@@ -9,17 +9,17 @@ func test_strike_increments_only_on_transition() -> void:
 	var system := ShiftPatienceSystemScript.new()
 	system.reset_for_shift(state, [StringName("Client_A")], 1.0, 3)
 
-	var result := system.tick_patience(state, [StringName("Client_A")], 0.5)
+	var result := system.tick_patience(state, [StringName("Client_A")], [], 1.0, 1.0, 0.5)
 	assert_int(state.strikes_current).is_equal(0)
 	assert_float(state.get_patience_left(StringName("Client_A"))).is_equal(0.5)
 	assert_int((result.get("strike_client_ids") as Array).size()).is_equal(0)
 
-	result = system.tick_patience(state, [StringName("Client_A")], 0.6)
+	result = system.tick_patience(state, [StringName("Client_A")], [], 1.0, 1.0, 0.6)
 	assert_int(state.strikes_current).is_equal(1)
 	assert_float(state.get_patience_left(StringName("Client_A"))).is_equal(0.0)
 	assert_int((result.get("strike_client_ids") as Array).size()).is_equal(1)
 
-	result = system.tick_patience(state, [StringName("Client_A")], 1.0)
+	result = system.tick_patience(state, [StringName("Client_A")], [], 1.0, 1.0, 1.0)
 	assert_int(state.strikes_current).is_equal(1)
 	assert_int((result.get("strike_client_ids") as Array).size()).is_equal(0)
 
@@ -28,7 +28,7 @@ func test_no_strike_when_starting_at_zero() -> void:
 	var system := ShiftPatienceSystemScript.new()
 	system.reset_for_shift(state, [StringName("Client_A")], 0.0, 3)
 
-	var result := system.tick_patience(state, [StringName("Client_A")], 1.0)
+	var result := system.tick_patience(state, [StringName("Client_A")], [], 1.0, 1.0, 1.0)
 	assert_int(state.strikes_current).is_equal(0)
 	assert_int((result.get("strike_client_ids") as Array).size()).is_equal(0)
 
@@ -37,7 +37,7 @@ func test_patience_ticks_only_for_active_clients() -> void:
 	var system := ShiftPatienceSystemScript.new()
 	system.reset_for_shift(state, [StringName("Client_A"), StringName("Client_B")], 1.0, 3)
 
-	system.tick_patience(state, [StringName("Client_A")], 0.5)
+	system.tick_patience(state, [StringName("Client_A")], [], 1.0, 1.0, 0.5)
 	assert_float(state.get_patience_left(StringName("Client_A"))).is_equal(0.5)
 	assert_float(state.get_patience_left(StringName("Client_B"))).is_equal(1.0)
 
@@ -83,6 +83,7 @@ func test_shift_service_fails_at_strike_limit() -> void:
 
 	shift_service.tick_patience(
 		[StringName("Client_A"), StringName("Client_B"), StringName("Client_C")],
+		[],
 		1.0
 	)
 

@@ -19,6 +19,7 @@ var _queue_state: ClientQueueState
 var _clients: Dictionary = {}
 var _run_manager: RunManagerBase
 var _patience_by: Dictionary = {}
+var _patience_max_by: Dictionary = {}
 var _max_visible: int = 6
 var _timed_out_ids: Dictionary = {}
 var _prev_ids: Array[StringName] = []
@@ -31,6 +32,7 @@ func configure(
 	clients: Dictionary,
 	run_manager: RunManagerBase,
 	patience_by: Dictionary,
+	patience_max_by: Dictionary = {},
 	max_visible: int = 6
 ) -> void:
 	_view = view
@@ -38,6 +40,7 @@ func configure(
 	_clients = clients
 	_run_manager = run_manager
 	_patience_by = patience_by
+	_patience_max_by = patience_max_by
 	_max_visible = max(0, max_visible)
 
 func set_debug_snapshot(snapshot, enabled: bool = true) -> void:
@@ -70,6 +73,7 @@ func _build_snapshot():
 		_clients,
 		queue_mix,
 		_patience_by,
+		_patience_max_by,
 		strikes_current,
 		strikes_limit,
 		_max_visible,
