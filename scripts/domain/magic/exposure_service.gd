@@ -8,6 +8,7 @@ const VampireExposureSystem := preload("res://scripts/domain/magic/vampire_expos
 const ZombieExposureSystem := preload("res://scripts/domain/magic/zombie_exposure_system.gd")
 const CorruptionAuraService := preload("res://scripts/domain/magic/corruption_aura_service.gd")
 const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
+const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
 
 var _vampire_system: VampireExposureSystem
 var _zombie_system: ZombieExposureSystem
@@ -49,15 +50,14 @@ func tick(
 			continue
 			
 		var arch = archetype_provider.call(item.id) as ItemArchetypeDefinition
-		if not arch: continue
 		
 		var pos = positions.get(item.id, Vector2.ZERO)
 		var z_state = _item_states[item.id]["zombie"] as ZombieExposureState
 		
-		var radius = arch.corruption_aura_radius
+		var radius = arch.corruption_aura_radius if arch else 0.0
 		var is_source = false
 		
-		if arch.is_zombie:
+		if arch and arch.is_zombie:
 			is_source = true
 		elif z_state.is_emitting_weak_aura:
 			is_source = true
@@ -77,36 +77,41 @@ func tick(
 	# 2. Tick Systems
 	for item in items:
 		var arch = archetype_provider.call(item.id) as ItemArchetypeDefinition
-		if not arch: continue
 		
 		var states = _item_states[item.id]
 		
 		# Vampire
-		_vampire_system.tick(
-			states["vampire"],
-			item,
-			arch,
-			light_states.get(item.id, false),
-			light_sources.get(item.id, []),
-			drag_states.get(item.id, false),
-			delta
-		)
+		if arch:
+			_vampire_system.tick(
+				states["vampire"],
+				item,
+				arch,
+				light_states.get(item.id, false),
+				light_sources.get(item.id, []),
+				drag_states.get(item.id, false),
+				delta
+			)
 		
-		# Zombie
 		var z_res = zombie_results.get(item.id, null)
 		var z_rate = z_res.rate if z_res else 0.0
 		var z_sources = z_res.sources if z_res else []
+		var is_dragging: bool = drag_states.get(item.id, false)
 		
-		_zombie_system.tick(
-			states["zombie"],
-			item,
-			z_rate,
-			z_sources,
-			drag_states.get(item.id, false),
-			delta
-		)
+		# Zombie: zombie archetypes emit aura but do not get corrupted themselves.
+		if not arch or not arch.is_zombie:
+			_zombie_system.tick(
+				states["zombie"],
+				item,
+				z_rate,
+				z_sources,
+				is_dragging,
+				delta
+			)
 
 func is_emitting_weak_aura(item_id: StringName) -> bool:
 	if _item_states.has(item_id):
 		return _item_states[item_id]["zombie"].is_emitting_weak_aura
 	return false
+
+func get_weak_aura_radius() -> float:
+	return WEAK_AURA_RADIUS

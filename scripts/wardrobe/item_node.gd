@@ -3,6 +3,7 @@ extends RigidBody2D
 
 const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
+const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const LOG_TRANSFER_ENABLED := false
 const LOG_TRANSFER_END_ENABLED := false
@@ -81,6 +82,7 @@ var durability: float = 100.0
 
 var _item_instance: RefCounted
 var _aura_particles: GPUParticles2D
+var _aura_debug_ring: Line2D
 
 @onready var _pick_shape: CollisionShape2D = $PickArea/CollisionShape2D
 @onready var _sprite: Sprite2D = $Sprite
@@ -137,14 +139,20 @@ func set_item_instance(instance: RefCounted) -> void:
 func get_item_instance() -> RefCounted:
 	return _item_instance
 
-func set_emitting_aura(enabled: bool) -> void:
+func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
 	if enabled:
 		if _aura_particles == null:
 			_create_aura_particles()
+		if radius > 0.0:
+			_set_aura_radius(radius)
+			_set_aura_debug_ring_radius(radius)
+		if DebugFlags.enabled:
+			_show_aura_debug_ring(true)
 		_aura_particles.emitting = true
 	else:
 		if _aura_particles != null:
 			_aura_particles.emitting = false
+		_show_aura_debug_ring(false)
 
 func _create_aura_particles() -> void:
 	_aura_particles = GPUParticles2D.new()
@@ -154,17 +162,52 @@ func _create_aura_particles() -> void:
 	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
 	material.emission_sphere_radius = 24.0
 	material.gravity = Vector3(0, -10, 0)
-	material.color = Color(0.1, 0.4, 0.1, 0.6) # Dark green transparent
+	material.color = Color(0.2, 0.9, 0.2, 0.9) # Brighter green for visibility
 	material.scale_min = 2.0
-	material.scale_max = 4.0
+	material.scale_max = 5.0
 	
 	_aura_particles.process_material = material
-	_aura_particles.amount = 24
-	_aura_particles.lifetime = 1.0
+	_aura_particles.amount = 36
+	_aura_particles.lifetime = 1.2
 	_aura_particles.local_coords = true # Move with item
 	
 	add_child(_aura_particles)
 	move_child(_aura_particles, 0)
+
+func _set_aura_radius(radius: float) -> void:
+	if _aura_particles == null:
+		return
+	if _aura_particles.process_material is ParticleProcessMaterial:
+		var material := _aura_particles.process_material as ParticleProcessMaterial
+		material.emission_sphere_radius = radius
+
+func _show_aura_debug_ring(show_ring: bool) -> void:
+	if not DebugFlags.enabled:
+		if _aura_debug_ring != null:
+			_aura_debug_ring.visible = false
+		return
+	if _aura_debug_ring == null and show_ring:
+		_create_aura_debug_ring()
+	if _aura_debug_ring != null:
+		_aura_debug_ring.visible = show_ring
+
+func _create_aura_debug_ring() -> void:
+	_aura_debug_ring = Line2D.new()
+	_aura_debug_ring.name = "AuraDebugRing"
+	_aura_debug_ring.width = 2.0
+	_aura_debug_ring.default_color = Color(0.2, 1.0, 0.2, 0.6)
+	add_child(_aura_debug_ring)
+	move_child(_aura_debug_ring, 0)
+
+func _set_aura_debug_ring_radius(radius: float) -> void:
+	if _aura_debug_ring == null:
+		return
+	var points: PackedVector2Array = []
+	var segments := 64
+	for i in range(segments + 1):
+		var angle := TAU * float(i) / float(segments)
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	_aura_debug_ring.points = points
 
 func _physics_process(delta: float) -> void:
 	if _transfer_phase != TransferPhase.NONE:

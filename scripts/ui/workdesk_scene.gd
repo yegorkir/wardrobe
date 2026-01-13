@@ -291,9 +291,17 @@ func _tick_exposure(delta: float) -> void:
 		var item_instance = item_node.get_item_instance()
 		if not item_instance: continue
 		
-		var is_emitting = _exposure_service.is_emitting_weak_aura(item_instance.id)
+		var arch = _get_item_archetype(item_instance.id)
+		var emit_aura := false
+		var aura_radius := 0.0
+		if arch and arch.is_zombie:
+			emit_aura = true
+			aura_radius = arch.corruption_aura_radius
+		elif _exposure_service.is_emitting_weak_aura(item_instance.id):
+			emit_aura = true
+			aura_radius = _exposure_service.get_weak_aura_radius()
 		if item_node.has_method("set_emitting_aura"):
-			item_node.set_emitting_aura(is_emitting)
+			item_node.set_emitting_aura(emit_aura, aura_radius)
 			
 		# Also update quality visuals if changed
 		_item_visuals.refresh_quality_stars(item_node)
