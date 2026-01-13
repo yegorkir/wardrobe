@@ -5,12 +5,13 @@ const ItemEffect := preload("res://scripts/domain/effects/item_effect.gd")
 const ItemEffectTypes := preload("res://scripts/domain/effects/item_effect_types.gd")
 const ZombieExposureState := preload("res://scripts/domain/magic/zombie_exposure_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-const EXPOSURE_THRESHOLD := 3.0
-const QUALITY_LOSS_PER_STAGE := 1
+const ZombieExposureConfig := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 
 var _logger: Callable
+var _config: ZombieExposureConfig
 
-func _init(logger: Callable = Callable()) -> void:
+func _init(config: ZombieExposureConfig, logger: Callable = Callable()) -> void:
+	_config = config
 	_logger = logger
 
 func tick(state: ZombieExposureState, item: ItemInstance, exposure_rate: float, source_ids: Array[StringName], is_dragging: bool, delta: float) -> void:
@@ -29,20 +30,20 @@ func tick(state: ZombieExposureState, item: ItemInstance, exposure_rate: float, 
 
 	state.current_stage_exposure += exposure_rate * delta
 	
-	if state.current_stage_exposure >= EXPOSURE_THRESHOLD:
-		state.current_stage_exposure -= EXPOSURE_THRESHOLD
+	if state.current_stage_exposure >= _config.exposure_threshold:
+		state.current_stage_exposure -= _config.exposure_threshold
 		state.stage_index += 1
 		
 		var effect = ItemEffect.new(
 			ItemEffectTypes.Type.ZOMBIE_AURA,
 			ItemEffectTypes.Source.ZOMBIE,
-			float(QUALITY_LOSS_PER_STAGE)
+			_config.quality_loss_per_stage
 		)
 		
 		var result = item.apply_effect(effect)
 		
-		if not state.is_emitting_weak_aura:
-			state.is_emitting_weak_aura = true
+		# "Weak aura" is now implicit (stage > 0), so no need to set a flag.
+		if state.stage_index == 1:
 			if _logger.is_valid():
 				_logger.call("ZOMBIE_PROPAGATION_ENABLED", { "item_id": item.id })
 		

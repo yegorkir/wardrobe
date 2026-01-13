@@ -1,7 +1,6 @@
 extends RefCounted
 class_name ExposureService
 
-const WEAK_AURA_RADIUS := 100.0
 const VampireExposureState := preload("res://scripts/domain/magic/vampire_exposure_state.gd")
 const ZombieExposureState := preload("res://scripts/domain/magic/zombie_exposure_state.gd")
 const VampireExposureSystem := preload("res://scripts/domain/magic/vampire_exposure_system.gd")
@@ -9,7 +8,8 @@ const ZombieExposureSystem := preload("res://scripts/domain/magic/zombie_exposur
 const CorruptionAuraService := preload("res://scripts/domain/magic/corruption_aura_service.gd")
 const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
-const ZOMBIE_SOURCE_STAGE := 999
+const ZombieExposureConfig := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
+
 const TRANSFER_SPEED := 100.0
 const TRANSFER_TIME_MIN := 0.5
 const TRANSFER_TIME_MAX := 2.0
@@ -20,11 +20,18 @@ var _zombie_system: ZombieExposureSystem
 var _corruption_service: CorruptionAuraService
 var _shift_log: Callable
 var _item_states: Dictionary = {} # { item_id: { vampire: State, zombie: State } }
+var _zombie_config: ZombieExposureConfig
+var _last_zombie_results: Dictionary = {}
 
-func _init(shift_log: Callable = Callable()) -> void:
+func _init(shift_log: Callable = Callable(), zombie_config: ZombieExposureConfig = null) -> void:
 	_shift_log = shift_log
+	if zombie_config:
+		_zombie_config = zombie_config
+	else:
+		_zombie_config = ZombieExposureConfig.new()
+		
 	_vampire_system = VampireExposureSystem.new(shift_log)
-	_zombie_system = ZombieExposureSystem.new(shift_log)
+	_zombie_system = ZombieExposureSystem.new(_zombie_config, shift_log)
 	_corruption_service = CorruptionAuraService.new()
 
 func register_item(item_id: StringName) -> void:
@@ -56,24 +63,20 @@ func tick(
 		var arch = archetype_provider.call(item.id) as ItemArchetypeDefinition
 		var pos = positions.get(item.id, Vector2.ZERO)
 		var z_state = _item_states[item.id]["zombie"] as ZombieExposureState
-		target_stages[item.id] = z_state.stage_index
+		
+		# Effective stage = accumulated + innate (from archetype)
+		var innate_stage = arch.zombie_innate_stage if arch else 0
+		var effective_stage = z_state.stage_index + innate_stage
+		
+		target_stages[item.id] = effective_stage
 		
 		if drag_states.get(item.id, false):
 			continue
 			
-		var radius = arch.corruption_aura_radius if arch else 0.0
-		var is_source = false
+		var radius = float(effective_stage) * _zombie_config.radius_per_stage
 		
-		if arch and arch.is_zombie:
-			is_source = true
-			source_stages[item.id] = ZOMBIE_SOURCE_STAGE
-		elif z_state.is_emitting_weak_aura:
-			is_source = true
-			source_stages[item.id] = z_state.stage_index
-			if radius <= 0.0:
-				radius = WEAK_AURA_RADIUS
-		
-		if is_source:
+		if radius > 0.0:
+			source_stages[item.id] = effective_stage
 			zombie_sources.append(CorruptionAuraService.AuraSource.new(
 				item.id,
 				pos, 
@@ -162,7 +165,12 @@ func tick(
 		var z_sources = z_res.sources if z_res else EMPTY_SOURCES
 		var is_dragging: bool = drag_states.get(item.id, false)
 		
-		# Zombie: zombie archetypes emit aura but do not get corrupted themselves.
+		# Zombie: zombie archetypes emit aura but do not get corrupted themselves (unless they gain exposure from others?)
+		# Current rule: zombie archetypes are sources. They might also receive exposure if we want them to rot further?
+		# For now, keeping original logic: if arch.is_zombie, we might skip ticking exposure or tick it anyway?
+		# The original code skipped tick if arch.is_zombie was true? No, it skipped if it WAS a zombie?
+		# Original: if not arch or not arch.is_zombie: _zombie_system.tick(...)
+		# This implies "True Zombies" do not get corrupted.
 		if not arch or not arch.is_zombie:
 			_zombie_system.tick(
 				states["zombie"],
@@ -173,20 +181,15 @@ func tick(
 				delta
 			)
 
-func is_emitting_weak_aura(item_id: StringName) -> bool:
-	if _item_states.has(item_id):
-		return _item_states[item_id]["zombie"].is_emitting_weak_aura
-	return false
-
-func get_weak_aura_radius() -> float:
-	return WEAK_AURA_RADIUS
-
 func get_exposure_result(item_id: StringName) -> CorruptionAuraService.ExposureResult:
-	# We don't store the result from the last tick in a persistent way, 
-	# but we can re-construct it from state if needed, or better, 
-	# we should store the last calculated result if UI needs it.
-	# For now, let's assume the UI calls this RIGHT after tick?
-	# No, tick() is local. We should store the last results in a member variable.
 	return _last_zombie_results.get(item_id, null)
 
-var _last_zombie_results: Dictionary = {}
+func get_item_aura_radius(item_id: StringName, archetype_provider: Callable) -> float:
+	if not _item_states.has(item_id):
+		return 0.0
+	
+	var arch = archetype_provider.call(item_id) as ItemArchetypeDefinition
+	var z_state = _item_states[item_id]["zombie"] as ZombieExposureState
+	var innate = arch.zombie_innate_stage if arch else 0
+	
+	return float(z_state.stage_index + innate) * _zombie_config.radius_per_stage

@@ -49,19 +49,19 @@ func to_snapshot() -> Dictionary:
 	return snapshot
 
 func apply_effect(effect: ItemEffect) -> ItemEffectResult:
-	var quality_loss_amount := 0
+	var quality_loss_amount := 0.0
 	var accepted := false
 	
 	# Mapping effect types to quality loss logic
 	if effect.type == ItemEffectTypes.Type.LIGHT_CORROSION:
-		quality_loss_amount = int(effect.intensity)
+		quality_loss_amount = effect.intensity
 		accepted = true
 	elif effect.type == ItemEffectTypes.Type.ZOMBIE_AURA:
-		quality_loss_amount = int(effect.intensity)
+		quality_loss_amount = effect.intensity
 		accepted = true
 	
 	var actual_loss := 0.0
-	if quality_loss_amount > 0 and quality_state:
-		actual_loss = quality_state.reduce_quality(float(quality_loss_amount))
+	if quality_loss_amount > 0.0 and quality_state:
+		actual_loss = quality_state.reduce_quality(quality_loss_amount)
 	
-	return ItemEffectResult.new(accepted, int(actual_loss), [])
+	return ItemEffectResult.new(accepted, actual_loss, [])

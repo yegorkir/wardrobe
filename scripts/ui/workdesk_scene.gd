@@ -28,12 +28,18 @@ const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_adapter.gd")
 const ExposureServiceScript := preload("res://scripts/domain/magic/exposure_service.gd")
 const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
+const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
 @export var debug_logs_enabled: bool = false
 @export var queue_hud_max_visible: int = 6
 @export var queue_hud_preview_enabled: bool = false
+
+@export_group("Zombie Balance")
+@export var zombie_radius_per_stage: float = 50.0
+@export var zombie_quality_loss_per_stage: float = 0.5
+@export var zombie_exposure_threshold: float = 3.0
 
 @onready var _end_shift_button: Button = %EndShiftButton
 @onready var _queue_hud_view: Control = %QueueHudView
@@ -50,6 +56,7 @@ var _interaction_service := WardrobeInteractionServiceScript.new()
 var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
 var _light_service: LightService
 var _exposure_service: ExposureServiceScript
+var _zombie_config: ZombieExposureConfigScript
 var _archetype_cache: Dictionary = {}
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
@@ -89,8 +96,13 @@ func _ready() -> void:
 	call_deferred("_finish_ready_setup")
 
 func _finish_ready_setup() -> void:
+	_zombie_config = ZombieExposureConfigScript.new(
+		zombie_radius_per_stage,
+		zombie_quality_loss_per_stage,
+		zombie_exposure_threshold
+	)
 	_light_service = LightServiceScript.new(Callable(_shift_log, "record"))
-	_exposure_service = ExposureServiceScript.new(Callable(_shift_log, "record"))
+	_exposure_service = ExposureServiceScript.new(Callable(_shift_log, "record"), _zombie_config)
 
 	if _light_zones_adapter:
 		_light_zones_adapter.setup(_light_service)
@@ -296,7 +308,7 @@ func _tick_exposure(delta: float) -> void:
 			var target_pos = positions.get(item_instance.id, Vector2.ZERO)
 			
 			# Determine target radius once per target
-			var target_radius := ExposureServiceScript.WEAK_AURA_RADIUS
+			var target_radius := 50.0 # Fallback
 			
 			# If we can find the node, get its exact visual radius
 			var target_node: Node2D = null
@@ -338,15 +350,10 @@ func _tick_exposure(delta: float) -> void:
 		var item_instance = item_node.get_item_instance()
 		if not item_instance: continue
 		
-		var arch = _get_item_archetype(item_instance.id)
-		var emit_aura := false
-		var aura_radius := 0.0
-		if arch and arch.is_zombie:
-			emit_aura = true
-			aura_radius = arch.corruption_aura_radius
-		elif _exposure_service.is_emitting_weak_aura(item_instance.id):
-			emit_aura = true
-			aura_radius = _exposure_service.get_weak_aura_radius()
+		# Update aura emission using dynamic radius from service
+		var aura_radius = _exposure_service.get_item_aura_radius(item_instance.id, Callable(self, "_get_item_archetype"))
+		var emit_aura = aura_radius > 0.0
+		
 		if item_node.has_method("set_emitting_aura"):
 			item_node.set_emitting_aura(emit_aura, aura_radius)
 			
@@ -382,9 +389,9 @@ func _get_item_archetype(item_id: StringName) -> ItemArchetypeDefinitionScript:
 
 	var def: ItemArchetypeDefinitionScript
 	if arch_id == "vampire_cloak":
-		def = ItemArchetypeDefinitionScript.new(arch_id, true, false, 0.0)
+		def = ItemArchetypeDefinitionScript.new(arch_id, true, false, 0)
 	elif arch_id == "zombie_rag":
-		def = ItemArchetypeDefinitionScript.new(arch_id, false, true, 150.0)
+		def = ItemArchetypeDefinitionScript.new(arch_id, false, true, 5) # innate stage 5
 	else:
 		def = ItemArchetypeDefinitionScript.new(arch_id)
 
