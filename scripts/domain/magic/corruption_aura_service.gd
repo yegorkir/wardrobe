@@ -35,6 +35,8 @@ func calculate_exposure_rates(target_positions: Dictionary, sources: Array[AuraS
 		var affecting_sources: Array[StringName] = []
 		
 		for source in sources:
+			if source.id == item_id:
+				continue
 			var dist_sq = pos.distance_squared_to(source.position)
 			var rad_sq = source.radius * source.radius
 			

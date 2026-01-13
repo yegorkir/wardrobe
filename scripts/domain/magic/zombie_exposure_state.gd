@@ -24,6 +24,9 @@ func reset() -> void:
 	# I'll implement reset if rate is 0 in the system.
 	is_emitting_weak_aura = false
 
+func reset_exposure_only() -> void:
+	current_stage_exposure = 0.0
+
 func duplicate_state() -> ZombieExposureState:
 	var dup = get_script().new()
 	dup.current_stage_exposure = current_stage_exposure

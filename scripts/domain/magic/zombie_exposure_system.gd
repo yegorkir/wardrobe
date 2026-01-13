@@ -15,11 +15,11 @@ func _init(logger: Callable = Callable()) -> void:
 
 func tick(state: ZombieExposureState, item: ItemInstance, exposure_rate: float, source_ids: Array[StringName], is_dragging: bool, delta: float) -> void:
 	if is_dragging:
-		state.reset()
+		state.reset_exposure_only()
 		return
 		
 	if exposure_rate <= 0.0:
-		state.reset()
+		state.reset_exposure_only()
 		return
 		
 	state.current_stage_exposure += exposure_rate * delta

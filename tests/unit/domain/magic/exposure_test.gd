@@ -9,6 +9,7 @@ const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.
 const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const ItemEffectTypesScript := preload("res://scripts/domain/effects/item_effect_types.gd")
 const CorruptionAuraServiceScript := preload("res://scripts/domain/magic/corruption_aura_service.gd")
+const ExposureServiceScript := preload("res://scripts/domain/magic/exposure_service.gd")
 
 func test_vampire_exposure_accumulation() -> void:
 	var system = VampireExposureSystemScript.new()
@@ -111,3 +112,65 @@ func test_corruption_aura_service() -> void:
 	# 4 sources overlapping "near"
 	assert_float(stacked_results["near"].rate).is_equal(3.0) # Cap at 3.0
 	assert_int(stacked_results["near"].sources.size()).is_equal(4)
+
+func test_corruption_aura_self_exclusion() -> void:
+	var service = CorruptionAuraServiceScript.new()
+	var source = CorruptionAuraServiceScript.AuraSource.new(&"self", Vector2.ZERO, 100.0, 1.0)
+	var targets = {
+		&"self": Vector2.ZERO,
+		&"other": Vector2(10, 0),
+	}
+	var results = service.calculate_exposure_rates(targets, [source])
+	
+	assert_float(results[&"self"].rate).is_equal(0.0)
+	assert_bool(results[&"self"].sources.is_empty()).is_true()
+	assert_float(results[&"other"].rate).is_equal(1.0)
+	assert_array(results[&"other"].sources).contains_exactly([&"self"])
+
+func test_zombie_domino_aura_propagation() -> void:
+	var exposure = ExposureServiceScript.new()
+	var zombie_id := StringName("zombie_source")
+	var normal_a_id := StringName("normal_a")
+	var normal_b_id := StringName("normal_b")
+	
+	var zombie_item = ItemInstanceScript.new(zombie_id, "COAT")
+	var normal_a = ItemInstanceScript.new(normal_a_id, "COAT")
+	var normal_b = ItemInstanceScript.new(normal_b_id, "COAT")
+	
+	var items = [zombie_item, normal_a, normal_b]
+	var positions = {
+		zombie_id: Vector2.ZERO,
+		normal_a_id: Vector2(50, 0), # within zombie radius
+		normal_b_id: Vector2(140, 0), # outside zombie radius, within weak aura
+	}
+	var drag_states = {
+		zombie_id: false,
+		normal_a_id: false,
+		normal_b_id: false,
+	}
+	var light_states = {
+		zombie_id: false,
+		normal_a_id: false,
+		normal_b_id: false,
+	}
+	var empty_sources: Array[StringName] = []
+	var light_sources = {
+		zombie_id: empty_sources,
+		normal_a_id: empty_sources,
+		normal_b_id: empty_sources,
+	}
+	var archetype_provider := Callable(self, "_get_domino_archetype").bind(zombie_id)
+	
+	# Tick 1: normal_a gets corrupted from zombie source, enabling weak aura.
+	exposure.tick(items, positions, drag_states, light_states, light_sources, archetype_provider, 3.0)
+	assert_float(normal_a.quality_state.current_stars).is_equal(2.0)
+	assert_float(normal_b.quality_state.current_stars).is_equal(3.0)
+	
+	# Tick 2: normal_b gets corrupted via weak aura from normal_a.
+	exposure.tick(items, positions, drag_states, light_states, light_sources, archetype_provider, 3.0)
+	assert_float(normal_b.quality_state.current_stars).is_equal(2.0)
+
+func _get_domino_archetype(item_id: StringName, zombie_id: StringName) -> ItemArchetypeDefinitionScript:
+	if item_id == zombie_id:
+		return ItemArchetypeDefinitionScript.new(zombie_id, false, true, 60.0)
+	return null
