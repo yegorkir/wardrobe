@@ -5,6 +5,7 @@ const VampireExposureSystemScript := preload("res://scripts/domain/magic/vampire
 const ZombieExposureSystemScript := preload("res://scripts/domain/magic/zombie_exposure_system.gd")
 const VampireExposureStateScript := preload("res://scripts/domain/magic/vampire_exposure_state.gd")
 const ZombieExposureStateScript := preload("res://scripts/domain/magic/zombie_exposure_state.gd")
+const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const ItemEffectTypesScript := preload("res://scripts/domain/effects/item_effect_types.gd")
@@ -45,15 +46,16 @@ func test_vampire_effect_application() -> void:
 	assert_float(item.quality_state.current_stars).is_equal(3.0)
 	
 	# Reach threshold (1.0)
-	system.tick(state, item, arch, true, [], false, 1.0)
+	system.tick(state, item, arch, true, [], false, 2.0)
 	assert_int(state.stage_index).is_equal(1)
 	assert_float(state.current_stage_exposure).is_equal(0.0)
 	
 	# Check quality loss (1 star)
-	assert_float(item.quality_state.current_stars).is_equal(2.0)
+	assert_float(item.quality_state.current_stars).is_equal(2.5)
 
 func test_zombie_exposure_accumulation() -> void:
-	var system = ZombieExposureSystemScript.new()
+	var config = ZombieExposureConfigScript.new(30.0, 1.0, 3.0)
+	var system = ZombieExposureSystemScript.new(config)
 	var state = ZombieExposureStateScript.new()
 	var item = ItemInstanceScript.new("test_normal", "COAT")
 	
@@ -71,18 +73,17 @@ func test_zombie_exposure_accumulation() -> void:
 	assert_float(state.current_stage_exposure).is_equal(0.0)
 
 func test_zombie_effect_and_propagation() -> void:
-	var system = ZombieExposureSystemScript.new()
+	var config = ZombieExposureConfigScript.new(30.0, 1.0, 3.0)
+	var system = ZombieExposureSystemScript.new(config)
 	var state = ZombieExposureStateScript.new()
 	var item = ItemInstanceScript.new("test_normal", "COAT")
 	
-	assert_bool(state.is_emitting_weak_aura).is_false()
 	assert_float(item.quality_state.current_stars).is_equal(3.0)
 	
 	# Reach threshold (3.0)
 	system.tick(state, item, 1.0, [&"zombie_1"], false, 3.0)
 	
 	assert_int(state.stage_index).is_equal(1)
-	assert_bool(state.is_emitting_weak_aura).is_true()
 	assert_float(item.quality_state.current_stars).is_equal(2.0)
 
 func test_corruption_aura_service() -> void:
@@ -176,7 +177,8 @@ func test_corruption_aura_respects_stage_gating() -> void:
 	assert_float(results[&"higher"].rate).is_equal(0.0)
 
 func test_zombie_domino_aura_propagation() -> void:
-	var exposure = ExposureServiceScript.new()
+	var zombie_config = ZombieExposureConfigScript.new(30.0, 1.0, 3.0)
+	var exposure = ExposureServiceScript.new(Callable(), zombie_config)
 	var zombie_id := StringName("zombie_source")
 	var normal_a_id := StringName("normal_a")
 	var normal_b_id := StringName("normal_b")

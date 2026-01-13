@@ -32,6 +32,13 @@ signal shift_won(payload)
 const SHIFT_DEFAULT_CONFIG := {
 	"strikes_limit": 3,
 	"patience_max": 30.0,
+	"slot_decay_rate": 1.0,
+	"queue_decay_multiplier": 0.5,
+	"queue_delay_checkin_min": 0.5,
+	"queue_delay_checkin_max": 1.5,
+	"queue_delay_checkout_min": 1.0,
+	"queue_delay_checkout_max": 3.0,
+	"seed_override": null,
 }
 const FALL_IMPACT_TO_DAMAGE_DIVISOR := 100.0
 
@@ -48,6 +55,7 @@ var _hud_snapshot: RefCounted
 var _last_summary: RefCounted
 var _meta_data: Dictionary = {}
 var _shift_config: Dictionary = SHIFT_DEFAULT_CONFIG.duplicate(true)
+var _seed: int = 0
 
 func setup(
 	save_manager,
@@ -66,8 +74,23 @@ func setup(
 	var resolved_inspection: RefCounted = inspection_config if inspection_config else build_default_inspection_config()
 	_magic_system.setup(resolved_magic)
 	_inspection_system.setup(resolved_inspection)
+	
+	_resolve_seed()
+	
 	_initialize_run_state()
 	_reset_demo_hud()
+
+func _resolve_seed() -> void:
+	if _shift_config.has("seed_override") and _shift_config["seed_override"] != null:
+		_seed = int(_shift_config["seed_override"])
+		return
+	var run_id: int = int(_meta_data.get("run_id", 0))
+	var shift_index: int = int(_meta_data.get("shift_index", 1))
+	_seed = hash(Vector2i(run_id, shift_index))
+
+func get_seed() -> int:
+	return _seed
+
 
 static func build_default_magic_config() -> RefCounted:
 	return MagicConfigScript.new(
@@ -118,6 +141,9 @@ func end_shift() -> RefCounted:
 		_save_manager.save_meta(_meta_data)
 	emit_signal("shift_ended", _last_summary.duplicate_summary())
 	return _last_summary.duplicate_summary()
+
+func get_shift_config() -> Dictionary:
+	return _shift_config.duplicate(true)
 
 func get_hud_snapshot() -> RefCounted:
 	return _hud_snapshot.duplicate_snapshot() if _hud_snapshot else null
@@ -262,8 +288,18 @@ func update_active_client_count(active_clients: int) -> void:
 		return
 	_run_state.active_clients = max(0, active_clients)
 
-func tick_patience(active_client_ids: Array, delta: float) -> Dictionary:
-	var result: Dictionary = _patience_system.tick_patience(_patience_state, active_client_ids, delta)
+func tick_patience(active_client_ids: Array, queue_client_ids: Array, delta: float) -> Dictionary:
+	var slot_rate := float(_shift_config.get("slot_decay_rate", 1.0))
+	var queue_mult := float(_shift_config.get("queue_decay_multiplier", 0.5))
+	
+	var result: Dictionary = _patience_system.tick_patience(
+		_patience_state,
+		active_client_ids,
+		queue_client_ids,
+		slot_rate,
+		queue_mult,
+		delta
+	)
 	var strike_clients: Array = result.get("strike_client_ids", [])
 	if strike_clients.is_empty():
 		return result

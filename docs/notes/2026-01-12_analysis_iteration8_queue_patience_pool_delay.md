@@ -10,6 +10,13 @@ Introduce queue patience decay with configurable rates and add a deterministic p
 - Queue delay must be deterministic (seeded) and not rely on nondeterministic RNG.
 - Separate delay ranges for checkin vs checkout are required.
 - Decay logging per tick is debug-only and off by default.
+- **[New]** Queue items must display a patience progress bar, similar to the desk UI.
+
+## Validation (Iter 6 & 7 check)
+- **Iteration 6 (Lights):** No conflict. Light zones and services operate independently of the patience system.
+- **Iteration 7 (Exposure):** No conflict. Exposure systems (`VampireExposureSystem`, `ZombieExposureSystem`) operate on `ItemInstance` quality and `ItemEffect`s. They do not directly manipulate patience. Strikes from quality loss are separate from patience strikes.
+- **RunManager Integration:** `WorkdeskScene` delegates patience ticking to `RunManager`, which forwards to `ShiftService`. Signatures will need to be updated across this chain to support queue clients.
+- **ClientQueueSystem:** Currently stateless helper. Will need `tick` method or state management for delays.
 
 ## Constraints & architecture rules
 - Domain/app must not depend on Node or SceneTree.
@@ -20,30 +27,41 @@ Introduce queue patience decay with configurable rates and add a deterministic p
 ## Current behavior (codebase)
 - `ShiftPatienceSystem.tick_patience(state, active_client_ids, delta)` applies decay only to active desk clients.
 - `WorkdeskScene._tick_patience()` collects active desk clients only.
+- `ClientQueueSystem` immediately requeues clients after dropoff.
 - No queue decay or pool delay exists.
+- `QueueHudView` displays static client portraits.
 
 ## Solution design
 ### Patience decay
 - Add `slot_decay_rate` and `queue_decay_multiplier` to shift config.
-- New tick signature accepts both active (desk) and queue client lists.
+- Update `ShiftPatienceSystem.tick_patience` signature to accept `active_client_ids` AND `queue_client_ids`.
 - Decay formula:
   - slot: `delta * slot_decay_rate`
   - queue: `delta * slot_decay_rate * queue_decay_multiplier`
   - pool: `0`
 
 ### Pool delay (deterministic)
-- Introduce a queue-delay tracker in app layer (ClientQueueSystem or dedicated helper).
-- Delay is deterministic using a hash-based method, not runtime RNG:
+- Extend `ClientQueueSystem` to manage delayed clients.
+- Add `tick(delta)` to `ClientQueueSystem`.
+- Delay is deterministic using a hash-based method:
   - `ratio = abs(hash(client_id + seed)) / MAX_INT`
   - `delay = lerp(min, max, ratio)`
 - Separate ranges for checkin vs checkout.
-- Seed comes from shift metadata with an override for tests.
+- Seed comes from `ShiftService` (propagated to `ClientQueueSystem` via `WardrobeWorldSetupAdapter` or similar).
+
+### Queue UI (Patience Bar)
+- **Data Flow:** `QueueHudPresenter` needs both current patience (already has via `patience_by`) and max patience to calculate ratio.
+- **Adapter:** Update `QueueHudAdapter.configure` to accept `patience_max_by`.
+- **View Model:** Update `QueueHudClientVM` to include `patience_ratio` (0.0 to 1.0).
+- **View:** `QueueHudView` adds a `ProgressBar` (or `ColorRect` overlay) to the client item. Update it in `_update_item`.
 
 ## Architecture (system design)
 ### Modules
 - `ShiftPatienceSystem` (domain/app): extends `tick_patience` to accept queue clients and rates.
-- `ShiftService`: provides shift config rates and seed; owns deterministic seed setup.
+- `ShiftService`: provides shift config rates and seed.
 - `ClientQueueSystem`: manages queue delay timers and enqueue-after-delay behavior.
+- `RunManager` / `ShiftService`: method signatures updated to pass queue clients.
+- `QueueHud*`: Updated for patience visualization.
 
 ### Data contracts
 - Shift config keys:
@@ -68,6 +86,3 @@ Introduce queue patience decay with configurable rates and add a deterministic p
 - Unit: pool clients do not decay.
 - Unit: deterministic delay from seed and client_id.
 - Integration: dropoff -> pool delay -> queue -> slot, strikes still only once.
-
-## Engine references (Godot 4.5)
-- No engine-specific APIs required beyond existing timing/tick integration.

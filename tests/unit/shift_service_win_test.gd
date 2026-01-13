@@ -82,7 +82,7 @@ func test_shift_wont_win_after_failure() -> void:
 		won_payloads.append(payload)
 	)
 
-	shift_service.tick_patience([StringName("Client_A")], 1.0)
+	shift_service.tick_patience([StringName("Client_A")], [], 1.0)
 	shift_service.update_active_client_count(0)
 	shift_service.register_checkin_completed(StringName("Client_A"))
 	shift_service.register_checkout_completed(StringName("Client_A"))

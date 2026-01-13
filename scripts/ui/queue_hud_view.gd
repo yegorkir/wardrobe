@@ -75,12 +75,47 @@ func _create_item(vm) -> Control:
 	content.add_child(icon)
 	wrapper.set_meta("content", content)
 	wrapper.set_meta("icon", icon)
+	
+	var bar := ProgressBar.new()
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 10)
+	bar.anchor_top = 1.0
+	bar.anchor_bottom = 1.0
+	bar.anchor_right = 1.0
+	bar.offset_top = -15
+	bar.offset_bottom = -5
+	bar.offset_left = 5
+	bar.offset_right = -5
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	var style_bg := StyleBoxFlat.new()
+	style_bg.bg_color = Color(0.1, 0.1, 0.1, 1.0)
+	bar.add_theme_stylebox_override("background", style_bg)
+	
+	var style_fill := StyleBoxFlat.new()
+	style_fill.bg_color = Color(1.0, 1.0, 1.0, 1.0)
+	bar.add_theme_stylebox_override("fill", style_fill)
+	
+	content.add_child(bar)
+	wrapper.set_meta("patience_bar", bar)
+	
 	return wrapper
 
 func _update_item(item: Control, vm) -> void:
 	var icon := item.get_meta("icon", null) as TextureRect
 	if icon:
 		icon.texture = _resolve_texture(vm.portrait_key)
+	
+	var bar := item.get_meta("patience_bar", null) as ProgressBar
+	if bar:
+		bar.value = vm.patience_ratio * 100.0
+		# Simple color feedback
+		if vm.patience_ratio < 0.25:
+			bar.modulate = Color(1, 0.3, 0.3) # Red
+		elif vm.patience_ratio < 0.5:
+			bar.modulate = Color(1, 0.8, 0.2) # Orange/Yellow
+		else:
+			bar.modulate = Color(0.4, 1, 0.4) # Green
 
 func _remove_item(client_id: StringName, immediate: bool) -> void:
 	if _leaving_ids.has(client_id):

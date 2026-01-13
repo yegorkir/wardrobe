@@ -15,6 +15,7 @@ func build_result(
 	clients: Dictionary,
 	queue_mix: Dictionary,
 	patience_by: Dictionary,
+	patience_max_by: Dictionary,
 	strikes_current: int,
 	strikes_limit: int,
 	max_visible: int,
@@ -34,14 +35,22 @@ func build_result(
 		var portrait_key := _resolve_portrait_key(client_state)
 		var status := STATUS_QUEUED
 		var patience_left := float(patience_by.get(client_id, 1.0))
+		var patience_max := float(patience_max_by.get(client_id, 30.0))
+		
 		if patience_left <= 0.0:
 			status = STATUS_LEAVING_RED
 			new_timeouts.append(client_id)
+			
+		var ratio := 1.0
+		if patience_max > 0.0:
+			ratio = clampf(patience_left / patience_max, 0.0, 1.0)
+			
 		var vm := QueueHudClientVMScript.new(
 			client_id,
 			portrait_key,
 			[],
-			status
+			status,
+			ratio
 		)
 		upcoming.append(vm)
 	var remaining_checkin := int(queue_mix.get("need_in", 0))

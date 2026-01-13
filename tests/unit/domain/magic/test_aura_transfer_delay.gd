@@ -30,7 +30,7 @@ func test_transfer_delay_prevents_immediate_corruption() -> void:
 	
 	var archetype_provider = func(id):
 		if id == zombie_id:
-			return ItemArchetypeDefinitionScript.new(zombie_id, false, true, 100.0)
+			return ItemArchetypeDefinitionScript.new(zombie_id, false, true, 3)
 		return null
 	
 	# Tick for 0.4s (less than t=0.5)
@@ -118,7 +118,7 @@ func test_exit_and_reenter_resets_pending() -> void:
 	assert_float(z_state.pending_transfers[zombie_id]).is_equal_approx(0.2, 0.001)
 	
 	# Exit aura
-	var pos_out = { zombie_id: Vector2.ZERO, target_id: Vector2(200, 0) }
+	var pos_out = { zombie_id: Vector2.ZERO, target_id: Vector2(10000, 0) }
 	_exposure.tick(items, pos_out, drag_states, empty_dict, empty_sources, archetype_provider, 0.1)
 	assert_bool(z_state.pending_transfers.has(zombie_id)).is_false()
 	

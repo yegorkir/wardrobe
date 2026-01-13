@@ -171,6 +171,12 @@ func _finish_ready_setup() -> void:
 	if _run_manager != null:
 		interaction_context.apply_patience_penalty = Callable(_run_manager, "apply_patience_penalty")
 		interaction_context.register_item = Callable(_run_manager, "register_item")
+		
+		# Configure Queue System
+		var queue_system = _world_adapter.get_queue_system()
+		if queue_system:
+			queue_system.configure(_run_manager.get_shift_config(), _run_manager.get_seed())
+
 	_interaction_logger.configure(Callable(_shift_log, "record"))
 	interaction_context.interaction_logger = _interaction_logger
 	_interaction_events.set_unhandled_policy(desk_event_unhandled_policy)
@@ -255,6 +261,13 @@ func _process(delta: float) -> void:
 	_dragdrop_adapter.update_drag_watchdog()
 	_tick_patience(delta)
 	_tick_exposure(delta)
+	
+	if not _shift_finished and _clients_ready:
+		var queue_system = _world_adapter.get_queue_system()
+		var queue_state = _world_adapter.get_client_queue_state()
+		if queue_system and queue_state:
+			queue_system.tick(queue_state, delta)
+
 	_queue_hud_adapter.update()
 
 func _tick_exposure(delta: float) -> void:
@@ -492,6 +505,7 @@ func _setup_queue_hud() -> void:
 		_world_adapter.get_clients(),
 		_run_manager,
 		_patience_by_client_id,
+		_patience_max_by_client_id,
 		queue_hud_max_visible
 	)
 	if queue_hud_preview_enabled:
@@ -560,7 +574,20 @@ func _tick_patience(delta: float) -> void:
 			if client_id == StringName():
 				continue
 			active_clients.append(client_id)
-		_run_manager.tick_patience(active_clients, delta)
+			
+		var queue_state = _world_adapter.get_client_queue_state()
+		var queue_clients: Array = queue_state.get_snapshot() if queue_state else []
+		
+		# Filter out active clients from queue list (sanity check)
+		# Though usually if they are at desk they are NOT in queue state.
+		# ClientQueueState manages queue, DeskState manages active.
+		# But let's be safe.
+		var pure_queue_clients: Array = []
+		for cid in queue_clients:
+			if not cid in active_clients:
+				pure_queue_clients.append(cid)
+		
+		_run_manager.tick_patience(active_clients, pure_queue_clients, delta)
 		_apply_patience_snapshot(_run_manager.get_patience_snapshot())
 		_run_manager.update_active_client_count(active_clients.size())
 	_clients_ui.refresh()

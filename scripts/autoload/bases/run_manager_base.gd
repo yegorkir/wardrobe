@@ -156,6 +156,16 @@ func update_active_client_count(active_clients: int) -> void:
 	if _shift_service:
 		_shift_service.update_active_client_count(active_clients)
 
+func get_seed() -> int:
+	if _shift_service:
+		return _shift_service.get_seed()
+	return 0
+
+func get_shift_config() -> Dictionary:
+	if _shift_service:
+		return _shift_service.get_shift_config()
+	return {}
+
 func get_patience_snapshot() -> Dictionary:
 	if _shift_service:
 		return _shift_service.get_patience_snapshot()
@@ -164,9 +174,9 @@ func get_patience_snapshot() -> Dictionary:
 		"patience_max_by_client_id": {},
 	}
 
-func tick_patience(active_client_ids: Array, delta: float) -> Dictionary:
+func tick_patience(active_client_ids: Array, queue_client_ids: Array, delta: float) -> Dictionary:
 	if _shift_service:
-		return _shift_service.tick_patience(active_client_ids, delta)
+		return _shift_service.tick_patience(active_client_ids, queue_client_ids, delta)
 	return {}
 
 func apply_patience_penalty(client_id: StringName, amount: float, reason_code: StringName) -> Dictionary:
