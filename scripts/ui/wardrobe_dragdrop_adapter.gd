@@ -158,6 +158,11 @@ func has_active_drag() -> bool:
 		return true
 	return _cursor_hand != null and _cursor_hand.get_active_hand_item() != null
 
+func get_dragged_item() -> ItemNode:
+	if _cursor_hand == null:
+		return null
+	return _cursor_hand.get_active_hand_item()
+
 func cancel_drag() -> void:
 	_drag_active = false
 	_set_hover_slot(null)
@@ -437,7 +442,7 @@ func _get_item_instance_for_node(item: ItemNode) -> ItemInstance:
 			return found
 	var kind := _item_visuals.resolve_kind_from_item_type(item.item_type)
 	var color := _item_visuals.get_item_color(item)
-	return ItemInstanceScript.new(item_id, kind, color)
+	return ItemInstanceScript.new(item_id, kind, &"", color)
 
 func _get_item_place_flags(item: ItemNode) -> int:
 	if item == null:
@@ -605,7 +610,7 @@ func _instance_from_snapshot(snapshot: Dictionary) -> ItemInstance:
 	var kind: StringName = snapshot.get("kind", ItemInstanceScript.KIND_COAT)
 	var color_variant: Variant = snapshot.get("color", Color.WHITE)
 	var color := _item_visuals.parse_color(color_variant)
-	return ItemInstanceScript.new(id, kind, color)
+	return ItemInstanceScript.new(id, kind, &"", color)
 
 func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)

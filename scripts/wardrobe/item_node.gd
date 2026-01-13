@@ -79,6 +79,9 @@ const TRANSFER_SINK_LOG_FRAMES := 6
 var ticket_number: int = -1
 var durability: float = 100.0
 
+var _item_instance: RefCounted
+var _aura_particles: GPUParticles2D
+
 @onready var _pick_shape: CollisionShape2D = $PickArea/CollisionShape2D
 @onready var _sprite: Sprite2D = $Sprite
 @onready var _physics_shape: CollisionShape2D = get_node_or_null("PhysicsShape") as CollisionShape2D
@@ -127,6 +130,41 @@ func _ready() -> void:
 	_apply_physics_material()
 	_update_center_of_mass()
 	body_entered.connect(_on_body_entered)
+
+func set_item_instance(instance: RefCounted) -> void:
+	_item_instance = instance
+
+func get_item_instance() -> RefCounted:
+	return _item_instance
+
+func set_emitting_aura(enabled: bool) -> void:
+	if enabled:
+		if _aura_particles == null:
+			_create_aura_particles()
+		_aura_particles.emitting = true
+	else:
+		if _aura_particles != null:
+			_aura_particles.emitting = false
+
+func _create_aura_particles() -> void:
+	_aura_particles = GPUParticles2D.new()
+	_aura_particles.name = "AuraParticles"
+	
+	var material = ParticleProcessMaterial.new()
+	material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	material.emission_sphere_radius = 24.0
+	material.gravity = Vector3(0, -10, 0)
+	material.color = Color(0.1, 0.4, 0.1, 0.6) # Dark green transparent
+	material.scale_min = 2.0
+	material.scale_max = 4.0
+	
+	_aura_particles.process_material = material
+	_aura_particles.amount = 24
+	_aura_particles.lifetime = 1.0
+	_aura_particles.local_coords = true # Move with item
+	
+	add_child(_aura_particles)
+	move_child(_aura_particles, 0)
 
 func _physics_process(delta: float) -> void:
 	if _transfer_phase != TransferPhase.NONE:

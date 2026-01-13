@@ -23,3 +23,8 @@ func to_snapshot() -> Dictionary:
 		"current": current_stars,
 		"max": max_stars
 	}
+
+func reduce_quality(amount: float) -> float:
+	var old_stars = current_stars
+	current_stars = clampf(current_stars - amount, 0.0, float(max_stars))
+	return old_stars - current_stars

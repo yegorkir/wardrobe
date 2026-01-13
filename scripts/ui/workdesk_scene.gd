@@ -26,6 +26,8 @@ const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.
 const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_adapter.gd")
+const ExposureServiceScript := preload("res://scripts/domain/magic/exposure_service.gd")
+const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -47,6 +49,8 @@ const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_ada
 var _interaction_service := WardrobeInteractionServiceScript.new()
 var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
 var _light_service: LightService
+var _exposure_service: ExposureServiceScript
+var _archetype_cache: Dictionary = {}
 var _event_adapter: WardrobeInteractionEventAdapter = WardrobeInteractionEventAdapterScript.new()
 var _step3_setup: WardrobeStep3SetupAdapter = WardrobeStep3SetupAdapterScript.new()
 var _interaction_events_bridge: WorkdeskDeskEventsBridge = WorkdeskDeskEventsBridgeScript.new()
@@ -86,6 +90,7 @@ func _ready() -> void:
 
 func _finish_ready_setup() -> void:
 	_light_service = LightServiceScript.new(Callable(_shift_log, "record"))
+	_exposure_service = ExposureServiceScript.new(Callable(_shift_log, "record"))
 
 	if _light_zones_adapter:
 		_light_zones_adapter.setup(_light_service)
@@ -234,10 +239,86 @@ func _unhandled_input(event: InputEvent) -> void:
 		_dragdrop_adapter.on_pointer_move(drag.position)
 		return
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_dragdrop_adapter.update_drag_watchdog()
-	_tick_patience(_delta)
+	_tick_patience(delta)
+	_tick_exposure(delta)
 	_queue_hud_adapter.update()
+
+func _tick_exposure(delta: float) -> void:
+	if _shift_finished or not _clients_ready: return
+
+	var items: Array = []
+	var positions: Dictionary = {}
+	var drag_states: Dictionary = {}
+	var light_states: Dictionary = {}
+	var light_sources: Dictionary = {}
+
+	var spawned_items = _world_adapter.get_spawned_items()
+	for item_node in spawned_items:
+		if not is_instance_valid(item_node): continue
+		if not item_node.has_method("get_item_instance"): continue
+
+		var item_instance = item_node.get_item_instance()
+		if not item_instance: continue
+
+		items.append(item_instance)
+		positions[item_instance.id] = item_node.global_position
+		drag_states[item_instance.id] = (item_node == _dragdrop_adapter.get_dragged_item())
+		
+		var is_in_light = false
+		if _light_zones_adapter:
+			is_in_light = _light_zones_adapter.is_item_in_light(item_node)
+			light_sources[item_instance.id] = _light_zones_adapter.which_sources_affect(item_node)
+		else:
+			light_sources[item_instance.id] = []
+		
+		light_states[item_instance.id] = is_in_light
+
+	if not items.is_empty():
+		_exposure_service.tick(
+			items,
+			positions,
+			drag_states,
+			light_states,
+			light_sources,
+			Callable(self, "_get_item_archetype"),
+			delta
+		)
+
+	for item_node in spawned_items:
+		if not is_instance_valid(item_node): continue
+		var item_instance = item_node.get_item_instance()
+		if not item_instance: continue
+		
+		var is_emitting = _exposure_service.is_emitting_weak_aura(item_instance.id)
+		if item_node.has_method("set_emitting_aura"):
+			item_node.set_emitting_aura(is_emitting)
+			
+		# Also update quality visuals if changed
+		_item_visuals.refresh_quality_stars(item_node)
+
+func _get_item_archetype(item_id: StringName) -> ItemArchetypeDefinitionScript:
+	var item_instance = _world_adapter.find_item_instance(item_id)
+	if not item_instance: return null
+
+	var arch_id = item_instance.archetype_id
+	if arch_id == StringName(): return null
+
+	if _archetype_cache.has(arch_id):
+		return _archetype_cache[arch_id]
+
+	var def: ItemArchetypeDefinitionScript
+	if arch_id == "vampire_cloak":
+		def = ItemArchetypeDefinitionScript.new(arch_id, true, false, 0.0)
+	elif arch_id == "zombie_rag":
+		def = ItemArchetypeDefinitionScript.new(arch_id, false, true, 150.0)
+	else:
+		def = ItemArchetypeDefinitionScript.new(arch_id)
+
+	_archetype_cache[arch_id] = def
+	return def
+
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:

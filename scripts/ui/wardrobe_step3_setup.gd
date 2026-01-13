@@ -125,14 +125,30 @@ func _make_demo_client(index: int, client_id: StringName, color: Color) -> Clien
 	var item_type := WardrobeItemConfigScript.get_demo_item_type_for_client(index)
 	var item_id := WardrobeItemConfigScript.build_client_item_id(item_type, index)
 	var item_kind := WardrobeItemConfigScript.get_kind_for_item_type(item_type)
+
+	var client_def_id := _resolve_client_def_id(index)
+	var client_def := _resolve_client_definition(client_def_id)
+	var client_archetype_id: StringName = client_def.get("archetype_id", StringName())
+	var portrait_key: StringName = client_def.get("portrait_key", StringName())
+	var wrong_item_penalty: float = float(client_def.get("wrong_item_penalty", 0.0))
+
+	var item_archetype_id := StringName()
+	# Simple mapping for iteration 7
+	if client_archetype_id == "vampire" or client_archetype_id == "client_vampire":
+		item_archetype_id = "vampire_cloak"
+	elif client_archetype_id == "zombie" or client_archetype_id == "client_zombie":
+		item_archetype_id = "zombie_rag"
+
 	var coat := ItemInstanceScript.new(
 		item_id,
 		item_kind,
+		item_archetype_id,
 		color
 	)
 	var ticket := ItemInstanceScript.new(
 		StringName("ticket_%02d" % index),
 		ItemInstanceScript.KIND_TICKET,
+		StringName(), # Archetype for ticket
 		color
 	)
 	
@@ -140,18 +156,13 @@ func _make_demo_client(index: int, client_id: StringName, color: Color) -> Clien
 		_register_item.call(coat)
 		_register_item.call(ticket)
 		
-	var client_def_id := _resolve_client_def_id(index)
-	var client_def := _resolve_client_definition(client_def_id)
-	var archetype_id: StringName = client_def.get("archetype_id", StringName())
-	var portrait_key: StringName = client_def.get("portrait_key", StringName())
-	var wrong_item_penalty: float = float(client_def.get("wrong_item_penalty", 0.0))
 	return ClientStateScript.new(
 		client_id,
 		coat,
 		ticket,
 		StringName(),
 		StringName("color_%d" % index),
-		archetype_id,
+		client_archetype_id,
 		wrong_item_penalty,
 		client_def_id,
 		portrait_key
