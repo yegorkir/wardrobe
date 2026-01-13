@@ -96,8 +96,9 @@ class TransferEffectData:
 		node = p_node
 
 var _transfer_effects: Dictionary = {} # target_id -> TransferEffectData
-var _is_aura_dimmed: bool = false
 const TRANSFER_RETURN_SPEED := 2.0
+const AURA_DENSITY_FACTOR := 0.6
+const MIN_AURA_PARTICLES := 12
 
 @onready var _pick_shape: CollisionShape2D = $PickArea/CollisionShape2D
 @onready var _sprite: Sprite2D = $Sprite
@@ -164,6 +165,12 @@ func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
 		if radius > 0.0:
 			_set_aura_radius(radius)
 			_set_aura_debug_ring_radius(radius)
+			
+			# Dynamic density: more particles for larger radius
+			var new_amount = max(MIN_AURA_PARTICLES, int(radius * AURA_DENSITY_FACTOR))
+			if _aura_particles.amount != new_amount:
+				_aura_particles.amount = new_amount
+				
 		if DebugFlags.enabled:
 			_show_aura_debug_ring(true)
 		_aura_particles.emitting = true
@@ -171,20 +178,6 @@ func set_emitting_aura(enabled: bool, radius: float = -1.0) -> void:
 		if _aura_particles != null:
 			_aura_particles.emitting = false
 		_show_aura_debug_ring(false)
-
-func set_aura_dimmed(dimmed: bool) -> void:
-	if _is_aura_dimmed == dimmed:
-		return
-	_is_aura_dimmed = dimmed
-	if _aura_particles:
-		var proc_mat = _aura_particles.process_material as ParticleProcessMaterial
-		if proc_mat:
-			if dimmed:
-				proc_mat.color.a = 0.3
-				_aura_particles.amount_ratio = 0.5
-			else:
-				proc_mat.color.a = 0.9
-				_aura_particles.amount_ratio = 1.0
 
 func update_transfer_effect(target_id: StringName, target_global_pos: Vector2, progress: float, target_item_radius: float) -> void:
 	var data: TransferEffectData

@@ -1,4 +1,4 @@
-3extends RefCounted
+extends RefCounted
 class_name ZombieExposureConfig
 
 var radius_per_stage: float

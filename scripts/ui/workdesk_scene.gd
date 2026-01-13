@@ -359,7 +359,6 @@ func _tick_exposure(delta: float) -> void:
 			
 		# Transfer effects visualization
 		if source_usage.has(item_instance.id):
-			item_node.set_aura_dimmed(true)
 			var active_targets: Array = []
 			for usage in source_usage[item_instance.id]:
 				item_node.update_transfer_effect(
@@ -371,7 +370,6 @@ func _tick_exposure(delta: float) -> void:
 				active_targets.append(usage.target_id)
 			item_node.clear_unused_transfers(active_targets)
 		else:
-			item_node.set_aura_dimmed(false)
 			item_node.clear_unused_transfers([])
 
 		# Also update quality visuals if changed

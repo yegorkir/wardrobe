@@ -68,7 +68,9 @@ func tick(
 		var innate_stage = arch.zombie_innate_stage if arch else 0
 		var effective_stage = z_state.stage_index + innate_stage
 		
-		target_stages[item.id] = effective_stage
+		# Only register as a potential TARGET if it can be corrupted
+		if item.can_be_corrupted():
+			target_stages[item.id] = effective_stage
 		
 		if drag_states.get(item.id, false):
 			continue
@@ -95,6 +97,9 @@ func tick(
 	var zombie_results: Dictionary = {} # { item_id: ExposureResult }
 	
 	for item in items:
+		if not item.can_be_corrupted():
+			continue
+
 		var z_state = _item_states[item.id]["zombie"] as ZombieExposureState
 		var potential: Array = potential_map.get(item.id, [])
 		

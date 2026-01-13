@@ -65,3 +65,6 @@ func apply_effect(effect: ItemEffect) -> ItemEffectResult:
 		actual_loss = quality_state.reduce_quality(quality_loss_amount)
 	
 	return ItemEffectResult.new(accepted, actual_loss, [])
+
+func can_be_corrupted() -> bool:
+	return kind != KIND_TICKET and kind != KIND_ANCHOR_TICKET
