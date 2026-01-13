@@ -2,11 +2,9 @@ extends RefCounted
 class_name ZombieExposureSystem
 
 const ItemEffect := preload("res://scripts/domain/effects/item_effect.gd")
-const ItemEffectResult := preload("res://scripts/domain/effects/item_effect_result.gd")
 const ItemEffectTypes := preload("res://scripts/domain/effects/item_effect_types.gd")
 const ZombieExposureState := preload("res://scripts/domain/magic/zombie_exposure_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-
 const EXPOSURE_THRESHOLD := 3.0
 const QUALITY_LOSS_PER_STAGE := 1
 
@@ -15,7 +13,7 @@ var _logger: Callable
 func _init(logger: Callable = Callable()) -> void:
 	_logger = logger
 
-func tick(state: ZombieExposureState, item: ItemInstance, exposure_rate: float, is_dragging: bool, delta: float) -> void:
+func tick(state: ZombieExposureState, item: ItemInstance, exposure_rate: float, source_ids: Array[StringName], is_dragging: bool, delta: float) -> void:
 	if is_dragging:
 		state.reset()
 		return
@@ -48,5 +46,6 @@ func tick(state: ZombieExposureState, item: ItemInstance, exposure_rate: float, 
 				"item_id": item.id,
 				"stage": state.stage_index,
 				"loss": result.quality_loss,
-				"rate": exposure_rate
+				"rate": exposure_rate,
+				"sources": source_ids
 			})

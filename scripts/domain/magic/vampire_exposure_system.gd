@@ -2,12 +2,10 @@ extends RefCounted
 class_name VampireExposureSystem
 
 const ItemEffect := preload("res://scripts/domain/effects/item_effect.gd")
-const ItemEffectResult := preload("res://scripts/domain/effects/item_effect_result.gd")
 const ItemEffectTypes := preload("res://scripts/domain/effects/item_effect_types.gd")
 const VampireExposureState := preload("res://scripts/domain/magic/vampire_exposure_state.gd")
 const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
 const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
-
 const EXPOSURE_THRESHOLD := 1.0 
 const QUALITY_LOSS_PER_STAGE := 1
 

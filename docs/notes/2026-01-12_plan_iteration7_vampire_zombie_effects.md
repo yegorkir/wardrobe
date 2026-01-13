@@ -55,3 +55,27 @@
   - `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`
 - Launch Godot once:
   - `"$GODOT_BIN" --path .`
+
+## Follow-up plan (2026-01-13) — Remaining work
+1) **Confirm test baseline**
+   - Re-run canonical tests; resolve any parser/type errors (latest logs showed `ItemEffect`/`ItemEffectResult` parse failures).
+   - If errors persist, align `class_name` usage and type hints for `ItemEffect*` classes.
+
+2) **Fix weak aura propagation radius**
+   - Add a dedicated `weak_aura_radius` config (global or per-archetype).
+   - Ensure non-zombie items that reached stage 1 emit a weak aura with the new radius.
+
+3) **Expose affecting sources in aura service**
+   - Extend `CorruptionAuraService` to optionally return source ids for logging/debug.
+   - Update exposure orchestration to pass `sources` into logs if required.
+
+4) **Add missing tests**
+   - Integration/deterministic scenario (zombie + nearby + far) with stable results.
+   - Propagation test to confirm weak aura spreads from a non-zombie item.
+
+5) **Clarify/implement vampire exposure UI**
+   - If still required, implement a simple progress bar indicator driven by exposure state.
+
+6) **Docs hygiene**
+   - Update `docs/checklist/2026-01-12_iteration7_vampire_zombie_effects.md`.
+   - Update `docs/changelog/2026-01-12_iteration7_vampire_zombie_effects.md`.

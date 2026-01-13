@@ -57,16 +57,16 @@ func test_zombie_exposure_accumulation() -> void:
 	var item = ItemInstanceScript.new("test_normal", "COAT")
 	
 	# Tick with rate
-	system.tick(state, item, 1.0, false, 0.5)
+	system.tick(state, item, 1.0, [], false, 0.5)
 	assert_float(state.current_stage_exposure).is_equal(0.5)
 	
 	# Drag resets
-	system.tick(state, item, 1.0, true, 0.1)
+	system.tick(state, item, 1.0, [], true, 0.1)
 	assert_float(state.current_stage_exposure).is_equal(0.0)
 	
 	# Rate 0 resets
-	system.tick(state, item, 1.0, false, 0.5)
-	system.tick(state, item, 0.0, false, 0.1)
+	system.tick(state, item, 1.0, [], false, 0.5)
+	system.tick(state, item, 0.0, [], false, 0.1)
 	assert_float(state.current_stage_exposure).is_equal(0.0)
 
 func test_zombie_effect_and_propagation() -> void:
@@ -78,7 +78,7 @@ func test_zombie_effect_and_propagation() -> void:
 	assert_float(item.quality_state.current_stars).is_equal(3.0)
 	
 	# Reach threshold (3.0)
-	system.tick(state, item, 1.0, false, 3.0)
+	system.tick(state, item, 1.0, [&"zombie_1"], false, 3.0)
 	
 	assert_int(state.stage_index).is_equal(1)
 	assert_bool(state.is_emitting_weak_aura).is_true()
@@ -86,7 +86,7 @@ func test_zombie_effect_and_propagation() -> void:
 
 func test_corruption_aura_service() -> void:
 	var service = CorruptionAuraServiceScript.new()
-	var source = CorruptionAuraServiceScript.AuraSource.new(Vector2(0, 0), 100.0, 1.0)
+	var source = CorruptionAuraServiceScript.AuraSource.new(&"s1", Vector2(0, 0), 100.0, 1.0)
 	
 	var targets = {
 		"near": Vector2(10, 0),
@@ -94,18 +94,20 @@ func test_corruption_aura_service() -> void:
 		"edge": Vector2(99, 0)
 	}
 	
-	var rates = service.calculate_exposure_rates(targets, [source])
+	var results = service.calculate_exposure_rates(targets, [source])
 	
-	assert_float(rates["near"]).is_equal(1.0)
-	assert_float(rates["far"]).is_equal(0.0)
-	assert_float(rates["edge"]).is_equal(1.0)
+	assert_float(results["near"].rate).is_equal(1.0)
+	assert_array(results["near"].sources).contains_exactly([&"s1"])
+	assert_float(results["far"].rate).is_equal(0.0)
+	assert_float(results["edge"].rate).is_equal(1.0)
 	
 	# Stacking and Cap
-	var source2 = CorruptionAuraServiceScript.AuraSource.new(Vector2(10, 0), 100.0, 1.0)
-	var source3 = CorruptionAuraServiceScript.AuraSource.new(Vector2(20, 0), 100.0, 1.0)
-	var source4 = CorruptionAuraServiceScript.AuraSource.new(Vector2(30, 0), 100.0, 1.0)
+	var source2 = CorruptionAuraServiceScript.AuraSource.new(&"s2", Vector2(10, 0), 100.0, 1.0)
+	var source3 = CorruptionAuraServiceScript.AuraSource.new(&"s3", Vector2(20, 0), 100.0, 1.0)
+	var source4 = CorruptionAuraServiceScript.AuraSource.new(&"s4", Vector2(30, 0), 100.0, 1.0)
 	
-	var rates_stacked = service.calculate_exposure_rates(targets, [source, source2, source3, source4])
+	var stacked_results = service.calculate_exposure_rates(targets, [source, source2, source3, source4])
 	
 	# 4 sources overlapping "near"
-	assert_float(rates_stacked["near"]).is_equal(3.0) # Cap at 3.0
+	assert_float(stacked_results["near"].rate).is_equal(3.0) # Cap at 3.0
+	assert_int(stacked_results["near"].sources.size()).is_equal(4)

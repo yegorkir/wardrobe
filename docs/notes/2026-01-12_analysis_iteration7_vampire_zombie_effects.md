@@ -105,3 +105,56 @@ Define domain-first rules and APIs for vampire light exposure and zombie aura ex
   https://docs.godotengine.org/en/4.5/classes/class_gpuparticles2d.html
 - Node2D (item visuals positioning):
   https://docs.godotengine.org/en/4.5/classes/class_node2d.html
+
+## Status audit (2026-01-13)
+### Implemented (as found in repo)
+- Item archetype id wired into `ItemInstance` snapshots/duplication.
+- Unified `ItemEffectTypes`, `ItemEffect`, `ItemEffectResult` + `ItemInstance.apply_effect`.
+- Vampire exposure state/system with staged quality loss and drag/light reset.
+- Zombie exposure state/system + aura rate service with stacking/cap.
+- Exposure orchestration in `ExposureService` and UI tick hookup in `WorkdeskScene`.
+- Aura particles toggled via `ItemNode.set_emitting_aura`.
+- Unit tests exist for vampire/zombie exposure and aura rate (`tests/unit/domain/magic/exposure_test.gd`).
+
+### Missing or uncertain vs Iteration 7 requirements
+- **Propagation radius** for weak aura on non-zombie items: current implementation uses `arch.corruption_aura_radius`, which is `0.0` for normal items, so propagation likely never spreads beyond zombie archetypes.
+- **Aura service output** only returns exposure rates; no affecting-source list is available for richer logs/debug.
+- **UI exposure indicator for vampire light** (progress bar) not present.
+- **Deterministic scenario/integration tests** (3-item scenario) not present.
+- **Tests not confirmed passing**: latest `reports/test_run_*.log` show parse errors for `ItemEffect`/`ItemEffectResult` in `item_instance.gd`, so verification is incomplete.
+- **Checklist/changelog not updated** to reflect current state.
+
+## Architecture options for remaining work
+### Option A — Keep ExposureService in domain, add explicit config
+- Keep `ExposureService` in `scripts/domain/magic/`.
+- Introduce `VampireExposureConfig` + `ZombieExposureConfig` (thresholds, loss, caps, weak aura radius).
+- Pass config from app/adapters, keep systems deterministic and testable.
+- Pros: minimal refactor; keeps SSOT in domain state.
+- Cons: config plumbing added to UI/adapters unless moved to app.
+
+### Option B — Move orchestration to app layer
+- Create `scripts/app/magic/exposure_orchestrator.gd` for tick-level coordination.
+- Domain systems stay pure (`VampireExposureSystem`, `ZombieExposureSystem`, `CorruptionAuraService`).
+- UI adapters provide data to app orchestrator, then emit outcomes back to UI.
+- Pros: aligns with app/domain separation; easier to mock in tests.
+- Cons: requires moving some logic from `WorkdeskScene`.
+
+## Module/class design adjustments (recommended)
+- `ZombieExposureConfig`:
+  - `threshold_per_stage`, `quality_loss_per_stage`, `stack_rate_cap`, `weak_aura_radius`.
+- `CorruptionAuraService`:
+  - return `ExposureRateResult` with `rate` and `source_ids` for logging.
+- `ExposureService`:
+  - store per-item exposure state + config
+  - expose snapshot access (copies) for UI indicators.
+- `ItemArchetypeDefinition`:
+  - if archetype-driven aura is desired, extend with `weak_aura_radius` (or keep weak aura purely config-driven).
+
+## Open questions / clarifications needed
+- Should vampire exposure progress be visualized (progress bar) in this iteration, or can it remain internal?
+- Should weak aura radius be fixed global config, or vary by item/archetype?
+- Is the exposure reset on zombie aura meant to be immediate (current behavior) or a decay over time?
+
+## Additional engine references
+- ParticleProcessMaterial (used by aura particles):
+  https://docs.godotengine.org/en/4.5/classes/class_particleprocessmaterial.html
