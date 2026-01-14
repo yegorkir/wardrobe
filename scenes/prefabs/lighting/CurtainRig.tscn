@@ -1,7 +1,7 @@
-[gd_scene load_steps=4 format=3 uid="uid://qavqeudwaxgi"]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/prefabs/lighting/CurtainStrip.tscn" id="1"]
-[ext_resource type="Script" uid="uid://dy2t3xqb64kmu" path="res://scripts/wardrobe/lights/curtain_light_adapter.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/wardrobe/lights/curtain_light_adapter.gd" id="2"]
 
 [sub_resource type="RectangleShape2D" id="100"]
 size = Vector2(325, 982)

@@ -1,10 +1,10 @@
-[gd_scene load_steps=6 format=3 uid="uid://b1vy45o0cbxlk"]
+[gd_scene load_steps=6 format=3]
 
-[ext_resource type="Script" uid="uid://dj1bcacnq58ve" path="res://scripts/wardrobe/storage_cabinet_layout.gd" id="1"]
-[ext_resource type="Script" uid="uid://cio6mjjwij4eb" path="res://scripts/wardrobe/slot.gd" id="2"]
-[ext_resource type="Texture2D" uid="uid://dfp2x8jbfnx2f" path="res://assets/sprites/wardrobe.png" id="3"]
-[ext_resource type="Texture2D" uid="uid://ckyaef5gy7qrw" path="res://assets/sprites/placeholder/slot.png" id="4"]
-[ext_resource type="PackedScene" uid="uid://c6v8jfs7u3xw1" path="res://scenes/prefabs/shelf_surface.tscn" id="5"]
+[ext_resource type="Script" path="res://scripts/wardrobe/storage_cabinet_layout.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/wardrobe/slot.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/wardrobe.png" id="3"]
+[ext_resource type="Texture2D" path="res://assets/sprites/placeholder/slot.png" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/prefabs/shelf_surface.tscn" id="5"]
 
 [node name="StorageCabinetLayout_Simple" type="Node2D"]
 script = ExtResource("1")
