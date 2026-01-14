@@ -1,9 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://bbsuw6pn2oo58"]
+[gd_scene load_steps=5 format=3]
 
-[ext_resource type="Script" uid="uid://emihdntv5wed" path="res://scripts/wardrobe/desk_service_point.gd" id="1"]
-[ext_resource type="Texture2D" uid="uid://b5i02up0x3qej" path="res://assets/sprites/placeholder/desk.svg" id="2"]
-[ext_resource type="Texture2D" uid="uid://ckyaef5gy7qrw" path="res://assets/sprites/placeholder/slot.png" id="3"]
-[ext_resource type="Script" uid="uid://cio6mjjwij4eb" path="res://scripts/wardrobe/slot.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/wardrobe/desk_service_point.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/placeholder/desk.svg" id="2"]
+[ext_resource type="Texture2D" path="res://assets/sprites/placeholder/slot.png" id="3"]
+[ext_resource type="Script" path="res://scripts/wardrobe/slot.gd" id="4"]
 
 [node name="DeskServicePoint" type="Node2D"]
 script = ExtResource("1")
