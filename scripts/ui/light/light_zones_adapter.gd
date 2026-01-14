@@ -72,7 +72,7 @@ func _update_curtain_shape(ratio: float) -> void:
 		var active_rect := _get_curtain_active_rect()
 		visual.size = active_rect.size
 		visual.position = -active_rect.size * 0.5
-		visual.visible = ratio > 0.001
+		visual.visible = active_rect.has_area()
 
 func _on_bulb_changed(_row: int, _is_on: bool) -> void:
 	if debug_draw:
@@ -97,19 +97,20 @@ func _draw() -> void:
 	if not debug_draw:
 		return
 
-	var curtain_rect := _get_curtain_active_rect()
-	if curtain_rect.has_area():
-		var local_rect := Rect2(to_local(curtain_rect.position), curtain_rect.size)
-		draw_rect(local_rect, debug_color_curtain)
+	# Debug drawing is disabled to prefer shader visuals.
+	# Uncomment to debug zone rects.
+	# var curtain_rect := _get_curtain_active_rect()
+	# if curtain_rect.has_area():
+	# 	var local_rect := Rect2(to_local(curtain_rect.position), curtain_rect.size)
+	# 	draw_rect(local_rect, debug_color_curtain)
 		
-	# Draw Bulbs
-	if (_light_service and _light_service.is_bulb_on(0)):
-		var local_r0 := Rect2(to_local(_bulb_row0_rect.position), _bulb_row0_rect.size)
-		draw_rect(local_r0, debug_color_bulb)
+	# if (_light_service and _light_service.is_bulb_on(0)):
+	# 	var local_r0 := Rect2(to_local(_bulb_row0_rect.position), _bulb_row0_rect.size)
+	# 	draw_rect(local_r0, debug_color_bulb)
 		
-	if (_light_service and _light_service.is_bulb_on(1)):
-		var local_r1 := Rect2(to_local(_bulb_row1_rect.position), _bulb_row1_rect.size)
-		draw_rect(local_r1, debug_color_bulb)
+	# if (_light_service and _light_service.is_bulb_on(1)):
+	# 	var local_r1 := Rect2(to_local(_bulb_row1_rect.position), _bulb_row1_rect.size)
+	# 	draw_rect(local_r1, debug_color_bulb)
 
 func _refresh_zones() -> void:
 	_curtain_zone = _get_shape_node(curtain_zone_path)

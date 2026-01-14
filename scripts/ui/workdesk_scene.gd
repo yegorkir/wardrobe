@@ -106,10 +106,10 @@ func _finish_ready_setup() -> void:
 	_light_service = LightServiceScript.new(Callable(_shift_log, "record"))
 	_exposure_service = ExposureServiceScript.new(Callable(_shift_log, "record"), _zombie_config)
 
-	if _light_zones_adapter:
-		_light_zones_adapter.setup(_light_service)
 	if _curtain_light_adapter:
 		_curtain_light_adapter.setup(_light_service, LightZonesAdapterScript.CURTAIN_SOURCE_ID)
+	if _light_zones_adapter:
+		_light_zones_adapter.setup(_light_service)
 	if _bulb_row0:
 		_bulb_row0.setup(_light_service, LightZonesAdapterScript.BULB_SOURCE_ID_ROW0)
 	if _bulb_row1:
