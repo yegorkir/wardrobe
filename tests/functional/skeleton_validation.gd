@@ -4,7 +4,6 @@ const REQUIRED_SCENES := [
 	"res://scenes/Main.tscn",
 	"res://scenes/screens/MainMenu.tscn",
 	"res://scenes/screens/WorkdeskScene.tscn",
-	"res://scenes/screens/WorkdeskScene_Debug.tscn",
 	"res://scenes/screens/ShiftSummary.tscn",
 	"res://scenes/screens/ModifierSelect.tscn",
 ]

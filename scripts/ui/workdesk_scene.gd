@@ -86,6 +86,11 @@ var _patience_max_by_client_id: Dictionary = {}
 var _desk_states_by_id: Dictionary = {}
 var _clients_ready := false
 
+func apply_payload(payload: Dictionary) -> void:
+	if payload.has("debug"):
+		debug_logs_enabled = bool(payload["debug"])
+		DebugFlags.set_enabled(debug_logs_enabled)
+
 func _ready() -> void:
 	DebugFlags.set_enabled(debug_logs_enabled)
 	if _end_shift_button:
@@ -111,9 +116,9 @@ func _finish_ready_setup() -> void:
 	if _light_zones_adapter:
 		_light_zones_adapter.setup(_light_service)
 	if _bulb_row0:
-		_bulb_row0.setup(_light_service, LightZonesAdapterScript.BULB_SOURCE_ID_ROW0)
+		_bulb_row0.setup(_light_service)
 	if _bulb_row1:
-		_bulb_row1.setup(_light_service, LightZonesAdapterScript.BULB_SOURCE_ID_ROW1)
+		_bulb_row1.setup(_light_service)
 
 	_interaction_events_bridge.configure_bridge(
 		Callable(self, "_on_client_completed"),

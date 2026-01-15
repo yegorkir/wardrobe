@@ -25,11 +25,11 @@ horizontal_alignment = 1
 
 [node name="StartWorkdeskButton" type="Button" parent="MarginContainer/VBox"]
 unique_name_in_owner = true
-text = "Start Run (Workdesk)"
+text = "Start Shift"
 
-[node name="StartWorkdeskDebugButton" type="Button" parent="MarginContainer/VBox"]
+[node name="DebugModeCheckbox" type="CheckBox" parent="MarginContainer/VBox"]
 unique_name_in_owner = true
-text = "Start Run (Workdesk Debug)"
+text = "Debug Mode"
 
 [node name="QuitButton" type="Button" parent="MarginContainer/VBox"]
 unique_name_in_owner = true
