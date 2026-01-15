@@ -34,6 +34,7 @@ extends Node2D
 		slider_path = value
 		_update_adapter_settings()
 
+@onready var _light_zone: Area2D = $CurtainZone
 @onready var _light_collision: CollisionShape2D = $CurtainZone/CollisionShape2D
 @onready var _light_visual: ColorRect = $CurtainZone/CollisionShape2D/LightVisual
 @onready var _adapter: CurtainLightAdapter = $CurtainsColumn/CurtainLightAdapter
@@ -56,13 +57,7 @@ func _update_adapter_settings() -> void:
 	_adapter.travel_pixels = travel_pixels
 	_adapter.speed_power = speed_power
 	if not slider_path.is_empty():
-		if slider_path.is_absolute():
-			_adapter.slider_path = slider_path
-		else:
-			# Adapter is nested 2 levels deep (CurtainsColumn -> Adapter), so we need to step up 2 levels
-			# before applying the path relative to the Rig root.
-			_adapter.slider_path = NodePath("../../" + str(slider_path))
-		
+		_adapter.slider_path = slider_path
 		# Trigger adapter update/re-setup if needed?
 		# CurtainLightAdapter uses _process for editor updates, so it should pick up changes or we might need to nudge it.
 		if Engine.is_editor_hint():
@@ -75,10 +70,8 @@ func _update_beam_visuals() -> void:
 		var rect_shape := _light_collision.shape as RectangleShape2D
 		if rect_shape.size.x != beam_width:
 			rect_shape.size.x = beam_width
-		
-		# Anchor to left side: X = Anchor + Width / 2
-		# Anchor calculated from original scene: -44.5 - (363 / 2) = -226.0
-		_light_collision.position.x = -226.0 + (beam_width * 0.5)
+			# Adjust collision position if needed (usually centered, but here might be offset)
+			# But LightVisual is child of CollisionShape, so we adjust LightVisual size too.
 	
 	if _light_visual:
 		# Update visual size to match shape

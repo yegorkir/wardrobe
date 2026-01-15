@@ -1,49 +1,18 @@
-[gd_scene load_steps=21 format=3 uid="uid://b08i7wldm2kvm"]
+[gd_scene load_steps=12 format=3 uid="uid://c5ienrjb1buvg"]
 
 [ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
-[ext_resource type="PackedScene" path="res://scenes/prefabs/StorageCabinetLayout_Simple.tscn" id="2"]
 [ext_resource type="PackedScene" uid="uid://bbsuw6pn2oo58" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
 [ext_resource type="Script" uid="uid://c1jb2jnhticws" path="res://scripts/wardrobe/cursor_hand.gd" id="4"]
 [ext_resource type="Script" uid="uid://ce2nlf0hgoh2r" path="res://scripts/ui/wardrobe_physics_tick_adapter.gd" id="5"]
-[ext_resource type="Script" uid="uid://bpqv5b0mctves" path="res://scripts/ui/floor_zone_adapter.gd" id="6"]
 [ext_resource type="Script" uid="uid://ctgc601ixkj3a" path="res://scripts/ui/queue_hud_view.gd" id="7"]
-[ext_resource type="Shader" uid="uid://cp1x2348citxk" path="res://assets/shaders/lighting/bulb_visual.gdshader" id="7_8dep5"]
 [ext_resource type="Script" uid="uid://b5uji3ko74ljn" path="res://scripts/ui/light/light_zones_adapter.gd" id="8"]
-[ext_resource type="Shader" uid="uid://b40o8k8ns7oxo" path="res://assets/shaders/lighting/bulb_glow.gdshader" id="8_2xc40"]
-[ext_resource type="PackedScene" uid="uid://b8srjshiw2kuw" path="res://scenes/prefabs/lighting/CurtainRig.tscn" id="9"]
-[ext_resource type="Script" uid="uid://cmkm6ndpiit7d" path="res://scripts/wardrobe/lights/bulb_light_adapter.gd" id="10"]
+[ext_resource type="PackedScene" uid="uid://c6jy016jxlubk" path="res://scenes/prefabs/lighting/CurtainRig.tscn" id="9"]
+[ext_resource type="PackedScene" uid="uid://boedrr2kgctj5" path="res://scenes/prefabs/lighting/BulbLightRig.tscn" id="10_rig"]
+[ext_resource type="PackedScene" uid="uid://cgmjqx87lwd1s" path="res://scenes/prefabs/CabinetsGrid.tscn" id="11"]
+[ext_resource type="PackedScene" path="res://scenes/prefabs/FloorZone.tscn" id="12"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_1cvfn"]
-shader = ExtResource("7_8dep5")
-shader_parameter/color = Color(1, 0.8, 0.4, 1)
-shader_parameter/glow_strength = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_g5561"]
-shader = ExtResource("7_8dep5")
-shader_parameter/color = Color(1, 0.8, 0.4, 1)
-shader_parameter/glow_strength = 0.5
-
-[sub_resource type="RectangleShape2D" id="101"]
-size = Vector2(358, 498)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ky8yc"]
-shader = ExtResource("8_2xc40")
-shader_parameter/color = Color(1, 0.8, 0.45, 0.35)
-shader_parameter/falloff_power = 2.0
-
-[sub_resource type="RectangleShape2D" id="102"]
-size = Vector2(359, 663)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_1p8ej"]
-shader = ExtResource("8_2xc40")
-shader_parameter/color = Color(1, 0.8, 0.45, 0.35)
-shader_parameter/falloff_power = 2.0
-
-[sub_resource type="RectangleShape2D" id="3"]
-size = Vector2(720, 6)
-
-[sub_resource type="RectangleShape2D" id="2"]
-size = Vector2(720, 54)
+[sub_resource type="RectangleShape2D" id="103"]
+size = Vector2(1000, 800)
 
 [node name="WorkdeskScene2" type="Node2D"]
 script = ExtResource("1")
@@ -54,168 +23,53 @@ unique_name_in_owner = true
 script = ExtResource("5")
 
 [node name="StorageHall" type="Node2D" parent="."]
-position = Vector2(0, 40)
+position = Vector2(200, 100)
 
-[node name="CabinetsGrid" type="Node2D" parent="StorageHall"]
+[node name="CabinetsGrid" parent="StorageHall" instance=ExtResource("11")]
 position = Vector2(180, 413)
 
-[node name="Cabinet_100" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(-9, -140)
-cabinet_id = &"Cab_100"
-
-[node name="Cabinet_010" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(191, -140)
-cabinet_id = &"Cab_010"
-
-[node name="Cabinet_001" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(391, -140)
-cabinet_id = &"Cab_001"
-
-[node name="Cabinet_200" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(-9, 360)
-cabinet_id = &"Cab_200"
-
-[node name="Cabinet_020" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(191, 360)
-cabinet_id = &"Cab_020"
-
-[node name="Cabinet_002" parent="StorageHall/CabinetsGrid" instance=ExtResource("2")]
-position = Vector2(391, 360)
-cabinet_id = &"Cab_002"
-
 [node name="CurtainRig" parent="StorageHall" instance=ExtResource("9")]
-position = Vector2(-11, 0)
+position = Vector2(1730, -83)
+scale = Vector2(-1, 1)
+slider_path = NodePath("../../HUDLayer/LightControls/CurtainSlider")
 
 [node name="BulbsColumn" type="Node2D" parent="StorageHall"]
 position = Vector2(692, 456)
 
-[node name="BulbRow0" type="Node2D" parent="StorageHall/BulbsColumn"]
+[node name="BulbRow0" parent="StorageHall/BulbsColumn" instance=ExtResource("10_rig")]
 position = Vector2(0, -330)
-script = ExtResource("10")
 
-[node name="Visual" type="ColorRect" parent="StorageHall/BulbsColumn/BulbRow0"]
-material = SubResource("ShaderMaterial_1cvfn")
-offset_left = -20.0
-offset_top = -20.0
-offset_right = 20.0
-offset_bottom = 20.0
-mouse_filter = 2
-metadata/_edit_use_anchors_ = true
-
-[node name="BulbRow1" type="Node2D" parent="StorageHall/BulbsColumn"]
+[node name="BulbRow1" parent="StorageHall/BulbsColumn" instance=ExtResource("10_rig")]
 position = Vector2(0, 170)
-script = ExtResource("10")
 row_index = 1
-
-[node name="Visual" type="ColorRect" parent="StorageHall/BulbsColumn/BulbRow1"]
-material = SubResource("ShaderMaterial_g5561")
-offset_left = -20.0
-offset_top = -20.0
-offset_right = 20.0
-offset_bottom = 20.0
-mouse_filter = 2
-metadata/_edit_use_anchors_ = true
-
-[node name="BulbRow0Zone" type="Area2D" parent="StorageHall"]
-position = Vector2(600, 273)
-collision_layer = 0
-collision_mask = 0
-monitorable = false
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/BulbRow0Zone"]
-position = Vector2(-59, 49)
-shape = SubResource("101")
-
-[node name="LightVisual" type="ColorRect" parent="StorageHall/BulbRow0Zone/CollisionShape2D"]
-material = SubResource("ShaderMaterial_ky8yc")
-offset_left = -171.0
-offset_top = -249.5
-offset_right = 185.0
-offset_bottom = 250.0
-mouse_filter = 2
-
-[node name="BulbRow1Zone" type="Area2D" parent="StorageHall"]
-position = Vector2(600, 773)
-collision_layer = 0
-collision_mask = 0
-monitorable = false
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/BulbRow1Zone"]
-position = Vector2(-58.5, 130.5)
-shape = SubResource("102")
-
-[node name="LightVisual" type="ColorRect" parent="StorageHall/BulbRow1Zone/CollisionShape2D"]
-material = SubResource("ShaderMaterial_1p8ej")
-offset_left = -177.5
-offset_top = -332.5
-offset_right = 185.5
-offset_bottom = 324.5
-mouse_filter = 2
+source_id = &"bulb_row1"
 
 [node name="LightZonesAdapter" type="Node2D" parent="StorageHall"]
 script = ExtResource("8")
 curtain_zone_path = NodePath("../CurtainRig/CurtainZone")
-bulb_row0_zone_path = NodePath("../BulbRow0Zone")
-bulb_row1_zone_path = NodePath("../BulbRow1Zone")
+bulb_row0_zone_path = NodePath("../BulbsColumn/BulbRow0/LightZone")
+bulb_row1_zone_path = NodePath("../BulbsColumn/BulbRow1/LightZone")
+service_zone_path = NodePath("../../ServiceZone/ServiceLightZone")
 curtain_adapter_path = NodePath("../CurtainRig/CurtainsColumn/CurtainLightAdapter")
 debug_draw = false
 
-[node name="FloorZone1" type="Node2D" parent="StorageHall"]
-position = Vector2(0, 515.26)
-script = ExtResource("6")
+[node name="FloorZone1" parent="StorageHall" instance=ExtResource("12")]
+position = Vector2(1260, 700)
 
-[node name="SurfaceBody" type="StaticBody2D" parent="StorageHall/FloorZone1"]
-collision_layer = 8
-collision_mask = 2
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone1/SurfaceBody"]
-position = Vector2(360, 0)
-shape = SubResource("3")
-
-[node name="DropArea" type="Area2D" parent="StorageHall/FloorZone1"]
-collision_layer = 4
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone1/DropArea"]
-position = Vector2(360, 0)
-shape = SubResource("2")
-
-[node name="FloorZone" type="Node2D" parent="StorageHall/FloorZone1/DropArea"]
-
-[node name="ItemsRoot" type="Node2D" parent="StorageHall/FloorZone1/DropArea"]
-
-[node name="SurfaceRef" type="Node2D" parent="StorageHall/FloorZone1"]
-position = Vector2(360, 0)
-
-[node name="FloorZone2" type="Node2D" parent="StorageHall"]
-position = Vector2(0, 1003)
-script = ExtResource("6")
-
-[node name="SurfaceBody" type="StaticBody2D" parent="StorageHall/FloorZone2"]
-collision_layer = 8
-collision_mask = 2
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone2/SurfaceBody"]
-position = Vector2(360, 0)
-shape = SubResource("3")
-
-[node name="DropArea" type="Area2D" parent="StorageHall/FloorZone2"]
-collision_layer = 4
-collision_mask = 0
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="StorageHall/FloorZone2/DropArea"]
-position = Vector2(360, 0)
-shape = SubResource("2")
-
-[node name="FloorZone" type="Node2D" parent="StorageHall/FloorZone2/DropArea"]
-
-[node name="ItemsRoot" type="Node2D" parent="StorageHall/FloorZone2/DropArea"]
-
-[node name="SurfaceRef" type="Node2D" parent="StorageHall/FloorZone2"]
-position = Vector2(360, 0)
+[node name="FloorZone2" parent="StorageHall" instance=ExtResource("12")]
+position = Vector2(1260, 900)
 
 [node name="ServiceZone" type="Node2D" parent="."]
-position = Vector2(0, 723)
+position = Vector2(1100, 200)
+
+[node name="ServiceLightZone" type="Area2D" parent="ServiceZone"]
+position = Vector2(240, 516)
+collision_layer = 0
+collision_mask = 0
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ServiceZone/ServiceLightZone"]
+shape = SubResource("103")
 
 [node name="ServiceSlots" type="Node2D" parent="ServiceZone"]
 position = Vector2(240, 516)
@@ -240,6 +94,7 @@ script = ExtResource("4")
 [node name="HUDLayer" type="CanvasLayer" parent="."]
 
 [node name="LightControls" type="Control" parent="HUDLayer"]
+visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -251,9 +106,9 @@ mouse_filter = 2
 [node name="CurtainSlider" type="VSlider" parent="HUDLayer/LightControls"]
 layout_mode = 0
 offset_left = 48.0
-offset_top = 1210.0
+offset_top = 800.0
 offset_right = 64.0
-offset_bottom = 1360.0
+offset_bottom = 950.0
 rotation = 3.1415927
 max_value = 1.0
 step = 0.1
