@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://c5ienrjb1buvg"]
+[gd_scene load_steps=14 format=3 uid="uid://c5ienrjb1buvg"]
 
 [ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bbsuw6pn2oo58" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
@@ -9,7 +9,10 @@
 [ext_resource type="PackedScene" uid="uid://c6jy016jxlubk" path="res://scenes/prefabs/lighting/CurtainRig.tscn" id="9"]
 [ext_resource type="PackedScene" uid="uid://boedrr2kgctj5" path="res://scenes/prefabs/lighting/BulbLightRig.tscn" id="10_rig"]
 [ext_resource type="PackedScene" uid="uid://cgmjqx87lwd1s" path="res://scenes/prefabs/CabinetsGrid.tscn" id="11"]
+[ext_resource type="PackedScene" uid="uid://cbrgfcbag4sc6" path="res://scenes/prefabs/lighting/LightSwitch.tscn" id="11_ax2is"]
+[ext_resource type="Script" uid="uid://bpbbtm0fh40sf" path="res://scenes/screens/curtain_slider_main.gd" id="11_pf1p7"]
 [ext_resource type="PackedScene" path="res://scenes/prefabs/FloorZone.tscn" id="12"]
+[ext_resource type="Script" uid="uid://d3ye2uxhc5xj" path="res://scenes/screens/curtain_slider.gd" id="12_qeg72"]
 
 [node name="WorkdeskScene2" type="Node2D"]
 script = ExtResource("1")
@@ -29,7 +32,7 @@ position = Vector2(-779, 174)
 position = Vector2(-28, 396)
 scale = Vector2(-1, 1)
 beam_width = 485.0
-slider_path = NodePath("../../HUDLayer/LightControls/CurtainSlider")
+slider_path = NodePath("../../HUDLayer/LightControls/CurtainSliderMain/CurtainSlider")
 
 [node name="BulbsColumn" type="Node2D" parent="StorageHall"]
 position = Vector2(692, 456)
@@ -41,6 +44,11 @@ zone_width = 400.0
 zone_height = 330.0
 light_intensity = 0.8
 bulb_offset = Vector2(36, 16)
+external_visual_path = NodePath("../LightSwitch0")
+
+[node name="LightSwitch0" parent="StorageHall/BulbsColumn" instance=ExtResource("11_ax2is")]
+position = Vector2(-1372, -171)
+scale = Vector2(0.5, 0.5)
 
 [node name="BulbRow1" parent="StorageHall/BulbsColumn" instance=ExtResource("10_rig")]
 position = Vector2(-1427, -4)
@@ -51,6 +59,11 @@ zone_width = 400.0
 zone_height = 330.0
 light_intensity = 0.8
 bulb_offset = Vector2(36, 16)
+external_visual_path = NodePath("../LightSwitch1")
+
+[node name="LightSwitch1" parent="StorageHall/BulbsColumn" instance=ExtResource("11_ax2is")]
+position = Vector2(-1373, 138)
+scale = Vector2(0.5, 0.5)
 
 [node name="LightZonesAdapter" type="Node2D" parent="StorageHall"]
 position = Vector2(2579, -1043)
@@ -111,15 +124,30 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="CurtainSlider" type="VSlider" parent="HUDLayer/LightControls"]
+[node name="CurtainSliderMain" type="VSlider" parent="HUDLayer/LightControls"]
+modulate = Color(1, 1, 1, 0)
+self_modulate = Color(1, 1, 1, 0)
 layout_mode = 0
-offset_left = 1901.0
-offset_top = 966.0
-offset_right = 1919.4158
-offset_bottom = 1413.5358
+offset_left = 1863.0
+offset_top = 130.0
+offset_right = 1919.0
+offset_bottom = 429.0
+max_value = 0.5
+step = 0.01
+script = ExtResource("11_pf1p7")
+
+[node name="CurtainSlider" type="VSlider" parent="HUDLayer/LightControls/CurtainSliderMain"]
+modulate = Color(1, 1, 1, 0)
+self_modulate = Color(1, 1, 1, 0)
+layout_mode = 0
+offset_left = 57.359985
+offset_top = 846.28503
+offset_right = 114.49585
+offset_bottom = 1323.4658
 rotation = 3.1415927
 max_value = 0.5
-step = 0.05
+step = 0.01
+script = ExtResource("12_qeg72")
 
 [node name="QueueHudView" type="Control" parent="HUDLayer"]
 unique_name_in_owner = true
