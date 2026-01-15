@@ -32,6 +32,11 @@ const LightService := preload("res://scripts/app/light/light_service.gd")
 		bulb_offset = value
 		_update_visual_layout()
 
+@export var external_visual_path: NodePath:
+	set(value):
+		external_visual_path = value
+		_update_visual_source()
+
 @export_group("Visuals")
 @export var on_color: Color = Color(1.0, 1.0, 0.4, 1.0)
 @export var off_color: Color = Color(0.3, 0.3, 0.3, 1.0)
@@ -42,6 +47,7 @@ const LightService := preload("res://scripts/app/light/light_service.gd")
 @onready var _light_visual: ColorRect = $LightZone/CollisionShape2D/LightVisual
 
 var _light_service: LightService
+var _external_visual_node: CanvasItem
 
 func _ready() -> void:
 	if _light_collision and _light_collision.shape:
@@ -53,6 +59,8 @@ func _ready() -> void:
 	if _light_visual and _light_visual.material:
 		_light_visual.material = _light_visual.material.duplicate()
 
+	_update_visual_source()
+
 	if Engine.is_editor_hint():
 		_update_editor_visibility()
 		_update_zone_geometry()
@@ -60,10 +68,21 @@ func _ready() -> void:
 		_update_visual_layout()
 	else:
 		# In game, light zone visual is controlled by LightZonesAdapter/LightService logic
-		# But we ensure it starts hidden/shown correctly if needed?
-		# Actually LightZonesAdapter manages the visibility of the "LightVisual" rect based on state.
-		# But the CollisionShape/Zone debug visibility is handled by Godot.
 		pass
+
+func _update_visual_source() -> void:
+	if not is_inside_tree(): return
+	
+	_external_visual_node = null
+	if not external_visual_path.is_empty():
+		var node = get_node_or_null(external_visual_path)
+		if node is CanvasItem:
+			_external_visual_node = node
+	
+	if _visual_node:
+		_visual_node.visible = (_external_visual_node == null)
+	
+	_update_visuals()
 
 func _update_zone_geometry() -> void:
 	if not is_inside_tree(): return
@@ -101,10 +120,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 			var mouse_event := make_input_local(event) as InputEventMouseButton
 			var local_pos := mouse_event.position
-			# Check against visual bulb radius (approx 40px)
-			if local_pos.length() < 40.0:
-				_toggle()
-				get_viewport().set_input_as_handled()
+			
+			if _external_visual_node and is_instance_valid(_external_visual_node) and _external_visual_node.visible:
+				# Check against external visual (global to local conversion)
+				var ext_local = to_local(_external_visual_node.global_position)
+				if local_pos.distance_to(ext_local) < 40.0:
+					_toggle()
+					get_viewport().set_input_as_handled()
+			else:
+				# Check against internal visual bulb radius (approx 40px)
+				# Use bulb_offset as the center
+				if local_pos.distance_to(bulb_offset) < 40.0:
+					_toggle()
+					get_viewport().set_input_as_handled()
 
 func _toggle() -> void:
 	if _light_service:
@@ -115,8 +143,14 @@ func _update_visuals() -> void:
 	if not _light_service:
 		return
 	var is_on := _light_service.is_bulb_on(row_index)
+	var color := on_color if is_on else off_color
+	
+	if _external_visual_node and is_instance_valid(_external_visual_node):
+		if _external_visual_node.has_method("set_is_on"):
+			_external_visual_node.call("set_is_on", is_on)
+	
 	if _visual_node:
-		_visual_node.modulate = on_color if is_on else off_color
+		_visual_node.modulate = color
 
 func _update_editor_visibility() -> void:
 	if not Engine.is_editor_hint():
