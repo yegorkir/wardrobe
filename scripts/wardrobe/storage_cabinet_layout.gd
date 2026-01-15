@@ -41,6 +41,10 @@ func _assign_slot_ids() -> void:
 		slot_a.slot_id = "%s_SlotA" % prefix
 		slot_b.slot_id = "%s_SlotB" % prefix
 		index += 1
+	
+	var shelf_node := _slots_root.get_node_or_null("Shelf/ShelfSurface")
+	if shelf_node and "shelf_id" in shelf_node:
+		shelf_node.shelf_id = "%s_Shelf" % String(cabinet_id)
 
 func _compare_positions(a: Node, b: Node) -> bool:
 	return String(a.name) < String(b.name)

@@ -62,10 +62,7 @@ curtain_adapter_path = NodePath("../CurtainRig/CurtainsColumn/CurtainLightAdapte
 debug_draw = false
 
 [node name="FloorZone1" parent="StorageHall" instance=ExtResource("12")]
-position = Vector2(-489, 711)
-
-[node name="FloorZone2" parent="StorageHall" instance=ExtResource("12")]
-position = Vector2(1260, 900)
+position = Vector2(-475, 861)
 
 [node name="ServiceZone" type="Node2D" parent="."]
 position = Vector2(0, 128)
