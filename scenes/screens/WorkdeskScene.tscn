@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://c5ienrjb1buvg"]
+[gd_scene load_steps=15 format=3 uid="uid://c5ienrjb1buvg"]
 
 [ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bbsuw6pn2oo58" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://ctgc601ixkj3a" path="res://scripts/ui/queue_hud_view.gd" id="7"]
 [ext_resource type="Script" uid="uid://b5uji3ko74ljn" path="res://scripts/ui/light/light_zones_adapter.gd" id="8"]
 [ext_resource type="PackedScene" uid="uid://c6jy016jxlubk" path="res://scenes/prefabs/lighting/CurtainRig.tscn" id="9"]
+[ext_resource type="Texture2D" uid="uid://cvia6yud6jok" path="res://assets/sprites/table.png" id="10_qeg72"]
 [ext_resource type="PackedScene" uid="uid://boedrr2kgctj5" path="res://scenes/prefabs/lighting/BulbLightRig.tscn" id="10_rig"]
 [ext_resource type="PackedScene" uid="uid://cgmjqx87lwd1s" path="res://scenes/prefabs/CabinetsGrid.tscn" id="11"]
 [ext_resource type="PackedScene" uid="uid://cbrgfcbag4sc6" path="res://scenes/prefabs/lighting/LightSwitch.tscn" id="11_ax2is"]
@@ -75,7 +76,7 @@ curtain_adapter_path = NodePath("../CurtainRig/CurtainsColumn/CurtainLightAdapte
 debug_draw = false
 
 [node name="FloorZone1" parent="StorageHall" instance=ExtResource("12")]
-position = Vector2(-475, 861)
+position = Vector2(-484, 680)
 
 [node name="ServiceZone" type="Node2D" parent="."]
 position = Vector2(0, 128)
@@ -105,6 +106,15 @@ scale = Vector2(1.5, 1.5)
 desk_id = &"Desk_B"
 desk_slot_id = &"DeskSlot_1"
 
+[node name="DeskZone" type="Node2D" parent="ServiceZone"]
+position = Vector2(1450, 903)
+
+[node name="DeskSprite" type="Sprite2D" parent="ServiceZone/DeskZone"]
+texture_filter = 1
+position = Vector2(-236, -73.000015)
+scale = Vector2(15.24574, 11.040768)
+texture = ExtResource("10_qeg72")
+
 [node name="HandRoot" type="Node2D" parent="."]
 z_index = 1000
 z_as_relative = false
@@ -120,6 +130,9 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 1860.0
+offset_top = 122.0
+offset_bottom = -108.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -127,11 +140,15 @@ mouse_filter = 2
 [node name="CurtainSliderMain" type="VSlider" parent="HUDLayer/LightControls"]
 modulate = Color(1, 1, 1, 0)
 self_modulate = Color(1, 1, 1, 0)
-layout_mode = 0
-offset_left = 1863.0
-offset_top = 130.0
-offset_right = 1919.0
-offset_bottom = 429.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -57.0
+offset_top = 7.0
+offset_right = -1.0
+offset_bottom = 306.0
+grow_horizontal = 0
 max_value = 0.5
 step = 0.01
 script = ExtResource("11_pf1p7")
@@ -139,11 +156,18 @@ script = ExtResource("11_pf1p7")
 [node name="CurtainSlider" type="VSlider" parent="HUDLayer/LightControls/CurtainSliderMain"]
 modulate = Color(1, 1, 1, 0)
 self_modulate = Color(1, 1, 1, 0)
-layout_mode = 0
-offset_left = 57.359985
-offset_top = 846.28503
-offset_right = 114.49585
-offset_bottom = 1323.4658
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0000114
+offset_top = 431.28162
+offset_right = 61.13588
+offset_bottom = 791.744
+grow_horizontal = 0
+grow_vertical = 0
 rotation = 3.1415927
 max_value = 0.5
 step = 0.01
