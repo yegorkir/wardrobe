@@ -19,19 +19,20 @@ shader_parameter/fade_end = 0.8
 script = ExtResource("4")
 
 [node name="CurtainZone" type="Area2D" parent="."]
-position = Vector2(151, -61)
+position = Vector2(196, -61)
 collision_layer = 0
 collision_mask = 0
 monitorable = false
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CurtainZone"]
+position = Vector2(-44.5, 0)
 shape = SubResource("RectangleShape2D_bie5o")
 
 [node name="LightVisual" type="ColorRect" parent="CurtainZone/CollisionShape2D"]
 material = SubResource("ShaderMaterial_iogvf")
-offset_left = -181.0
+offset_left = -181.5
 offset_top = -491.0
-offset_right = 182.0
+offset_right = 181.5
 offset_bottom = 491.0
 mouse_filter = 2
 
