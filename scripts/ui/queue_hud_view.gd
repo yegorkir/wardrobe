@@ -5,6 +5,10 @@ class_name QueueHudView
 const QueueHudSnapshotScript := preload("res://scripts/app/queue/queue_hud_snapshot.gd")
 const QueueHudClientVMScript := preload("res://scripts/app/queue/queue_hud_client_vm.gd")
 const STATUS_LEAVING_RED := StringName("leaving_red")
+const APPEND_QUEUE_PADDING := 16.0
+const APPEND_EXTRA_DISTANCE := 200.0
+const APPEND_FADE_DURATION := 0.2
+const APPEND_MOVE_DURATION := 0.9
 
 @onready var _queue_items: HBoxContainer = %QueueItems
 @onready var _remaining_checkin_label: Label = %RemainingCheckinValue
@@ -132,6 +136,31 @@ func _remove_item(client_id: StringName, immediate: bool) -> void:
 	tween.tween_callback(func() -> void: item.queue_free())
 
 func _play_append(item: Control) -> void:
+	call_deferred("_play_append_from_queue_items", item)
+
+func _play_append_from_queue_items(item: Control) -> void:
+	if not is_instance_valid(item):
+		return
+	await get_tree().process_frame
+	if not is_instance_valid(item) or _queue_items == null:
+		return
+	var target_pos := item.global_position
+	var items_pos := _queue_items.global_position
+	var items_right := items_pos.x + _queue_items.size.x
+	var start_x := items_right + APPEND_QUEUE_PADDING + APPEND_EXTRA_DISTANCE
+	var start_pos := Vector2(start_x, target_pos.y)
+	item.set_as_top_level(true)
+	item.global_position = start_pos
+	item.modulate = Color(1, 1, 1, 0)
+	var tween := create_tween()
+	tween.tween_property(item, "modulate:a", 1.0, APPEND_FADE_DURATION)
+	tween.tween_property(item, "global_position", target_pos, APPEND_MOVE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(item):
+			item.set_as_top_level(false)
+	)
+
+func _play_simple_append(item: Control) -> void:
 	var content := item.get_meta("content", null) as Control
 	if content == null:
 		return
