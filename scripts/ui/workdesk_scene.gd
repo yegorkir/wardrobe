@@ -709,6 +709,8 @@ func _rebuild_drop_zone_index() -> void:
 
 func _is_drop_zone_blocked(desk_id: StringName) -> bool:
 	var drop_zone = _drop_zones_by_desk_id.get(desk_id, null)
+	if _clients_ui != null and _clients_ui.is_exit_blocked(desk_id):
+		return true
 	if drop_zone == null:
 		return false
 	if drop_zone.has_method("has_blocking_items"):
@@ -780,10 +782,14 @@ func _tick_patience(delta: float) -> void:
 
 func _on_client_completed(client_id: StringName) -> void:
 	_served_clients += 1
+	if _clients_ui:
+		_clients_ui.notify_client_departed(client_id)
 	if _run_manager:
 		_run_manager.register_checkout_completed(client_id)
 
 func _on_client_checkin(client_id: StringName) -> void:
+	if _clients_ui:
+		_clients_ui.notify_client_departed(client_id)
 	if _run_manager:
 		_run_manager.register_checkin_completed(client_id)
 
