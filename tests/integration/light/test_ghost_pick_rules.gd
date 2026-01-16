@@ -1,10 +1,7 @@
 extends GdUnitTestSuite
 
 const WorkdeskScene := preload("res://scenes/screens/WorkdeskScene.tscn")
-const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
-const InteractionRules := preload("res://scripts/domain/interaction/interaction_rules.gd")
-const LightService := preload("res://scripts/app/light/light_service.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 
 var _scene: Node
 var _runner: GdUnitSceneRunner
@@ -30,7 +27,6 @@ func test_ghost_pick_blocked_in_darkness() -> void:
 	# 2. Spawn ghost item
 	# We need to inject a ghost item into the scene. 
 	# WorkdeskScene exposes _world_adapter, we can use it to register an item.
-	var adapter = _scene._world_adapter
 	var item_id = StringName("test_ghost")
 	
 	# We need to ensure _get_item_archetype returns a ghost archetype for this ID.
@@ -43,7 +39,7 @@ func test_ghost_pick_blocked_in_darkness() -> void:
 	# Let's try to spawn a "ghost_sheet" item using the ItemSpawner or just injecting it.
 	
 	# Create a mock ItemInstance with correct archetype
-	var instance = ItemInstance.new(ghost_id, ItemInstance.KIND_COAT, ghost_id)
+	var instance = ItemInstanceScript.new(ghost_id, ItemInstance.KIND_COAT, ghost_id)
 	
 	# We need to spawn the visual node.
 	# WorkdeskScene doesn't have a direct "spawn_item" public API that takes an instance easily 

@@ -34,7 +34,6 @@ extends Node2D
 		slider_path = value
 		_update_adapter_settings()
 
-@onready var _light_zone: Area2D = $CurtainZone
 @onready var _light_collision: CollisionShape2D = $CurtainZone/CollisionShape2D
 @onready var _light_visual: ColorRect = $CurtainZone/CollisionShape2D/LightVisual
 @onready var _adapter: CurtainLightAdapter = $CurtainsColumn/CurtainLightAdapter

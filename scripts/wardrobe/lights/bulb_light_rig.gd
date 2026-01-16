@@ -2,7 +2,7 @@
 class_name BulbLightRig
 extends Node2D
 
-const LightService := preload("res://scripts/app/light/light_service.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 
 @export var row_index: int = 0
 @export var source_id: StringName = &"bulb_row0"
@@ -42,7 +42,6 @@ const LightService := preload("res://scripts/app/light/light_service.gd")
 @export var off_color: Color = Color(0.3, 0.3, 0.3, 1.0)
 
 @onready var _visual_node: CanvasItem = $Visual
-@onready var _light_zone: Area2D = $LightZone
 @onready var _light_collision: CollisionShape2D = $LightZone/CollisionShape2D
 @onready var _light_visual: ColorRect = $LightZone/CollisionShape2D/LightVisual
 
