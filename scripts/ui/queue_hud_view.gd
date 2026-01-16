@@ -9,6 +9,9 @@ const APPEND_QUEUE_PADDING := 16.0
 const APPEND_EXTRA_DISTANCE := 200.0
 const APPEND_FADE_DURATION := 0.2
 const APPEND_MOVE_DURATION := 0.9
+const EXIT_MOVE_DISTANCE := 80.0
+const EXIT_SCALE_FACTOR := 0.7
+const EXIT_DURATION := 0.7
 
 @onready var _queue_items: HBoxContainer = %QueueItems
 @onready var _remaining_checkin_label: Label = %RemainingCheckinValue
@@ -131,9 +134,7 @@ func _remove_item(client_id: StringName, immediate: bool) -> void:
 	if immediate:
 		item.queue_free()
 		return
-	var tween := create_tween()
-	tween.tween_property(item, "modulate:a", 0.0, 0.15)
-	tween.tween_callback(func() -> void: item.queue_free())
+	_play_queue_exit(client_id, item)
 
 func _play_append(item: Control) -> void:
 	call_deferred("_play_append_from_queue_items", item)
@@ -180,6 +181,26 @@ func _play_timeout(client_id: StringName, item: Control) -> void:
 	tween.tween_callback(func() -> void:
 		_items_by_id.erase(client_id)
 		item.queue_free()
+		_leaving_ids.erase(client_id)
+	)
+
+func _play_queue_exit(client_id: StringName, item: Control) -> void:
+	if _leaving_ids.has(client_id):
+		return
+	_leaving_ids[client_id] = true
+	var start_pos := item.global_position
+	var end_pos := start_pos + Vector2(0.0, EXIT_MOVE_DISTANCE)
+	var start_scale := item.scale
+	var end_scale := start_scale * EXIT_SCALE_FACTOR
+	item.set_as_top_level(true)
+	item.global_position = start_pos
+	var tween := create_tween()
+	tween.tween_property(item, "global_position", end_pos, EXIT_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(item, "scale", end_scale, EXIT_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.parallel().tween_property(item, "modulate:a", 0.0, EXIT_DURATION)
+	tween.tween_callback(func() -> void:
+		if is_instance_valid(item):
+			item.queue_free()
 		_leaving_ids.erase(client_id)
 	)
 
