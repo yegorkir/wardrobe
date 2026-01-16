@@ -18,12 +18,15 @@ const PhysicsLayers := preload("res://scripts/wardrobe/config/physics_layers.gd"
 const SurfaceRegistry := preload("res://scripts/wardrobe/surface/surface_registry.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
-const FloorResolverScript := preload("res://scripts/app/wardrobe/floor_resolver.gd")
+const ClientDropZoneScript := preload("res://scripts/wardrobe/client_drop_zone.gd")
+const TicketRackScript := preload("res://scripts/wardrobe/ticket_rack.gd")
 
 const HOVER_DISTANCE_SQ := 64.0 * 64.0
 const HOVER_TIE_EPSILON := 0.001
 const HOVER_COLOR := Color(1.0, 0.92, 0.55, 1.0)
 const PASS_THROUGH_MARGIN_PX := 2.0
+const META_ORIGIN_SLOT_ID := "drag_origin_slot_id"
+const META_ORIGIN_POS := "drag_origin_global_pos"
 
 var _interaction_service: WardrobeInteractionService
 var _storage_state: WardrobeStorageState
@@ -35,10 +38,10 @@ var _spawned_items: Array = []
 var _event_adapter: WardrobeInteractionEventAdapter
 var _interaction_events: WardrobeInteractionEventsAdapter
 var _desk_event_dispatcher: DeskEventDispatcher
+var _desk_system: DeskServicePointSystem
 var _item_visuals: WardrobeItemVisualsAdapter
 var _interaction_logger
 var _find_item_instance: Callable
-var _desk_by_slot_id: Dictionary = {}
 var _cursor_hand: CursorHand
 var _physics_tick
 var _validate_world: Callable
@@ -52,6 +55,16 @@ var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
 var _surface_registry: SurfaceRegistry
 var _validate_pick_callback: Callable
+var _ticket_rack_slots: Array[WardrobeSlot] = []
+var _ticket_racks: Array = []
+var _tray_slots: Array[WardrobeSlot] = []
+var _client_drop_zones: Array = []
+var _drag_origin_slot: WardrobeSlot
+var _drag_origin_slot_id: StringName = StringName()
+var _drag_origin_pos: Vector2 = Vector2.ZERO
+var _drag_item_instance_id: StringName = StringName()
+var _drag_item_node: ItemNode
+var _drag_returning := false
 
 func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Callable = Callable()) -> void:
 	var typed := context
@@ -65,23 +78,25 @@ func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Cal
 	_event_adapter = typed.event_adapter
 	_interaction_events = typed.interaction_events
 	_desk_event_dispatcher = typed.desk_event_dispatcher
+	_desk_system = typed.desk_system
 	_find_item_instance = typed.find_item_instance
 	_interaction_logger = typed.interaction_logger
-	_desk_by_slot_id = typed.desk_by_slot_id
 	_cursor_hand = cursor_hand
 	_physics_tick = typed.physics_tick
 	_validate_world = validate_world
 	_surface_registry = SurfaceRegistry.get_autoload()
+	_ticket_rack_slots = typed.ticket_rack_slots
+	_ticket_racks = typed.ticket_racks
+	_tray_slots = typed.tray_slots
+	_client_drop_zones = typed.client_drop_zones
 	_cache_slots()
 	_setup_item_visuals(typed.item_scene)
 	_setup_interaction_events(typed.desk_by_id)
 	_setup_desk_dispatcher(
-		typed.desk_states,
-		typed.desk_by_slot_id,
+		typed.desk_by_id,
 		typed.desk_system,
 		typed.client_queue_state,
 		typed.clients,
-		typed.floor_resolver,
 		typed.apply_patience_penalty
 	)
 	_connect_event_adapter()
@@ -136,19 +151,19 @@ func on_pointer_up(cursor_pos: Vector2) -> void:
 	if not _drag_active:
 		return
 	if _cursor_hand and _cursor_hand.get_active_hand_item() != null:
+		var held := _cursor_hand.get_active_hand_item()
 		if _hover_slot:
-			var held := _cursor_hand.get_active_hand_item()
-			if _is_storage_slot(_hover_slot) and not _can_place_on_hook(held):
-				_try_drop_to_floor(cursor_pos)
+			if _is_slot_blocked_for_drop(_hover_slot, held):
+				_return_to_origin()
 				_drag_active = false
 				return
 			var exec_result := _perform_slot_interaction(_hover_slot)
 			if exec_result and not exec_result.success and _cursor_hand.get_active_hand_item() != null:
-				_try_drop_to_floor(cursor_pos)
-		elif _try_drop_to_shelf(cursor_pos):
+				_return_to_origin()
+		elif _try_deliver_to_client(cursor_pos):
 			pass
-		elif _try_drop_to_floor(cursor_pos):
-			pass
+		else:
+			_return_to_origin()
 	_drag_active = false
 
 func update_drag_watchdog() -> void:
@@ -159,7 +174,7 @@ func update_drag_watchdog() -> void:
 		cancel_drag()
 
 func has_active_drag() -> bool:
-	if _drag_active:
+	if _drag_active or _drag_returning:
 		return true
 	return _cursor_hand != null and _cursor_hand.get_active_hand_item() != null
 
@@ -173,6 +188,8 @@ func cancel_drag() -> void:
 	_set_hover_slot(null)
 	if _cursor_hand:
 		_cursor_hand.set_preview_small(false)
+	if _cursor_hand and _cursor_hand.get_active_hand_item() != null:
+		_return_to_origin()
 	_log_debug("cancel_drag hand_item=%s", [_get_hand_item_id()])
 
 func force_cancel_drag() -> void:
@@ -257,8 +274,11 @@ func _try_pick_surface_item(cursor_pos: Vector2) -> bool:
 	item.enter_drag_mode()
 	_cursor_hand.hold_item(item)
 	var instance := _get_item_instance_for_node(item)
+	var instance_id := StringName()
 	if instance != null:
 		_interaction_service.set_hand_item(instance)
+		instance_id = instance.id
+	_begin_drag_session(item, null, instance_id)
 	_log_debug("pick_surface item=%s pos=%.1f,%.1f", [item.item_id, cursor_pos.x, cursor_pos.y])
 	return true
 
@@ -490,8 +510,11 @@ func _log_debug(format: String, args: Array = []) -> void:
 func _is_storage_slot(slot: WardrobeSlot) -> bool:
 	if slot == null:
 		return false
-	var slot_id := StringName(slot.get_slot_identifier())
-	return not _desk_by_slot_id.has(slot_id)
+	if _is_tray_slot(slot):
+		return false
+	if _is_ticket_rack_slot(slot):
+		return false
+	return true
 
 func _get_world_space_state() -> PhysicsDirectSpaceState2D:
 	if _cursor_hand and _cursor_hand.is_inside_tree():
@@ -548,9 +571,7 @@ func _update_preview() -> void:
 	if _hover_slot == null:
 		_cursor_hand.set_preview_small(false)
 		return
-	var slot_id := StringName(_hover_slot.get_slot_identifier())
-	var is_storage := not _desk_by_slot_id.has(slot_id)
-	_cursor_hand.set_preview_small(is_storage)
+	_cursor_hand.set_preview_small(_is_storage_slot(_hover_slot))
 
 func _cache_slots() -> void:
 	_slots_array.clear()
@@ -582,24 +603,20 @@ func _setup_interaction_events(desk_by_id: Dictionary) -> void:
 	)
 
 func _setup_desk_dispatcher(
-	desk_states: Array,
-	desk_by_slot_id: Dictionary,
+	desk_by_id: Dictionary,
 	desk_system: DeskServicePointSystem,
 	client_queue_state: ClientQueueState,
 	clients: Dictionary,
-	floor_resolver,
 	apply_patience_penalty: Callable
 ) -> void:
 	if _desk_event_dispatcher == null:
 		return
 	_desk_event_dispatcher.configure(
-		desk_states,
-		desk_by_slot_id,
+		desk_by_id,
 		desk_system,
 		client_queue_state,
 		clients,
 		_storage_state,
-		floor_resolver,
 		apply_patience_penalty
 	)
 
@@ -610,6 +627,215 @@ func _connect_event_adapter() -> void:
 	_event_adapter.item_placed.connect(_on_event_item_placed)
 	_event_adapter.action_rejected.connect(_on_event_action_rejected)
 	_event_connected = true
+
+func recover_stale_drag() -> void:
+	for node in _item_nodes.values():
+		if node == null or not is_instance_valid(node):
+			continue
+		if not node.has_meta(META_ORIGIN_SLOT_ID) and not node.has_meta(META_ORIGIN_POS):
+			continue
+		var slot_id := StringName(str(node.get_meta(META_ORIGIN_SLOT_ID, "")))
+		if slot_id != StringName():
+			var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
+			if slot != null and not slot.has_item():
+				slot.put_item(node)
+				var instance := _get_item_instance_for_node(node)
+				if instance != null and _storage_state != null and _storage_state.get_slot_item(slot_id) == null:
+					_storage_state.put(slot_id, instance)
+				_release_origin_reservation_for_slot(slot_id, instance.id if instance != null else StringName())
+			node.remove_meta(META_ORIGIN_SLOT_ID)
+			node.remove_meta(META_ORIGIN_POS)
+		else:
+			node.remove_meta(META_ORIGIN_POS)
+
+func _begin_drag_session(item: ItemNode, origin_slot: WardrobeSlot, item_instance_id: StringName) -> void:
+	_drag_item_node = item
+	_drag_item_instance_id = item_instance_id
+	_drag_origin_slot = origin_slot
+	_drag_origin_slot_id = StringName(origin_slot.get_slot_identifier()) if origin_slot != null else StringName()
+	_drag_origin_pos = item.global_position if item != null else Vector2.ZERO
+	_drag_returning = false
+	if item != null:
+		item.set_meta(META_ORIGIN_SLOT_ID, _drag_origin_slot_id)
+		item.set_meta(META_ORIGIN_POS, _drag_origin_pos)
+	if origin_slot != null and item_instance_id != StringName():
+		origin_slot.reserve(item_instance_id)
+		if _desk_system != null:
+			_desk_system.reserve_tray_slot(_drag_origin_slot_id, item_instance_id)
+
+func _finalize_drag_after_put(_slot_id: StringName, item_node: ItemNode) -> void:
+	if _drag_origin_slot_id == StringName():
+		_clear_drag_session()
+		return
+	_release_origin_reservation()
+	if item_node != null:
+		item_node.remove_meta(META_ORIGIN_SLOT_ID)
+		item_node.remove_meta(META_ORIGIN_POS)
+	_clear_drag_session()
+
+func _return_to_origin() -> void:
+	if _drag_returning:
+		return
+	var item := _cursor_hand.get_active_hand_item() if _cursor_hand else null
+	if item == null:
+		return
+	_drag_returning = true
+	if _cursor_hand:
+		_cursor_hand.take_item_from_hand()
+	if item.get_parent() != null and _cursor_hand and item.get_parent() == _cursor_hand:
+		var target_parent := _cursor_hand.get_parent()
+		if target_parent != null:
+			item.reparent(target_parent)
+	var anchor := _drag_origin_slot.get_item_anchor() if _drag_origin_slot != null else null
+	if anchor == null:
+		var temp_anchor := Node2D.new()
+		temp_anchor.name = "DragReturnAnchor"
+		var anchor_parent: Node = _cursor_hand.get_parent() if _cursor_hand else null
+		if anchor_parent == null and item.get_parent() != null:
+			anchor_parent = item.get_parent()
+		if anchor_parent == null:
+			return
+		anchor_parent.add_child(temp_anchor)
+		temp_anchor.global_position = _drag_origin_pos
+		anchor = temp_anchor
+	item.return_to_origin(anchor, Callable(self, "_finish_return_to_origin").bind(item, anchor))
+
+func _finish_return_to_origin(item: ItemNode, anchor: Node2D) -> void:
+	if anchor != null and anchor.name == "DragReturnAnchor":
+		anchor.queue_free()
+	if item == null:
+		_clear_drag_session()
+		return
+	if _drag_origin_slot != null:
+		_drag_origin_slot.put_item(item)
+		if _storage_state != null and _drag_item_instance_id != StringName():
+			if _storage_state.get_slot_item(_drag_origin_slot_id) == null:
+				var instance: ItemInstance = _interaction_service.get_hand_item()
+				if instance != null:
+					_storage_state.put(_drag_origin_slot_id, instance)
+	_release_origin_reservation()
+	item.remove_meta(META_ORIGIN_SLOT_ID)
+	item.remove_meta(META_ORIGIN_POS)
+	_interaction_service.clear_hand_item()
+	_drag_returning = false
+	_clear_drag_session()
+
+func _release_origin_reservation() -> void:
+	_release_origin_reservation_for_slot(_drag_origin_slot_id, _drag_item_instance_id)
+
+func _release_origin_reservation_for_slot(slot_id: StringName, item_instance_id: StringName) -> void:
+	if slot_id == StringName():
+		return
+	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
+	if slot != null:
+		slot.release_reservation()
+	if _desk_system != null and item_instance_id != StringName():
+		_desk_system.release_tray_slot(slot_id, item_instance_id)
+
+func _clear_drag_session() -> void:
+	_drag_item_node = null
+	_drag_item_instance_id = StringName()
+	_drag_origin_slot = null
+	_drag_origin_slot_id = StringName()
+	_drag_origin_pos = Vector2.ZERO
+	_drag_returning = false
+
+func _is_slot_blocked_for_drop(slot: WardrobeSlot, item: ItemNode) -> bool:
+	if slot == null or item == null:
+		return true
+	if slot.has_reservation() and not slot.is_reserved_by(_drag_item_instance_id):
+		return true
+	if _is_ticket_rack_slot(slot) and not _is_ticket_item(item):
+		if item.has_method("play_reject_effect"):
+			item.play_reject_effect()
+		return true
+	if _is_tray_slot(slot) and slot != _drag_origin_slot:
+		if item.has_method("play_reject_effect"):
+			item.play_reject_effect()
+		return true
+	return false
+
+func _is_ticket_rack_slot(slot: WardrobeSlot) -> bool:
+	if slot == null:
+		return false
+	return _ticket_rack_slots.has(slot)
+
+func _is_tray_slot(slot: WardrobeSlot) -> bool:
+	if slot == null:
+		return false
+	if _desk_system == null:
+		return _tray_slots.has(slot)
+	var slot_id := StringName(slot.get_slot_identifier())
+	return _desk_system.is_tray_slot(slot_id)
+
+func _is_ticket_item(item: ItemNode) -> bool:
+	if item == null:
+		return false
+	return item.item_type == ItemNode.ItemType.TICKET
+
+func _try_deliver_to_client(cursor_pos: Vector2) -> bool:
+	var drop_zone := _get_drop_zone_at_point(cursor_pos)
+	if drop_zone == null:
+		return false
+	var item_instance: ItemInstance = _interaction_service.get_hand_item()
+	if item_instance == null:
+		return false
+	var events := _desk_event_dispatcher.process_deliver_attempt(drop_zone.service_point_id, item_instance)
+	_interaction_events.apply_desk_events(events)
+	_apply_deliver_results(events)
+	return true
+
+func _apply_deliver_results(events: Array) -> void:
+	var accepted := false
+	for event_data in events:
+		var event_type: StringName = event_data.get(EventSchema.EVENT_KEY_TYPE, StringName())
+		var payload: Dictionary = event_data.get(EventSchema.EVENT_KEY_PAYLOAD, {})
+		if event_type == EventSchema.EVENT_DELIVER_RESULT_ACCEPT_CONSUME:
+			var item_id := StringName(str(payload.get(EventSchema.PAYLOAD_ITEM_INSTANCE_ID, "")))
+			var consume_kind := StringName(str(payload.get(EventSchema.PAYLOAD_CONSUME_KIND, "")))
+			_consume_hand_item(item_id, consume_kind)
+			accepted = true
+		elif event_type == EventSchema.EVENT_DELIVER_RESULT_REJECT_RETURN:
+			_return_to_origin()
+	if accepted:
+		_clear_drag_session()
+
+func _consume_hand_item(item_id: StringName, consume_kind: StringName) -> void:
+	var node: ItemNode = _item_nodes.get(item_id, null)
+	if node == null and _cursor_hand != null:
+		node = _cursor_hand.get_active_hand_item()
+	if node != null:
+		node.remove_meta(META_ORIGIN_SLOT_ID)
+		node.remove_meta(META_ORIGIN_POS)
+		_detach_item_node(node)
+		if _item_nodes.has(item_id):
+			_item_nodes.erase(item_id)
+		node.queue_free()
+	_interaction_service.clear_hand_item()
+	if consume_kind == StringName("ticket"):
+		_clear_ticket_rack_offset(item_id)
+	_release_origin_reservation()
+	_clear_drag_session()
+
+func _clear_ticket_rack_offset(ticket_id: StringName) -> void:
+	if ticket_id == StringName():
+		return
+	for rack in _ticket_racks:
+		if rack is TicketRackScript:
+			rack.clear_ticket_offset(ticket_id)
+
+func _get_drop_zone_at_point(cursor_pos: Vector2) -> ClientDropZoneScript:
+	var best_zone: ClientDropZoneScript = null
+	var best_d2 := INF
+	for zone in _client_drop_zones:
+		if zone is ClientDropZoneScript:
+			if not zone.is_point_inside(cursor_pos):
+				continue
+			var d2 := cursor_pos.distance_squared_to(zone.global_position)
+			if d2 < best_d2:
+				best_d2 = d2
+				best_zone = zone
+	return best_zone
 
 func _detach_item_node(node: ItemNode) -> void:
 	if node == null:
@@ -637,7 +863,10 @@ func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) ->
 	if node and _cursor_hand:
 		node.enter_drag_mode()
 		_cursor_hand.hold_item(node)
-	_interaction_service.set_hand_item(_instance_from_snapshot(item))
+	var instance := _instance_from_snapshot(item)
+	_interaction_service.set_hand_item(instance)
+	if node != null:
+		_begin_drag_session(node, slot, instance.id)
 
 func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)
@@ -650,11 +879,13 @@ func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) ->
 		node.freeze = true
 		slot.put_item(node)
 		_interaction_service.clear_hand_item()
+		_finalize_drag_after_put(slot_id, node)
 	else:
 		_log_put_missing("placed", slot_id, item_id, slot, hand_before, node)
 
 func _on_event_action_rejected(_slot_id: StringName, _reason: StringName, _tick: int) -> void:
-	pass
+	if _cursor_hand and _cursor_hand.get_active_hand_item() != null:
+		_return_to_origin()
 
 func _debug_validate_world() -> void:
 	if _validate_world.is_valid():

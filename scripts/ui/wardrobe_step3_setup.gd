@@ -27,6 +27,7 @@ var _desk_system: DeskServicePointSystem
 var _queue_system: ClientQueueSystem
 var _storage_state: WardrobeStorageState
 var _get_ticket_slots: Callable
+var _get_cabinet_ticket_slots: Callable
 var _place_item_instance_in_slot: Callable
 var _apply_desk_events: Callable
 var _register_item: Callable
@@ -49,6 +50,7 @@ func configure(context: RefCounted) -> void:
 	_queue_system = context.queue_system
 	_storage_state = context.storage_state
 	_get_ticket_slots = context.get_ticket_slots
+	_get_cabinet_ticket_slots = context.get_cabinet_ticket_slots
 	_place_item_instance_in_slot = context.place_item_instance_in_slot
 	_apply_desk_events = context.apply_desk_events
 	_register_item = context.register_item
@@ -60,7 +62,7 @@ func initialize_step3() -> void:
 		_collect_desks.call()
 	_apply_wave_settings()
 	_setup_step3_desks_and_clients()
-	_seed_step3_hook_tickets()
+	_seed_cabinet_tickets()
 	_sync_hook_anchor_tickets_once()
 
 func _setup_step3_desks_and_clients() -> void:
@@ -147,21 +149,13 @@ func _make_demo_client(index: int, client_id: StringName, color: Color) -> Clien
 		item_archetype_id,
 		color
 	)
-	var ticket := ItemInstanceScript.new(
-		StringName("ticket_%02d" % index),
-		ItemInstanceScript.KIND_TICKET,
-		StringName(), # Archetype for ticket
-		color
-	)
-	
 	if _register_item.is_valid():
 		_register_item.call(coat)
-		_register_item.call(ticket)
 		
 	return ClientStateScript.new(
 		client_id,
 		coat,
-		ticket,
+		null,
 		StringName(),
 		StringName("color_%d" % index),
 		client_archetype_id,
@@ -243,24 +237,35 @@ func _load_wave_settings() -> Dictionary:
 		"target_checkout": int(wave_payload.get("target_checkout", DEFAULT_TARGET_CHECKOUT)),
 	}
 
-func _seed_step3_hook_tickets() -> void:
-	if not _get_ticket_slots.is_valid():
+func _seed_cabinet_tickets() -> void:
+	if not _get_cabinet_ticket_slots.is_valid():
 		return
-	var ticket_slots: Array = _get_ticket_slots.call()
-	if ticket_slots.is_empty():
-		push_warning("Step 3 hooks missing; no ticket slots found.")
+	var cabinet_slots: Array = _get_cabinet_ticket_slots.call()
+	if cabinet_slots.is_empty():
+		push_warning("Step 3 cabinet ticket slots missing; no cabinet slots found.")
 		return
-	var client_ids: Array = _clients.keys()
-	var slot_count: int = min(ticket_slots.size(), client_ids.size())
+	var colors: Array[Color] = [
+		Color(0.85, 0.35, 0.35),
+		Color(0.35, 0.7, 0.45),
+		Color(0.35, 0.45, 0.9),
+		Color(0.9, 0.75, 0.35),
+		Color(0.75, 0.35, 0.85),
+		Color(0.35, 0.85, 0.8),
+		Color(0.85, 0.6, 0.35),
+	]
+	var slot_count: int = cabinet_slots.size()
 	for index in range(slot_count):
-		var client_id: StringName = StringName(str(client_ids[index]))
-		var client: RefCounted = _clients.get(client_id, null)
-		if client == null:
-			continue
+		var color := colors[index % colors.size()]
+		var ticket := ItemInstanceScript.new(
+			StringName("ticket_cabinet_%02d" % index),
+			ItemInstanceScript.KIND_TICKET,
+			StringName(),
+			color
+		)
 		if _place_item_instance_in_slot.is_valid():
 			_place_item_instance_in_slot.call(
-				StringName(ticket_slots[index].get_slot_identifier()),
-				client.get_ticket_item()
+				StringName(cabinet_slots[index].get_slot_identifier()),
+				ticket
 			)
 
 func _sync_hook_anchor_tickets_once() -> void:

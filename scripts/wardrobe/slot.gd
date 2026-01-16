@@ -6,6 +6,7 @@ const SLOT_GROUP := "wardrobe_slots"
 @export var slot_id: String = ""
 @onready var _item_anchor: Node2D = $ItemAnchor
 var _held_item: ItemNode
+var _reserved_item_id: StringName = StringName()
 
 func _ready() -> void:
 	add_to_group(SLOT_GROUP)
@@ -17,7 +18,13 @@ func get_item() -> ItemNode:
 	return _held_item
 
 func can_put(_item: ItemNode) -> bool:
-	return _item != null and not has_item()
+	if _item == null:
+		return false
+	if has_item():
+		return false
+	if _reserved_item_id == StringName():
+		return true
+	return _reserved_item_id == StringName(_item.item_id)
 
 func put_item(item: ItemNode) -> bool:
 	if not can_put(item):
@@ -49,6 +56,25 @@ func clear_item(queue_item := true) -> void:
 		if queue_item and is_instance_valid(_held_item):
 			_held_item.queue_free()
 		_held_item = null
+
+func reserve(item_instance_id: StringName) -> void:
+	if item_instance_id == StringName():
+		return
+	_reserved_item_id = item_instance_id
+
+func release_reservation() -> void:
+	_reserved_item_id = StringName()
+
+func is_reserved_by(item_instance_id: StringName) -> bool:
+	if _reserved_item_id == StringName():
+		return false
+	return _reserved_item_id == item_instance_id
+
+func has_reservation() -> bool:
+	return _reserved_item_id != StringName()
+
+func get_item_anchor() -> Node2D:
+	return _item_anchor
 
 func get_slot_identifier() -> String:
 	return slot_id if slot_id.length() > 0 else String(name)

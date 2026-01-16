@@ -1,0 +1,27 @@
+# Checklist - Iteration 10 MVP rescope
+
+- [x] Review iteration 10 requirements and existing implementation constraints.
+- [x] Add deliver attempt/result events and payload keys.
+- [x] Rewrite desk service point system to use tray slots, deliver validation, and accept/reject outcomes.
+- [x] Implement slot reservation + return-to-origin drag session behavior.
+- [x] Add ticket rack + tray/dropzone layout scenes and scripts.
+- [x] Update world setup and step3 seeding to use ticket rack pool.
+- [x] Update UI adapters for deliver events and tray spawn by slot id.
+- [x] Update/replace unit tests for deliver and reject flows.
+- [x] Seed hook tickets on SlotA hooks and wire hook slot discovery into step3 setup.
+- [x] Add layout fallback positioning/visuals for ticket rack and desk tray slots/drop zone.
+- [x] Harden ticket rack spawn to accept root/controller layouts.
+- [x] Remove runtime hook board spawn to avoid duplicate hook visuals.
+- [x] Seed one ticket per cabinet slot (SlotA/SlotB) using CabinetsGrid slot discovery.
+- [x] Add `get_ticket_slots()` on CabinetsGrid and wire script at runtime.
+- [x] Add retry to collect desk layouts when tray slots are initially missing.
+- [x] Add fallback tray slot/drop zone discovery for desk layouts missing scripts.
+- [x] Ensure fallback applies scripts even when nodes already have non-typed scripts.
+- [x] Search drop zone inside layout subtree so desk can register client drop zone.
+- [x] Ensure ClientDropZone builds collision shape in editor via @tool.
+- [x] Move layout instancing to WorkdeskScene and expose ensure_layout_instanced().
+- [x] Remove layout_scene export from DeskServicePoint and instantiate layout in WorkdeskScene.
+- [x] Add DeskLayout instances under Desk_A/Desk_B in WorkdeskScene for manual edits.
+- [x] Add debug logs for desk layout and assignment state.
+- [x] Run canonical tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`.
+- [x] Launch Godot once for startup validation: `"$GODOT_BIN" --path .`.

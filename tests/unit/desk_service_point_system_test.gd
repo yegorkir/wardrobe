@@ -7,119 +7,76 @@ const ClientQueueStateScript := preload("res://scripts/domain/clients/client_que
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
-const InteractionEventScript := preload("res://scripts/domain/interaction/interaction_event.gd")
 
-func test_dropoff_consumes_ticket_and_spawns_next_coat() -> void:
+func test_deliver_accepts_any_free_ticket_on_checkin_consumes() -> void:
 	var system := DeskServicePointSystemScript.new()
 	_configure_queue_system(system)
 	var storage := _make_storage()
 	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
 	var queue := ClientQueueStateScript.new()
-	var client_a := _make_client("Client_A", "coat_a", "ticket_a")
-	var client_b := _make_client("Client_B", "coat_b", "ticket_b")
-	var clients := {
-		client_a.client_id: client_a,
-		client_b.client_id: client_b,
-	}
-	desk.current_client_id = client_a.client_id
-	queue.enqueue_checkin(client_b.client_id)
-	storage.put(desk.desk_slot_id, client_a.get_ticket_item())
-	var event := _make_put_event(desk.desk_slot_id)
+	var client := _make_client("Client_A", "coat_a")
+	var clients := {client.client_id: client}
+	desk.current_client_id = client.client_id
+	var ticket := ItemInstanceScript.new(StringName("ticket_00"), ItemInstanceScript.KIND_TICKET)
 
-	var events := system.process_interaction_event(desk, queue, clients, storage, event)
+	var events := system.process_deliver_attempt(desk, queue, clients, storage, ticket)
 
-	assert_that(client_a.phase).is_equal(ClientStateScript.PHASE_PICK_UP)
-	assert_that(desk.current_client_id).is_equal(client_b.client_id)
-	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(client_b.get_coat_id())
-	assert_that(queue.peek_next_checkout()).is_equal(client_a.client_id)
-	assert_bool(_has_event(events, EventSchema.EVENT_DESK_CONSUMED_ITEM)).is_true()
-	assert_bool(_has_event(events, EventSchema.EVENT_DESK_SPAWNED_ITEM)).is_true()
+	assert_that(client.get_ticket_id()).is_equal(ticket.id)
+	assert_that(client.phase).is_equal(ClientStateScript.PHASE_PICK_UP)
+	assert_bool(_has_event(events, EventSchema.EVENT_DELIVER_RESULT_ACCEPT_CONSUME)).is_true()
+	var payload := _find_event_payload(events, EventSchema.EVENT_DELIVER_RESULT_ACCEPT_CONSUME)
+	assert_that(payload.get(EventSchema.PAYLOAD_CONSUME_KIND)).is_equal(StringName("ticket"))
 
-func test_dropoff_empty_queue_requeues_client_for_pickup() -> void:
+func test_deliver_rejects_wrong_item_in_checkout_keeps_phase() -> void:
 	var system := DeskServicePointSystemScript.new()
 	_configure_queue_system(system)
 	var storage := _make_storage()
 	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
 	var queue := ClientQueueStateScript.new()
-	var client_a := _make_client("Client_A", "coat_a", "ticket_a")
-	var clients := {client_a.client_id: client_a}
-	desk.current_client_id = client_a.client_id
-	storage.put(desk.desk_slot_id, client_a.get_ticket_item())
-	var event := _make_put_event(desk.desk_slot_id)
-
-	var events := system.process_interaction_event(desk, queue, clients, storage, event)
-
-	assert_that(desk.current_client_id).is_equal(client_a.client_id)
-	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(client_a.get_ticket_id())
-	assert_that(queue.get_count()).is_equal(0)
-	assert_bool(_has_event(events, EventSchema.EVENT_DESK_SPAWNED_ITEM)).is_true()
-
-func test_pickup_consumes_correct_coat_and_spawns_next_ticket() -> void:
-	var system := DeskServicePointSystemScript.new()
-	_configure_queue_system(system)
-	var storage := _make_storage()
-	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
-	var queue := ClientQueueStateScript.new()
-	var client_a := _make_client("Client_A", "coat_a", "ticket_a")
-	var client_b := _make_client("Client_B", "coat_b", "ticket_b")
-	client_a.set_phase(ClientStateScript.PHASE_PICK_UP)
-	client_b.set_phase(ClientStateScript.PHASE_PICK_UP)
-	var clients := {
-		client_a.client_id: client_a,
-		client_b.client_id: client_b,
-	}
-	desk.current_client_id = client_a.client_id
-	queue.enqueue_checkout(client_b.client_id)
-	storage.put(desk.desk_slot_id, client_a.get_coat_item())
-	var event := _make_put_event(desk.desk_slot_id)
-
-	var events := system.process_interaction_event(desk, queue, clients, storage, event)
-
-	assert_that(client_a.phase).is_equal(ClientStateScript.PHASE_DONE)
-	assert_that(desk.current_client_id).is_equal(client_b.client_id)
-	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(client_b.get_ticket_id())
-	assert_bool(_has_event(events, EventSchema.EVENT_CLIENT_COMPLETED)).is_true()
-
-func test_pickup_rejects_wrong_coat() -> void:
-	var system := DeskServicePointSystemScript.new()
-	_configure_queue_system(system)
-	var storage := _make_storage()
-	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
-	var queue := ClientQueueStateScript.new()
-	var client_a := _make_client("Client_A", "coat_a", "ticket_a")
-	client_a.set_phase(ClientStateScript.PHASE_PICK_UP)
-	var clients := {client_a.client_id: client_a}
-	desk.current_client_id = client_a.client_id
-	var wrong_coat := ItemInstanceScript.new(StringName("coat_wrong"), ItemInstanceScript.KIND_COAT)
-	storage.put(desk.desk_slot_id, wrong_coat)
-	var event := _make_put_event(desk.desk_slot_id)
-
-	var events := system.process_interaction_event(desk, queue, clients, storage, event)
-
-	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(StringName("coat_wrong"))
-	assert_bool(_has_event(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)).is_true()
-	var reject_payload := _find_event_payload(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)
-	assert_that(reject_payload.get(EventSchema.PAYLOAD_REASON_CODE)).is_equal(EventSchema.REASON_WRONG_ITEM)
-
-func test_dropoff_rejects_non_ticket_item() -> void:
-	var system := DeskServicePointSystemScript.new()
-	_configure_queue_system(system)
-	var storage := _make_storage()
-	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
-	var queue := ClientQueueStateScript.new()
-	var client_a := _make_client("Client_A", "coat_a", "ticket_a")
-	var clients := {client_a.client_id: client_a}
-	desk.current_client_id = client_a.client_id
+	var client := _make_client("Client_A", "coat_a")
+	client.set_phase(ClientStateScript.PHASE_PICK_UP)
+	var clients := {client.client_id: client}
+	desk.current_client_id = client.client_id
 	var wrong_item := ItemInstanceScript.new(StringName("coat_wrong"), ItemInstanceScript.KIND_COAT)
-	storage.put(desk.desk_slot_id, wrong_item)
-	var event := _make_put_event(desk.desk_slot_id)
 
-	var events := system.process_interaction_event(desk, queue, clients, storage, event)
+	var events := system.process_deliver_attempt(desk, queue, clients, storage, wrong_item)
 
-	assert_that(storage.get_slot_item(desk.desk_slot_id).id).is_equal(StringName("coat_wrong"))
-	assert_bool(_has_event(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)).is_true()
-	var reject_payload := _find_event_payload(events, EventSchema.EVENT_DESK_REJECTED_DELIVERY)
-	assert_that(reject_payload.get(EventSchema.PAYLOAD_REASON_CODE)).is_equal(EventSchema.REASON_WRONG_ITEM)
+	assert_that(client.phase).is_equal(ClientStateScript.PHASE_PICK_UP)
+	assert_bool(_has_event(events, EventSchema.EVENT_DELIVER_RESULT_REJECT_RETURN)).is_true()
+	var payload := _find_event_payload(events, EventSchema.EVENT_DELIVER_RESULT_REJECT_RETURN)
+	assert_that(payload.get(EventSchema.PAYLOAD_REASON_CODE)).is_equal(EventSchema.REASON_WRONG_ITEM)
+
+func test_tray_blocks_only_checkin_by_free_slots_condition() -> void:
+	var system := DeskServicePointSystemScript.new()
+	_configure_queue_system(system)
+	var storage := _make_storage()
+	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
+	var tray_slots := [
+		StringName("Tray_0"),
+		StringName("Tray_1"),
+		StringName("Tray_2"),
+		StringName("Tray_3"),
+	]
+	system.register_tray_slots(desk.desk_id, tray_slots)
+	for slot_id in tray_slots:
+		storage.register_slot(slot_id)
+		var filler := ItemInstanceScript.new(StringName("tray_fill_%s" % slot_id), ItemInstanceScript.KIND_COAT)
+		storage.put(slot_id, filler)
+
+	var queue := ClientQueueStateScript.new()
+	var checkin_client := _make_client("Client_Checkin", "coat_in")
+	var checkout_client := _make_client("Client_Checkout", "coat_out")
+	checkout_client.set_phase(ClientStateScript.PHASE_PICK_UP)
+	var clients := {
+		checkin_client.client_id: checkin_client,
+		checkout_client.client_id: checkout_client,
+	}
+	queue.enqueue_checkin(checkin_client.client_id)
+	queue.enqueue_checkout(checkout_client.client_id)
+
+	system.assign_next_client_to_desk(desk, queue, clients, storage)
+
+	assert_that(desk.current_client_id).is_equal(checkout_client.client_id)
 
 func _make_storage() -> WardrobeStorageState:
 	var storage := StorageStateScript.new()
@@ -135,15 +92,9 @@ func _configure_queue_system(system: DeskServicePointSystem) -> void:
 	}
 	system.configure_queue_system(queue_config, 0)
 
-func _make_client(id: String, coat_id: String, ticket_id: String) -> ClientState:
+func _make_client(id: String, coat_id: String) -> ClientState:
 	var coat := ItemInstanceScript.new(StringName(coat_id), ItemInstanceScript.KIND_COAT)
-	var ticket := ItemInstanceScript.new(StringName(ticket_id), ItemInstanceScript.KIND_TICKET)
-	return ClientState.new(StringName(id), coat, ticket)
-
-func _make_put_event(slot_id: StringName) -> InteractionEventScript:
-	return InteractionEventScript.new(EventSchema.EVENT_ITEM_PLACED, {
-		EventSchema.PAYLOAD_SLOT_ID: slot_id,
-	})
+	return ClientState.new(StringName(id), coat)
 
 func _has_event(events: Array, event_type: StringName) -> bool:
 	for event_data in events:

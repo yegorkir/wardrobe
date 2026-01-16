@@ -31,12 +31,16 @@ const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/ite
 const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 const InteractionRulesScript := preload("res://scripts/domain/interaction/interaction_rules.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
+const DEFAULT_TICKET_RACK_SCENE := preload("res://scenes/TicketRack.tscn")
+const CabinetsGridScript := preload("res://scripts/wardrobe/cabinets_grid.gd")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
 @export var debug_logs_enabled: bool = false
 @export var queue_hud_max_visible: int = 6
 @export var queue_hud_preview_enabled: bool = false
+@export var ticket_rack_scene: PackedScene = preload("res://scenes/TicketRack.tscn")
+@export var ticket_rack_position: Vector2 = Vector2(368, 520)
 
 @export_group("Zombie Balance")
 @export var zombie_radius_per_stage: float = ZombieExposureConfigScript.DEFAULT_RADIUS
@@ -48,6 +52,7 @@ const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 @onready var _cursor_hand: CursorHand = %CursorHand
 @onready var _physics_tick: Node = %WardrobePhysicsTick
 @onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
+@onready var _service_zone: Node2D = $ServiceZone
 
 @onready var _light_zones_adapter: Node2D = $StorageHall/LightZonesAdapter
 @onready var _curtain_light_adapter: Node = $StorageHall/CurtainRig/CurtainsColumn/CurtainLightAdapter
@@ -120,6 +125,7 @@ func _finish_ready_setup() -> void:
 	if _bulb_row1:
 		_bulb_row1.setup(_light_service)
 
+	_ensure_cabinets_grid_script()
 	_interaction_events_bridge.configure_bridge(
 		Callable(self, "_on_client_completed"),
 		Callable(self, "_on_client_checkin")
@@ -141,12 +147,20 @@ func _finish_ready_setup() -> void:
 		Callable(_interaction_events, "apply_desk_events"),
 		Callable(_run_manager, "register_item") if _run_manager else Callable()
 	)
+	_spawn_ticket_rack()
+	_ensure_desk_layouts()
+	await get_tree().process_frame
 	if _run_manager:
 		_world_adapter.get_desk_system().configure_queue_mix_provider(
 			Callable(_run_manager, "get_queue_mix_snapshot")
 		)
 	_world_adapter.collect_slots()
 	_world_adapter.collect_desks()
+	if _world_adapter.get_tray_slots().is_empty() and not _world_adapter.get_desk_nodes().is_empty():
+		await get_tree().process_frame
+		_world_adapter.collect_slots()
+		_world_adapter.collect_desks()
+	_log_desk_layout_state("after_collect")
 	if _world_adapter.get_slots().is_empty():
 		await get_tree().process_frame
 		_world_adapter.collect_slots()
@@ -173,6 +187,10 @@ func _finish_ready_setup() -> void:
 	interaction_context.desk_system = _world_adapter.get_desk_system()
 	interaction_context.client_queue_state = _world_adapter.get_client_queue_state()
 	interaction_context.clients = _world_adapter.get_clients()
+	interaction_context.ticket_rack_slots = _world_adapter.get_ticket_rack_slots()
+	interaction_context.ticket_racks = _world_adapter.get_ticket_racks()
+	interaction_context.tray_slots = _world_adapter.get_tray_slots()
+	interaction_context.client_drop_zones = _world_adapter.get_client_drop_zones()
 	interaction_context.find_item_instance = Callable(_run_manager, "find_item") if _run_manager else Callable(_world_adapter, "find_item_instance")
 	interaction_context.floor_resolver = _floor_resolver
 	if _run_manager != null:
@@ -194,7 +212,91 @@ func _finish_ready_setup() -> void:
 	_collect_surface_targets()
 	_dragdrop_adapter.configure_surface_targets(_shelf_surfaces, _floor_zone)
 	_world_adapter.initialize_world()
+	_log_desk_assignment_state("after_init")
+	_dragdrop_adapter.recover_stale_drag()
 	_setup_clients_ui()
+
+func _spawn_ticket_rack() -> void:
+	var scene := ticket_rack_scene if ticket_rack_scene != null else DEFAULT_TICKET_RACK_SCENE
+	if scene == null:
+		return
+	if _service_zone == null:
+		return
+	if _service_zone.get_node_or_null("TicketRack") != null:
+		return
+	var rack := scene.instantiate() as Node2D
+	if rack == null:
+		return
+	var controller := rack.get_node_or_null("TicketRackController")
+	var controller_node: Node = controller if controller != null else rack
+	if controller_node != null and controller_node.get_script() == null:
+		controller_node.set_script(preload("res://scripts/wardrobe/ticket_rack.gd"))
+	if controller_node != null:
+		controller_node.add_to_group("ticket_rack")
+	rack.name = "TicketRack"
+	rack.position = ticket_rack_position
+	_service_zone.add_child(rack)
+	if controller_node != null and controller_node.has_method("refresh_slots"):
+		controller_node.call("refresh_slots")
+
+func _ensure_cabinets_grid_script() -> void:
+	var grid := get_node_or_null("StorageHall/CabinetsGrid") as Node
+	if grid == null:
+		return
+	if grid.get_script() == null:
+		grid.set_script(CabinetsGridScript)
+
+func _ensure_desk_layouts() -> void:
+	for node in get_tree().get_nodes_in_group("wardrobe_desks"):
+		if node == null:
+			continue
+		if node.has_method("ensure_layout_instanced"):
+			node.call("ensure_layout_instanced")
+
+func _log_desk_layout_state(phase: String) -> void:
+	if not DebugLog.enabled():
+		return
+	var tray_slots := _world_adapter.get_tray_slots()
+	var drop_zones := _world_adapter.get_client_drop_zones()
+	DebugLog.logf(
+		"DeskLayout %s desks=%d tray_slots=%d drop_zones=%d",
+		[phase, _world_adapter.get_desk_nodes().size(), tray_slots.size(), drop_zones.size()]
+	)
+	for desk in _world_adapter.get_desk_nodes():
+		if desk == null:
+			continue
+		var tray_ids: Array = []
+		if desk.has_method("get_tray_slot_ids"):
+			tray_ids = desk.get_tray_slot_ids()
+		DebugLog.logf(
+			"DeskLayout %s desk=%s tray_ids=%s drop_zone=%s",
+			[
+				phase,
+				String(desk.desk_id),
+				tray_ids,
+				"yes" if desk.get_drop_zone() != null else "no",
+			]
+		)
+
+func _log_desk_assignment_state(phase: String) -> void:
+	if not DebugLog.enabled():
+		return
+	var queue_state := _world_adapter.get_client_queue_state()
+	DebugLog.logf(
+		"DeskAssign %s queue_in=%d queue_out=%d",
+		[
+			phase,
+			queue_state.get_checkin_count() if queue_state != null else -1,
+			queue_state.get_checkout_count() if queue_state != null else -1,
+		]
+	)
+	for desk_state in _world_adapter.get_desk_states():
+		if desk_state == null:
+			continue
+		DebugLog.logf(
+			"DeskAssign %s desk=%s client=%s",
+			[phase, String(desk_state.desk_id), String(desk_state.current_client_id)]
+		)
 
 func _configure_floor_resolver() -> void:
 	var registry := SurfaceRegistryScript.get_autoload()
