@@ -17,7 +17,6 @@ signal hud_updated(snapshot)
 
 const SCREEN_MAIN_MENU := "main_menu"
 const SCREEN_WARDROBE := "wardrobe"
-const SCREEN_WARDROBE_DEBUG := "wardrobe_debug"
 const SCREEN_SHIFT_SUMMARY := "shift_summary"
 
 const RUN_STATE_MENU := "menu"
@@ -76,10 +75,10 @@ func start_run() -> void:
 func start_shift() -> void:
 	start_shift_with_screen(SCREEN_WARDROBE)
 
-func start_shift_with_screen(screen_id: StringName) -> void:
+func start_shift_with_screen(screen_id: StringName, payload: Dictionary = {}) -> void:
 	_current_state = RUN_STATE_SHIFT
 	_shift_service.start_shift()
-	emit_signal("screen_requested", screen_id, {})
+	emit_signal("screen_requested", screen_id, payload)
 
 func end_shift() -> void:
 	_current_state = RUN_STATE_SUMMARY

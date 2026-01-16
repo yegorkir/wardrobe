@@ -1,0 +1,7 @@
+{
+  "id": "ghost_sheet",
+  "is_vampire": false,
+  "is_zombie": false,
+  "is_ghost": true,
+  "ghost_dark_alpha": 0.4
+}

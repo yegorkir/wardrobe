@@ -1,0 +1,6 @@
+{
+  "id": "ghost",
+  "display_name": "Ghost",
+  "patience": 60,
+  "wrong_item_patience_penalty": 0
+}

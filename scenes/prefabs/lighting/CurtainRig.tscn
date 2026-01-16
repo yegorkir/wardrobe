@@ -1,25 +1,54 @@
-[gd_scene load_steps=4 format=3 uid="uid://qavqeudwaxgi"]
+[gd_scene load_steps=7 format=3 uid="uid://c6jy016jxlubk"]
 
 [ext_resource type="PackedScene" path="res://scenes/prefabs/lighting/CurtainStrip.tscn" id="1"]
 [ext_resource type="Script" uid="uid://dy2t3xqb64kmu" path="res://scripts/wardrobe/lights/curtain_light_adapter.gd" id="2"]
+[ext_resource type="Shader" uid="uid://bi5rmtx2yj3we" path="res://assets/shaders/lighting/light_beam.gdshader" id="3_r48kh"]
+[ext_resource type="Script" uid="uid://bx0ie5va6wmt1" path="res://scripts/wardrobe/lights/curtain_rig.gd" id="4"]
 
-[sub_resource type="RectangleShape2D" id="100"]
-size = Vector2(325, 982)
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bie5o"]
+size = Vector2(363, 982)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_iogvf"]
+shader = ExtResource("3_r48kh")
+shader_parameter/color = Color(0.96, 0.98, 1, 0.5)
+shader_parameter/intensity_y = 2.0
+shader_parameter/min_brightness = 0.1
+shader_parameter/fade_end = 0.8
 
 [node name="CurtainRig" type="Node2D"]
+script = ExtResource("4")
+
+[node name="CurtainZone" type="Area2D" parent="."]
+position = Vector2(196, -61)
+collision_layer = 0
+collision_mask = 0
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CurtainZone"]
+position = Vector2(-44.5, 0)
+shape = SubResource("RectangleShape2D_bie5o")
+
+[node name="LightVisual" type="ColorRect" parent="CurtainZone/CollisionShape2D"]
+material = SubResource("ShaderMaterial_iogvf")
+offset_left = -181.5
+offset_top = -491.0
+offset_right = 181.5
+offset_bottom = 491.0
+mouse_filter = 2
 
 [node name="CurtainsColumn" type="Node2D" parent="."]
-position = Vector2(40, 603)
 
 [node name="CurtainTop" type="Node2D" parent="CurtainsColumn"]
 position = Vector2(0, -250)
 
 [node name="CurtainStrip" parent="CurtainsColumn/CurtainTop" instance=ExtResource("1")]
+position = Vector2(0, -22)
 
 [node name="CurtainBottom" type="Node2D" parent="CurtainsColumn"]
 position = Vector2(0, 250)
 
 [node name="CurtainStrip" parent="CurtainsColumn/CurtainBottom" instance=ExtResource("1")]
+position = Vector2(0, 24)
 
 [node name="CurtainLightAdapter" type="Node" parent="CurtainsColumn"]
 script = ExtResource("2")
@@ -27,21 +56,3 @@ slider_path = NodePath("../../../../HUDLayer/LightControls/CurtainSlider")
 curtain_top_root_path = NodePath("../CurtainTop")
 curtain_bottom_root_path = NodePath("../CurtainBottom")
 curtain_zone_shape_path = NodePath("../../CurtainZone/CollisionShape2D")
-
-[node name="CurtainZone" type="Area2D" parent="."]
-position = Vector2(250, 413)
-collision_layer = 0
-collision_mask = 0
-monitorable = false
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="CurtainZone"]
-position = Vector2(-62.5, 126)
-shape = SubResource("100")
-
-[node name="LightVisual" type="ColorRect" parent="CurtainZone/CollisionShape2D"]
-offset_left = -162.5
-offset_top = -491.0
-offset_right = 162.5
-offset_bottom = 491.0
-mouse_filter = 2
-color = Color(1, 1, 1, 0.15)

@@ -1,7 +1,7 @@
 extends GdUnitTestSuite
 
-const LightZonesAdapter := preload("res://scripts/ui/light/light_zones_adapter.gd")
-const LightService := preload("res://scripts/app/light/light_service.gd")
+const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_adapter.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 const ItemNodeScript := preload("res://scripts/wardrobe/item_node.gd")
 const ItemScene := preload("res://scenes/prefabs/item_node.tscn")
 
@@ -24,14 +24,14 @@ func before_test() -> void:
 	_scene.add_child(_bulb_row0_zone)
 	_scene.add_child(_bulb_row1_zone)
 	
-	_adapter = LightZonesAdapter.new()
+	_adapter = LightZonesAdapterScript.new()
 	# Use NodePath from the node directly (absolute path)
 	_adapter.curtain_zone_path = _curtain_zone.get_path()
 	_adapter.bulb_row0_zone_path = _bulb_row0_zone.get_path()
 	_adapter.bulb_row1_zone_path = _bulb_row1_zone.get_path()
 	_scene.add_child(_adapter)
 	
-	_service = LightService.new()
+	_service = LightServiceScript.new()
 	_adapter.setup(_service)
 
 func after_test() -> void:

@@ -2,7 +2,7 @@
 class_name CurtainLightAdapter
 extends Node
 
-const LightService := preload("res://scripts/app/light/light_service.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 
 @export var slider_path: NodePath
 @export var curtain_top_root_path: NodePath
@@ -63,7 +63,9 @@ func setup(service: LightService, source_id: StringName) -> void:
 	if not curtain_zone_shape_path.is_empty():
 		_curtain_zone_shape = get_node_or_null(curtain_zone_shape_path) as CollisionShape2D
 	_collect_segments()
-	_refresh_layout()
+	if _light_service:
+		if not _light_service.curtain_changed.is_connected(_update_visuals):
+			_light_service.curtain_changed.connect(_update_visuals)
 	
 	if slider:
 		if not slider.value_changed.is_connected(_on_slider_value_changed):

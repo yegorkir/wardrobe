@@ -1,11 +1,11 @@
 extends RefCounted
 class_name VampireExposureSystem
 
-const ItemEffect := preload("res://scripts/domain/effects/item_effect.gd")
-const ItemEffectTypes := preload("res://scripts/domain/effects/item_effect_types.gd")
-const VampireExposureState := preload("res://scripts/domain/magic/vampire_exposure_state.gd")
-const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
+const ItemEffectScript := preload("res://scripts/domain/effects/item_effect.gd")
+const ItemEffectTypesScript := preload("res://scripts/domain/effects/item_effect_types.gd")
+const VampireExposureStateScript := preload("res://scripts/domain/magic/vampire_exposure_state.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const EXPOSURE_THRESHOLD := 2.0 
 const QUALITY_LOSS_PER_STAGE := 0.5
 
@@ -36,9 +36,9 @@ func tick(
 		state.current_stage_exposure -= EXPOSURE_THRESHOLD
 		state.stage_index += 1
 		
-		var effect = ItemEffect.new(
-			ItemEffectTypes.Type.LIGHT_CORROSION,
-			ItemEffectTypes.Source.LIGHT,
+		var effect = ItemEffectScript.new(
+			ItemEffectTypesScript.Type.LIGHT_CORROSION,
+			ItemEffectTypesScript.Source.LIGHT,
 			float(QUALITY_LOSS_PER_STAGE)
 		)
 		

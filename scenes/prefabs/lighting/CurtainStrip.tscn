@@ -1,8 +1,83 @@
-[gd_scene format=3]
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/lighting/curtain_fabric.gdshader" id="1_02n50"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rp2ts"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.56, 0.08, 0.14, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5dq8m"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.58, 0.09, 0.15, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rf5lh"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.55, 0.08, 0.13, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_heqop"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.57, 0.09, 0.14, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_3jukd"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.54, 0.08, 0.13, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_n2x17"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.56, 0.09, 0.15, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wt7wn"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.55, 0.08, 0.14, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_e24ol"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.58, 0.09, 0.14, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_molsq"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.54, 0.08, 0.13, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nc54i"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.57, 0.09, 0.15, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ldogf"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.55, 0.08, 0.14, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_py6ev"]
+shader = ExtResource("1_02n50")
+shader_parameter/base_color = Color(0.56, 0.09, 0.14, 1)
+shader_parameter/fold_strength = null
+shader_parameter/fold_frequency = null
 
 [node name="CurtainStrip" type="Node2D"]
 
 [node name="Segment1" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_rp2ts")
 offset_left = -30.0
 offset_right = 30.0
 offset_bottom = 40.0
@@ -10,6 +85,7 @@ color = Color(0.56, 0.08, 0.14, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment2" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_5dq8m")
 offset_left = -30.0
 offset_top = 40.0
 offset_right = 30.0
@@ -18,6 +94,7 @@ color = Color(0.58, 0.09, 0.15, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment3" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_rf5lh")
 offset_left = -30.0
 offset_top = 80.0
 offset_right = 30.0
@@ -26,6 +103,7 @@ color = Color(0.55, 0.08, 0.13, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment4" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_heqop")
 offset_left = -30.0
 offset_top = 120.0
 offset_right = 30.0
@@ -34,6 +112,7 @@ color = Color(0.57, 0.09, 0.14, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment5" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_3jukd")
 offset_left = -30.0
 offset_top = 160.0
 offset_right = 30.0
@@ -42,6 +121,7 @@ color = Color(0.54, 0.08, 0.13, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment6" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_n2x17")
 offset_left = -30.0
 offset_top = 200.0
 offset_right = 30.0
@@ -50,6 +130,7 @@ color = Color(0.56, 0.09, 0.15, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment7" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_wt7wn")
 offset_left = -30.0
 offset_top = 240.0
 offset_right = 30.0
@@ -58,6 +139,7 @@ color = Color(0.55, 0.08, 0.14, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment8" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_e24ol")
 offset_left = -30.0
 offset_top = 280.0
 offset_right = 30.0
@@ -66,6 +148,7 @@ color = Color(0.58, 0.09, 0.14, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment9" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_molsq")
 offset_left = -30.0
 offset_top = 320.0
 offset_right = 30.0
@@ -74,6 +157,7 @@ color = Color(0.54, 0.08, 0.13, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment10" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_nc54i")
 offset_left = -30.0
 offset_top = 360.0
 offset_right = 30.0
@@ -82,6 +166,7 @@ color = Color(0.57, 0.09, 0.15, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment11" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_ldogf")
 offset_left = -30.0
 offset_top = 400.0
 offset_right = 30.0
@@ -90,6 +175,7 @@ color = Color(0.55, 0.08, 0.14, 1)
 metadata/_edit_use_anchors_ = true
 
 [node name="Segment12" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_py6ev")
 offset_left = -30.0
 offset_top = 440.0
 offset_right = 30.0

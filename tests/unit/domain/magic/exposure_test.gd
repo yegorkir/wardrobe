@@ -228,5 +228,5 @@ func test_zombie_domino_aura_propagation() -> void:
 
 func _get_domino_archetype(item_id: StringName, zombie_id: StringName) -> ItemArchetypeDefinitionScript:
 	if item_id == zombie_id:
-		return ItemArchetypeDefinitionScript.new(zombie_id, false, true, 60.0)
+		return ItemArchetypeDefinitionScript.new(zombie_id, false, true, 60)
 	return null

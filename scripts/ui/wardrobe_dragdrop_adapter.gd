@@ -51,6 +51,8 @@ var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
 var _surface_registry: SurfaceRegistry
+var _validate_pick_callback: Callable
+
 func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Callable = Callable()) -> void:
 	var typed := context
 	_interaction_service = typed.interaction_service
@@ -83,6 +85,9 @@ func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Cal
 		typed.apply_patience_penalty
 	)
 	_connect_event_adapter()
+
+func configure_rules(validate_pick: Callable) -> void:
+	_validate_pick_callback = validate_pick
 
 func configure_surface_targets(
 	shelves: Array,
@@ -189,6 +194,14 @@ func apply_interaction_events(events: Array) -> void:
 	_interaction_events.apply_desk_events(desk_events)
 
 func _perform_slot_interaction(slot: WardrobeSlot) -> InteractionResultScript:
+	var item_node := slot.get_item()
+	if item_node and _validate_pick_callback.is_valid():
+		if not _validate_pick_callback.call(StringName(item_node.item_id)):
+			if item_node.has_method("play_reject_effect"):
+				item_node.play_reject_effect()
+			_log_debug("pick rejected by rule item=%s", [item_node.item_id])
+			return InteractionResultScript.new(false, StringName("rule_blocked"), String(WardrobeInteractionCommandScript.TYPE_PICK), [], null)
+
 	var command := build_interaction_command(slot)
 	var exec_result: InteractionResultScript = execute_interaction(command)
 	apply_interaction_events(exec_result.events)
@@ -232,6 +245,14 @@ func _try_pick_surface_item(cursor_pos: Vector2) -> bool:
 	var item := _get_surface_item_at_point(cursor_pos)
 	if item == null:
 		return false
+	
+	if _validate_pick_callback.is_valid():
+		if not _validate_pick_callback.call(StringName(item.item_id)):
+			if item.has_method("play_reject_effect"):
+				item.play_reject_effect()
+			_log_debug("pick rejected by rule item=%s", [item.item_id])
+			return true # Consumed input, even if rejected
+
 	_remove_item_from_surfaces(item)
 	item.enter_drag_mode()
 	_cursor_hand.hold_item(item)
@@ -298,19 +319,15 @@ func _try_drop_to_floor(cursor_pos: Vector2) -> bool:
 func _get_target_floor_for_item(item: ItemNode) -> FloorZoneAdapter:
 	if item == null:
 		return null
-	if _surface_registry != null:
-		var item_rect := item.get_collider_aabb_global()
-		var item_x := item.global_position.x
-		if item_rect.size != Vector2.ZERO:
-			item_x = item_rect.position.x + item_rect.size.x * 0.5
-		var bottom_y := item.get_bottom_y_global()
-		var floor = _surface_registry.pick_floor_for_item(item_x, bottom_y)
-		if floor is FloorZoneAdapter:
-			return floor as FloorZoneAdapter
 	var item_rect := item.get_collider_aabb_global()
 	var item_x := item.global_position.x
 	if item_rect.size != Vector2.ZERO:
 		item_x = item_rect.position.x + item_rect.size.x * 0.5
+	var item_bottom_y := item.get_bottom_y_global()
+	if _surface_registry != null:
+		var floor_zone = _surface_registry.pick_floor_for_item(item_x, item_bottom_y)
+		if floor_zone is FloorZoneAdapter:
+			return floor_zone as FloorZoneAdapter
 	var candidates: Array[FloorZoneAdapter] = []
 	for zone in _floor_zones:
 		if zone is FloorZoneAdapter:
@@ -323,7 +340,6 @@ func _get_target_floor_for_item(item: ItemNode) -> FloorZoneAdapter:
 	var best_below: FloorZoneAdapter = null
 	var best_below_delta := INF
 	var best_below_name := ""
-	var item_bottom_y := item.get_bottom_y_global()
 	for zone in candidates:
 		var delta: float = zone.get_surface_collision_y_global() - item_bottom_y
 		if delta < 0.0:

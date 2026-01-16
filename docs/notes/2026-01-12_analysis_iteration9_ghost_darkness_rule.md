@@ -4,56 +4,56 @@
 Add ghost archetype interaction rules tied to light: ghost items cannot be picked in darkness, but behave normally in light. Show feedback only after a blocked attempt. Log blocking in debug only.
 
 ## Requirements (confirmed)
-- Ghost settings live in item config.
+- Ghost settings live in item archetype (`is_ghost`).
 - No pre-emptive UI hint; show effect after failed attempt only.
 - Log `GHOST_PICK_BLOCKED` in DebugLog only (not ShiftLog).
-- Rule implemented via a rule provider; input code must not check light/archetype directly.
+- Rule implemented via a rule provider (`InteractionRules`); input code must not check light/archetype directly.
 
 ## Architecture (clean boundaries)
-- Domain/app owns the rule decision.
-- UI/adapters only query the rule and render feedback.
-- Light state provided via Light Query contract (no scene traversal in domain).
+- **Domain (`InteractionRules`)**: Owns the rule logic (`can_pick(archetype, is_in_light)`).
+- **App/Adapter (`WorkdeskScene`)**: Coordinates the check. It has access to `ItemInstance` (Archetype) and `LightZonesAdapter` (Light State).
+- **UI (`WardrobeDragDropAdapter`)**: Enforces the rule during input handling. It requests validation via a callback before allowing a pick.
+- **Visuals (`ItemNode`)**: displays the rejection feedback (e.g., alpha flash) when triggered by the adapter.
 
 ## Domain model
-- Item config includes `is_ghost` (or `archetype_id == GHOST`) and `ghost_dark_alpha`.
-- Rule provider API:
-  - `can_pick(item_state, is_in_light) -> bool`
+- `ItemArchetypeDefinition`: Add `is_ghost`.
+- `InteractionRules` (new static class):
+  - `can_pick(archetype: ItemArchetypeDefinition, is_in_light: bool) -> bool`
 
 ## Flow
-1) Input attempts pick.
-2) Adapter queries light state for the item.
-3) Adapter calls rule provider.
-4) If blocked:
-   - cancel interaction
-   - show feedback effect
-   - debug log
-5) If allowed: proceed normally.
+1) Input (Mouse Down) detected in `WorkdeskScene`.
+2) `WardrobeDragDropAdapter` identifies target item.
+3) Adapter calls injected `validate_pick_callback(item_id)`.
+4) `WorkdeskScene` (inside callback):
+   - Looks up `ItemInstance` -> `ItemArchetypeDefinition`.
+   - Checks `LightZonesAdapter.is_item_in_light(item_node)`.
+   - Calls `InteractionRules.can_pick(...)`.
+   - If blocked: returns `false`.
+5) If blocked:
+   - `WardrobeDragDropAdapter` cancels pick.
+   - Calls `item_node.play_reject_effect()`.
+   - Logs `GHOST_PICK_BLOCKED` to DebugLog.
+6) If allowed: proceed with pick (`hold_item` or `build_interaction_command`).
 
 ## Risks & mitigations
-- Archetype confusion: enforce item archetype separate from client archetype.
-- Light dependency: only use Light Query contract.
-- Gate timing: check before execute_interaction.
-- No duplicate logic: single rule provider.
-- Feedback timing: post-attempt only.
+- **Archetype confusion**: Enforce use of `ItemArchetypeDefinition` from domain, not ad-hoc flags.
+- **Light dependency**: Use existing `LightZonesAdapter` in `WorkdeskScene`.
+- **Feedback timing**: Ensure effect plays *immediately* on click, even if pick is rejected.
+- **State mutation**: Ensure `ItemNode` physics/state doesn't change (e.g., doesn't enter `DRAGGING` state) if rejected.
 
 ## Risk checklist (clean architecture)
-- [ ] Item archetype defined in item config/state (no client archetype use).
-- [ ] Light state comes only from Light Query contract.
-- [ ] Gate before `execute_interaction` (no state mutation on blocked pick).
-- [ ] Single Rule Provider (no duplicate logic in UI).
-- [ ] Visual effect only after blocked attempt.
+- [ ] `ItemArchetypeDefinition` extended with `is_ghost`.
+- [ ] `InteractionRules` created in `domain/interaction`.
+- [ ] `WardrobeDragDropAdapter` decoupled from domain rules via callback.
+- [ ] `ItemNode` implements `play_reject_effect` (visual only).
 - [ ] Debug-only logging (no ShiftLog noise).
-- [ ] Edge case: item already in hand when lights go dark explicitly handled.
+- [ ] Edge case: item already in hand when lights go dark? (Rule applies to *pick* action, so holding is fine per current scope).
 
 ## Tests (requirements)
-- Unit:
+- Unit (`InteractionRules`):
   - ghost + light -> true
   - ghost + dark -> false
   - non-ghost + any -> true
-- Integration:
-  - toggle light on/off and attempt pick
-  - ensure no state mutation on blocked pick
-
-## Engine references (Godot 4.5)
-- CanvasItem modulate/alpha (visual feedback):
-  https://docs.godotengine.org/en/4.5/classes/class_canvasitem.html
+- Integration (`WorkdeskScene`):
+  - Toggle light off -> click ghost -> assert not picked, feedback played.
+  - Toggle light on -> click ghost -> assert picked.

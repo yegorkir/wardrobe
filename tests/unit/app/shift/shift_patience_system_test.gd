@@ -1,14 +1,14 @@
 extends GdUnitTestSuite
 
-const ShiftPatienceSystem := preload("res://scripts/app/shift/shift_patience_system.gd")
-const ShiftPatienceState := preload("res://scripts/domain/shift/shift_patience_state.gd")
+const ShiftPatienceSystemScript := preload("res://scripts/app/shift/shift_patience_system.gd")
+const ShiftPatienceStateScript := preload("res://scripts/domain/shift/shift_patience_state.gd")
 
 var _system: ShiftPatienceSystem
 var _state: ShiftPatienceState
 
 func before_test() -> void:
-	_system = ShiftPatienceSystem.new()
-	_state = ShiftPatienceState.new()
+	_system = ShiftPatienceSystemScript.new()
+	_state = ShiftPatienceStateScript.new()
 	_state.reset(["c1", "c2", "c3"], 30.0, 3)
 
 func test_tick_patience_decay_rates() -> void:

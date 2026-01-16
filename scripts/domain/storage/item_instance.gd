@@ -4,9 +4,9 @@ class_name ItemInstance
 
 const ItemQualityConfigScript := preload("res://scripts/domain/quality/item_quality_config.gd")
 const ItemQualityStateScript := preload("res://scripts/domain/quality/item_quality_state.gd")
-const ItemEffect := preload("res://scripts/domain/effects/item_effect.gd")
-const ItemEffectResult := preload("res://scripts/domain/effects/item_effect_result.gd")
-const ItemEffectTypes := preload("res://scripts/domain/effects/item_effect_types.gd")
+const ItemEffectScript := preload("res://scripts/domain/effects/item_effect.gd")
+const ItemEffectResultScript := preload("res://scripts/domain/effects/item_effect_result.gd")
+const ItemEffectTypesScript := preload("res://scripts/domain/effects/item_effect_types.gd")
 
 const KIND_COAT := StringName("COAT")
 const KIND_TICKET := StringName("TICKET")
@@ -53,10 +53,10 @@ func apply_effect(effect: ItemEffect) -> ItemEffectResult:
 	var accepted := false
 	
 	# Mapping effect types to quality loss logic
-	if effect.type == ItemEffectTypes.Type.LIGHT_CORROSION:
+	if effect.type == ItemEffectTypesScript.Type.LIGHT_CORROSION:
 		quality_loss_amount = effect.intensity
 		accepted = true
-	elif effect.type == ItemEffectTypes.Type.ZOMBIE_AURA:
+	elif effect.type == ItemEffectTypesScript.Type.ZOMBIE_AURA:
 		quality_loss_amount = effect.intensity
 		accepted = true
 	
@@ -64,7 +64,7 @@ func apply_effect(effect: ItemEffect) -> ItemEffectResult:
 	if quality_loss_amount > 0.0 and quality_state:
 		actual_loss = quality_state.reduce_quality(quality_loss_amount)
 	
-	return ItemEffectResult.new(accepted, actual_loss, [])
+	return ItemEffectResultScript.new(accepted, actual_loss, [])
 
 func can_be_corrupted() -> bool:
 	return kind != KIND_TICKET and kind != KIND_ANCHOR_TICKET

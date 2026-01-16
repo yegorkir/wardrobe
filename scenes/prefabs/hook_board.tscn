@@ -1,7 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://ksk6sq0cby4i"]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/wardrobe/hook_board.gd" id="1"]
-[ext_resource type="PackedScene" uid="uid://djktkpfea03nu" path="res://scenes/prefabs/hook_item.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/prefabs/hook_item.tscn" id="2"]
 
 [node name="HookBoard" type="Node2D"]
 script = ExtResource("1")

@@ -26,6 +26,10 @@ const SHELF_GROUP := PhysicsLayers.GROUP_SHELVES
 @export var auto_from_cabinet: bool = true
 @export var visual_bar_height_px: float = 4.0
 @export var drop_y_offset_px: float = 0.0
+@export var enabled: bool = true:
+	set(value):
+		enabled = value
+		visible = value
 
 @onready var _drop_area: Area2D = $DropArea
 @onready var _drop_shape: CollisionShape2D = $DropArea/CollisionShape2D
@@ -46,6 +50,10 @@ var _shelf_length_px: float = 240.0
 var _drop_area_height_px: float = 64.0
 
 func _ready() -> void:
+	if not enabled:
+		visible = false
+		_disable_completely()
+		return
 	add_to_group(SHELF_GROUP)
 	_resolve_children()
 	_apply_physics_layers()
@@ -56,15 +64,28 @@ func _ready() -> void:
 		_items_root.y_sort_enabled = true
 	_register_surface()
 
+func _disable_completely() -> void:
+	_resolve_children()
+	if _drop_area:
+		_drop_area.monitorable = false
+		_drop_area.monitoring = false
+	if _surface_body:
+		_surface_body.process_mode = Node.PROCESS_MODE_DISABLED
+	# We intentionally do not register or add to group
+
 func _exit_tree() -> void:
 	_unregister_surface()
 
 func contains_item(item: ItemNode) -> bool:
+	if not enabled:
+		return false
 	if item == null:
 		return false
 	return _items_by_id.has(StringName(item.item_id))
 
 func register_item(item: ItemNode) -> void:
+	if not enabled:
+		return
 	if item == null:
 		return
 	_items_by_id[StringName(item.item_id)] = item
@@ -77,6 +98,8 @@ func remove_item(item: ItemNode) -> void:
 	item.clear_current_surface()
 
 func is_point_inside(global_point: Vector2) -> bool:
+	if not enabled:
+		return false
 	var rect := _get_drop_rect_local()
 	if rect.size == Vector2.ZERO:
 		return false
@@ -96,6 +119,8 @@ func get_drop_rect_global() -> Rect2:
 	return Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
 
 func place_item(item: ItemNode, drop_global_pos: Vector2) -> void:
+	if not enabled:
+		return
 	if item == null:
 		return
 	if not item.can_register_on_surface():
