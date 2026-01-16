@@ -5,8 +5,8 @@ const DESK_GROUP := "wardrobe_desks"
 const TRAY_GROUP := "sp_tray_slot"
 const DROP_ZONE_GROUP := "sp_client_drop_zone"
 const ClientDropZoneScript := preload("res://scripts/wardrobe/client_drop_zone.gd")
-const WardrobeSlotScript := preload("res://scripts/wardrobe/slot.gd")
 const TRAY_SLOT_TEXTURE := preload("res://assets/sprites/placeholder/slot.png")
+const HIGHLIGHT_SHADER := preload("res://shaders/client_highlight.gdshader")
 const TRAY_SLOT_SCALE := Vector2(0.35, 0.35)
 const DEFAULT_TRAY_POSITIONS: Array[Vector2] = [
 	Vector2(-48, 20),
@@ -19,11 +19,17 @@ const DEFAULT_DROP_ZONE_POS := Vector2(0, -90)
 @export var desk_id: StringName = StringName()
 @export var desk_slot_id: StringName = StringName()
 @export var layout_root_path: NodePath = NodePath()
+@export var layout_adapter_path: NodePath = NodePath("LayoutRoot/DeskLayout")
+@export var client_visual_path: NodePath = NodePath("ClientVisual")
+
+const HIGHLIGHT_PARAM := "highlight_strength"
 
 var _tray_slots: Array[WardrobeSlot] = []
 var _drop_zone: ClientDropZoneScript
 var _layout_valid := true
 var _layout_collect_attempts := 0
+var _layout_adapter: Node
+var _client_visual: CanvasItem
 
 func _ready() -> void:
 	add_to_group(DESK_GROUP)
@@ -32,6 +38,7 @@ func _ready() -> void:
 	if desk_slot_id == StringName():
 		desk_slot_id = StringName("%s_Slot" % desk_id)
 	_ensure_layout_root()
+	_cache_client_visual()
 	call_deferred("_finish_layout_setup")
 
 func get_slot_id() -> StringName:
@@ -57,6 +64,8 @@ func get_drop_zone() -> ClientDropZoneScript:
 	return _drop_zone if _layout_valid else null
 
 func _ensure_layout_root() -> void:
+	if layout_root_path != NodePath() and get_node_or_null(layout_root_path) != null:
+		return
 	if get_node_or_null("LayoutRoot") != null:
 		return
 	var root := Node2D.new()
@@ -67,40 +76,35 @@ func ensure_layout_instanced() -> void:
 	if get_node_or_null("LayoutRoot") == null:
 		_ensure_layout_root()
 
+func set_drop_highlight(enabled: bool) -> void:
+	_cache_client_visual()
+	if _client_visual == null:
+		return
+	var shader_material := _ensure_highlight_material()
+	if shader_material == null:
+		return
+	var strength := 1.0 if enabled else 0.0
+	shader_material.set_shader_parameter(HIGHLIGHT_PARAM, strength)
+
 func _collect_layout_nodes() -> void:
 	_layout_collect_attempts += 1
 	_tray_slots.clear()
 	_drop_zone = null
-	var root := _get_layout_root()
-	if root == null:
-		return
-	for node in root.find_children("*", "WardrobeSlot", true, false):
-		if node is WardrobeSlot:
-			var slot := node as WardrobeSlot
-			if not slot.is_in_group(TRAY_GROUP):
-				slot.add_to_group(TRAY_GROUP)
-			_tray_slots.append(slot)
-	if _tray_slots.is_empty():
-		for node in root.find_children("TraySlot_*", "", true, false):
-			if node is Node2D and not (node is WardrobeSlot):
-				node.set_script(WardrobeSlotScript)
-			if node is WardrobeSlot:
-				var slot := node as WardrobeSlot
+	var layout := _get_layout_adapter()
+	if layout != null and layout.has_method("get_tray_slots"):
+		var slots: Array = layout.call("get_tray_slots")
+		for slot_entry in slots:
+			if slot_entry is WardrobeSlot:
+				var slot := slot_entry as WardrobeSlot
 				if not slot.is_in_group(TRAY_GROUP):
 					slot.add_to_group(TRAY_GROUP)
 				_tray_slots.append(slot)
-	for node in root.get_tree().get_nodes_in_group(DROP_ZONE_GROUP):
-		if node is ClientDropZoneScript and root.is_ancestor_of(node):
-			_drop_zone = node
+	if layout != null and layout.has_method("get_drop_zone"):
+		var drop_zone = layout.call("get_drop_zone")
+		if drop_zone is ClientDropZoneScript:
+			_drop_zone = drop_zone as ClientDropZoneScript
 			_drop_zone.service_point_id = desk_id
-			break
-	if _drop_zone == null:
-		var drop_node := root.find_child("ClientDropZone", true, false) as Node
-		if drop_node != null and not (drop_node is ClientDropZoneScript):
-			drop_node.set_script(ClientDropZoneScript)
-		if drop_node is ClientDropZoneScript:
-			_drop_zone = drop_node as ClientDropZoneScript
-			_drop_zone.service_point_id = desk_id
+			_drop_zone.service_point_node = self
 	_apply_tray_slot_ids()
 	if _tray_slots.is_empty() and _layout_collect_attempts < 3:
 		call_deferred("_collect_layout_nodes")
@@ -112,6 +116,43 @@ func _get_layout_root() -> Node2D:
 			return target as Node2D
 	return get_node_or_null("LayoutRoot") as Node2D
 
+func _cache_client_visual() -> void:
+	if _client_visual != null and is_instance_valid(_client_visual):
+		return
+	if client_visual_path == NodePath():
+		return
+	var node := get_node_or_null(client_visual_path)
+	if node is CanvasItem:
+		_client_visual = node as CanvasItem
+
+func _ensure_highlight_material() -> ShaderMaterial:
+	if _client_visual == null:
+		return null
+	var shader_material := _client_visual.material as ShaderMaterial
+	if shader_material == null:
+		shader_material = ShaderMaterial.new()
+		shader_material.shader = HIGHLIGHT_SHADER
+		shader_material.resource_local_to_scene = true
+		_client_visual.material = shader_material
+	elif not shader_material.resource_local_to_scene:
+		shader_material = shader_material.duplicate() as ShaderMaterial
+		if shader_material != null:
+			shader_material.resource_local_to_scene = true
+			_client_visual.material = shader_material
+	return shader_material
+
+func _get_layout_adapter() -> Node:
+	if _layout_adapter != null and is_instance_valid(_layout_adapter):
+		return _layout_adapter
+	if layout_adapter_path == NodePath():
+		_layout_adapter = null
+		return null
+	var target := get_node_or_null(layout_adapter_path)
+	if target != null and target.get_script() == null:
+		target.set_script(preload("res://scripts/wardrobe/desk_layout.gd"))
+	_layout_adapter = target
+	return _layout_adapter
+
 func _apply_tray_slot_ids() -> void:
 	if _tray_slots.is_empty():
 		return
@@ -122,7 +163,11 @@ func _apply_tray_slot_ids() -> void:
 		var slot := _tray_slots[index]
 		if slot == null:
 			continue
-		if slot.get_slot_identifier().is_empty():
+		var slot_identifier := slot.get_slot_identifier()
+		if slot_identifier.is_empty():
+			slot.slot_id = String("%s_Tray_%d" % [desk_id, index])
+			continue
+		if slot_identifier == String(slot.name) and String(slot.name).begins_with("TraySlot_"):
 			slot.slot_id = String("%s_Tray_%d" % [desk_id, index])
 
 func _validate_layout() -> void:

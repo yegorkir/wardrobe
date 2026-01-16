@@ -7,6 +7,7 @@ const DeskServicePointSystemScript := preload("res://scripts/app/desk/desk_servi
 const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
 const DeskServicePointScript := preload("res://scripts/wardrobe/desk_service_point.gd")
+const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 
 var _root: Node
 var _interaction_service: WardrobeInteractionService
@@ -50,6 +51,7 @@ func configure(
 	_item_visuals = item_visuals
 	_apply_desk_events = apply_desk_events
 	_register_item = register_item
+	_desk_system.set_queue_system(_queue_system)
 	_setup_step3_context()
 
 func get_slots() -> Array[WardrobeSlot]:
@@ -127,12 +129,18 @@ func get_client_drop_zones() -> Array:
 func collect_slots() -> void:
 	_slots.clear()
 	_slot_lookup.clear()
+	if DebugLog.enabled():
+		DebugLog.log("Storage collect_slots begin")
+	if _desk_nodes.is_empty():
+		collect_desks()
 	for node in _root.get_tree().get_nodes_in_group(WardrobeSlot.SLOT_GROUP):
 		if node is WardrobeSlot:
 			var slot := node as WardrobeSlot
 			_slots.append(slot)
 			var slot_id := StringName(slot.get_slot_identifier())
 			_slot_lookup[slot_id] = slot
+	if DebugLog.enabled():
+		DebugLog.logf("Storage collect_slots group_count=%d", [_slots.size()])
 	if _slots.is_empty():
 		for node in _root.find_children("*", "WardrobeSlot", true, true):
 			if node is WardrobeSlot:
@@ -140,7 +148,31 @@ func collect_slots() -> void:
 				_slots.append(slot)
 				var slot_id := StringName(slot.get_slot_identifier())
 				_slot_lookup[slot_id] = slot
+		if DebugLog.enabled():
+			DebugLog.logf("Storage collect_slots fallback_count=%d", [_slots.size()])
+	_collect_service_point_layouts()
+	if DebugLog.enabled():
+		DebugLog.logf("Storage collect_slots tray_count=%d", [_tray_slots.size()])
+	for tray_slot in _tray_slots:
+		if tray_slot == null:
+			continue
+		var tray_id := StringName(tray_slot.get_slot_identifier())
+		if tray_id == StringName():
+			continue
+		if _slot_lookup.has(tray_id):
+			continue
+		_slots.append(tray_slot)
+		_slot_lookup[tray_id] = tray_slot
 	_collect_ticket_rack_slots()
+	if DebugLog.enabled():
+		var sample_ids: Array = []
+		for slot in _slots:
+			if slot == null:
+				continue
+			if sample_ids.size() >= 10:
+				break
+			sample_ids.append(StringName(slot.get_slot_identifier()))
+		DebugLog.logf("Storage collect_slots sample=%s", [sample_ids])
 
 func _collect_ticket_rack_slots() -> void:
 	_ticket_rack_slots.clear()
@@ -175,11 +207,15 @@ func collect_desks() -> void:
 	for node in _root.get_tree().get_nodes_in_group(DeskServicePointScript.DESK_GROUP):
 		if node is Node2D and node.has_method("get_slot_id"):
 			_desk_nodes.append(node)
+	if DebugLog.enabled():
+		DebugLog.logf("Desk collect_desks count=%d", [_desk_nodes.size()])
 	_collect_service_point_layouts()
 
 func _collect_service_point_layouts() -> void:
 	_tray_slots.clear()
 	_client_drop_zones.clear()
+	if DebugLog.enabled():
+		DebugLog.logf("Desk collect_layouts desks=%d", [_desk_nodes.size()])
 	for desk_node in _desk_nodes:
 		if desk_node == null:
 			continue
@@ -195,12 +231,19 @@ func _collect_service_point_layouts() -> void:
 		if desk_node.has_method("get_tray_slot_ids"):
 			var tray_ids: Array = desk_node.get_tray_slot_ids()
 			_desk_system.register_tray_slots(desk_node.desk_id, tray_ids)
+			if DebugLog.enabled():
+				DebugLog.logf("DeskTray world_register desk=%s tray_ids=%s", [
+					String(desk_node.desk_id),
+					tray_ids,
+				])
 
 func reset_storage_state() -> void:
 	_interaction_service.reset_state()
 	register_storage_slots()
 
 func register_storage_slots() -> void:
+	if DebugLog.enabled():
+		DebugLog.logf("Storage register_slots total=%d", [_slots.size()])
 	for slot in _slots:
 		_interaction_service.register_slot(StringName(slot.get_slot_identifier()))
 

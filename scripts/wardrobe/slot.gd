@@ -4,12 +4,13 @@ extends Node2D
 const SLOT_GROUP := "wardrobe_slots"
 
 @export var slot_id: String = ""
-@onready var _item_anchor: Node2D = $ItemAnchor
+@onready var _item_anchor: Node2D = get_node_or_null("ItemAnchor") as Node2D
 var _held_item: ItemNode
 var _reserved_item_id: StringName = StringName()
 
 func _ready() -> void:
 	add_to_group(SLOT_GROUP)
+	_ensure_item_anchor()
 
 func has_item() -> bool:
 	return _held_item != null
@@ -28,6 +29,10 @@ func can_put(_item: ItemNode) -> bool:
 
 func put_item(item: ItemNode) -> bool:
 	if not can_put(item):
+		return false
+	_ensure_item_anchor()
+	if _item_anchor == null:
+		push_warning("WardrobeSlot %s missing ItemAnchor" % name)
 		return false
 	_held_item = item
 	item.prepare_for_slot_anchor()
@@ -74,7 +79,18 @@ func has_reservation() -> bool:
 	return _reserved_item_id != StringName()
 
 func get_item_anchor() -> Node2D:
+	_ensure_item_anchor()
 	return _item_anchor
+
+func _ensure_item_anchor() -> void:
+	if _item_anchor != null:
+		return
+	_item_anchor = get_node_or_null("ItemAnchor") as Node2D
+	if _item_anchor != null:
+		return
+	_item_anchor = Node2D.new()
+	_item_anchor.name = "ItemAnchor"
+	add_child(_item_anchor)
 
 func get_slot_identifier() -> String:
 	return slot_id if slot_id.length() > 0 else String(name)

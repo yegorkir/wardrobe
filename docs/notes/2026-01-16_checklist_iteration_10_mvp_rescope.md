@@ -22,6 +22,28 @@
 - [x] Move layout instancing to WorkdeskScene and expose ensure_layout_instanced().
 - [x] Remove layout_scene export from DeskServicePoint and instantiate layout in WorkdeskScene.
 - [x] Add DeskLayout instances under Desk_A/Desk_B in WorkdeskScene for manual edits.
+- [x] Add desk layout adapter script and connect DeskServicePoint via layout_adapter_path.
+- [x] Namespace tray slot ids per desk when using default TraySlot_* names.
 - [x] Add debug logs for desk layout and assignment state.
+- [x] Respect layout_root_path before creating LayoutRoot fallback.
+- [x] Point desk layout_adapter_path to ClientDropZone/DeskLayout in WorkdeskScene.
+- [x] Use scripts/wardrobe/desk_layout.gd in DeskService_ClientDropZone prefab.
+- [x] Add desk tray spawn debug logging in DeskServicePointSystem.
+- [x] Add storage put failure logs to explain tray spawn failures.
+- [x] Add logs to confirm storage slot registration and desk tray slot registration.
+- [x] Add logs for slot collection counts and sample ids.
+- [x] Add tray slots to world slot collection for storage registration.
+- [x] Add desk discovery logs to debug tray slot registration timing.
+- [x] Collect desks before slots so tray slots are included in storage registration.
+- [x] Auto-collect desks during slot collection when desk list is empty.
+- [x] Ensure WardrobeSlot creates ItemAnchor if missing to avoid null errors.
+- [x] Remove DeskSlot from DeskServicePoint_Workdesk prefab.
+- [x] Add deliver attempt/result logs for client handoff debugging.
+- [x] Auto-size client drop zone from desk sprite rect.
+- [x] Add temporary debug draw for client drop zones.
+- [x] Raise debug draw z-index for drop zone overlays.
+- [x] Add client highlight shader and desk hover highlight wiring.
+- [x] Bind drop zone to desk node for highlight toggling.
+- [x] Ensure per-desk highlight materials to prevent both clients highlighting.
 - [x] Run canonical tests: `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests`.
 - [x] Launch Godot once for startup validation: `"$GODOT_BIN" --path .`.

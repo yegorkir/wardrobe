@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://bs3fk24bgd1l6"]
+[gd_scene load_steps=16 format=3 uid="uid://bs3fk24bgd1l6"]
 
 [ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bbsuw6pn2oo58" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
@@ -10,20 +10,15 @@
 [ext_resource type="Texture2D" uid="uid://cvia6yud6jok" path="res://assets/sprites/table.png" id="10_qeg72"]
 [ext_resource type="PackedScene" uid="uid://boedrr2kgctj5" path="res://scenes/prefabs/lighting/BulbLightRig.tscn" id="10_rig"]
 [ext_resource type="PackedScene" uid="uid://cgmjqx87lwd1s" path="res://scenes/prefabs/CabinetsGrid.tscn" id="11"]
+[ext_resource type="PackedScene" uid="uid://pnau0crra3wg" path="res://scenes/prefabs/DeskService_ClientDropZone.tscn" id="11_8dep5"]
 [ext_resource type="PackedScene" uid="uid://cbrgfcbag4sc6" path="res://scenes/prefabs/lighting/LightSwitch.tscn" id="11_ax2is"]
-[ext_resource type="Script" uid="uid://bpbbtm0fh40sf" path="res://scenes/screens/curtain_slider_main.gd" id="11_pf1p7"]
+[ext_resource type="Script" uid="uid://bpbbtm0fh40sf" path="res://scripts/ui/curtain_slider_main.gd" id="11_pf1p7"]
 [ext_resource type="PackedScene" path="res://scenes/prefabs/FloorZone.tscn" id="12"]
-[ext_resource type="Script" uid="uid://d3ye2uxhc5xj" path="res://scenes/screens/curtain_slider.gd" id="12_qeg72"]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_qeg72"]
-size = Vector2(162.77779, 24.888882)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_8dep5"]
-size = Vector2(201.66658, 24.777771)
+[ext_resource type="Script" uid="uid://d3ye2uxhc5xj" path="res://scripts/ui/curtain_slider.gd" id="12_qeg72"]
 
 [node name="WorkdeskScene2" type="Node2D"]
 script = ExtResource("1")
-metadata/_edit_vertical_guides_ = [372.0]
+metadata/_edit_vertical_guides_ = [422.0]
 
 [node name="WardrobePhysicsTick" type="Node2D" parent="."]
 unique_name_in_owner = true
@@ -115,107 +110,22 @@ position = Vector2(-145.33334, -62.666664)
 scale = Vector2(1.5, 1.5)
 desk_id = &"Desk_A"
 desk_slot_id = &"DeskSlot_0"
-layout_root_path = NodePath("LayoutRoot")
+layout_root_path = NodePath("ClientDropZone")
+layout_adapter_path = NodePath("ClientDropZone/DeskLayout")
 
-[node name="LayoutRoot" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A"]
-position = Vector2(0, 52)
-
-[node name="DeskLayout" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot"]
-position = Vector2(14.666672, 0)
-
-[node name="ClientTray" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout"]
-
-[node name="TraySlot_0" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray"]
-script = "res://scripts/wardrobe/slot.gd"
-
-[node name="SlotSprite" type="Sprite2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray/TraySlot_0"]
-scale = Vector2(1e-05, 1e-05)
-
-[node name="ItemAnchor" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray/TraySlot_0"]
-
-[node name="TraySlot_1" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray"]
-script = "res://scripts/wardrobe/slot.gd"
-
-[node name="SlotSprite" type="Sprite2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray/TraySlot_1"]
-scale = Vector2(1e-05, 1e-05)
-
-[node name="ItemAnchor" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray/TraySlot_1"]
-
-[node name="TraySlot_2" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray"]
-script = "res://scripts/wardrobe/slot.gd"
-
-[node name="SlotSprite" type="Sprite2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray/TraySlot_2"]
-scale = Vector2(1e-05, 1e-05)
-
-[node name="ItemAnchor" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray/TraySlot_2"]
-
-[node name="TraySlot_3" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray"]
-script = "res://scripts/wardrobe/slot.gd"
-
-[node name="SlotSprite" type="Sprite2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray/TraySlot_3"]
-scale = Vector2(1e-05, 1e-05)
-
-[node name="ItemAnchor" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientTray/TraySlot_3"]
-
-[node name="ClientDropZone" type="Area2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout"]
-script = "res://scripts/wardrobe/client_drop_zone.gd"
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ServiceZone/ServiceSlots/Desk_A/LayoutRoot/DeskLayout/ClientDropZone"]
-position = Vector2(0.3888855, 0)
-shape = SubResource("RectangleShape2D_qeg72")
+[node name="ClientDropZone" parent="ServiceZone/ServiceSlots/Desk_A" instance=ExtResource("11_8dep5")]
+position = Vector2(20.888899, 52)
 
 [node name="Desk_B" parent="ServiceZone/ServiceSlots" instance=ExtResource("3")]
 position = Vector2(151.33333, -61.333336)
 scale = Vector2(1.5, 1.5)
 desk_id = &"Desk_B"
 desk_slot_id = &"DeskSlot_1"
-layout_root_path = NodePath("LayoutRoot")
+layout_root_path = NodePath("ClientDropZone")
+layout_adapter_path = NodePath("ClientDropZone/DeskLayout")
 
-[node name="LayoutRoot" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B"]
-position = Vector2(6.6665955, 50.666656)
-
-[node name="DeskLayout" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot"]
-
-[node name="ClientTray" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout"]
-
-[node name="TraySlot_0" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray"]
-script = "res://scripts/wardrobe/slot.gd"
-
-[node name="SlotSprite" type="Sprite2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray/TraySlot_0"]
-scale = Vector2(1e-05, 1e-05)
-
-[node name="ItemAnchor" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray/TraySlot_0"]
-
-[node name="TraySlot_1" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray"]
-script = "res://scripts/wardrobe/slot.gd"
-
-[node name="SlotSprite" type="Sprite2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray/TraySlot_1"]
-scale = Vector2(1e-05, 1e-05)
-
-[node name="ItemAnchor" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray/TraySlot_1"]
-
-[node name="TraySlot_2" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray"]
-script = "res://scripts/wardrobe/slot.gd"
-
-[node name="SlotSprite" type="Sprite2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray/TraySlot_2"]
-scale = Vector2(1e-05, 1e-05)
-
-[node name="ItemAnchor" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray/TraySlot_2"]
-
-[node name="TraySlot_3" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray"]
-script = "res://scripts/wardrobe/slot.gd"
-
-[node name="SlotSprite" type="Sprite2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray/TraySlot_3"]
-scale = Vector2(1e-05, 1e-05)
-
-[node name="ItemAnchor" type="Node2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientTray/TraySlot_3"]
-
-[node name="ClientDropZone" type="Area2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout"]
-script = "res://scripts/wardrobe/client_drop_zone.gd"
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="ServiceZone/ServiceSlots/Desk_B/LayoutRoot/DeskLayout/ClientDropZone"]
-position = Vector2(-0.05545044, 0.5)
-shape = SubResource("RectangleShape2D_8dep5")
+[node name="ClientDropZone" parent="ServiceZone/ServiceSlots/Desk_B" instance=ExtResource("11_8dep5")]
+position = Vector2(20.444454, 51.111103)
 
 [node name="HandRoot" type="Node2D" parent="."]
 z_index = 1000

@@ -82,6 +82,7 @@ var _floor_resolver = FloorResolverScript.new()
 var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
+var _drop_zones_by_desk_id: Dictionary = {}
 
 var _shift_finished := false
 var _served_clients := 0
@@ -154,17 +155,19 @@ func _finish_ready_setup() -> void:
 		_world_adapter.get_desk_system().configure_queue_mix_provider(
 			Callable(_run_manager, "get_queue_mix_snapshot")
 		)
-	_world_adapter.collect_slots()
 	_world_adapter.collect_desks()
+	_world_adapter.collect_slots()
+	_rebuild_drop_zone_index()
 	if _world_adapter.get_tray_slots().is_empty() and not _world_adapter.get_desk_nodes().is_empty():
 		await get_tree().process_frame
-		_world_adapter.collect_slots()
 		_world_adapter.collect_desks()
+		_world_adapter.collect_slots()
+		_rebuild_drop_zone_index()
 	_log_desk_layout_state("after_collect")
 	if _world_adapter.get_slots().is_empty():
 		await get_tree().process_frame
-		_world_adapter.collect_slots()
 		_world_adapter.collect_desks()
+		_world_adapter.collect_slots()
 	_world_adapter.reset_storage_state()
 	_configure_floor_resolver()
 	var interaction_context := WardrobeInteractionContextScript.new()
@@ -201,6 +204,9 @@ func _finish_ready_setup() -> void:
 		var queue_system = _world_adapter.get_queue_system()
 		if queue_system:
 			queue_system.configure(_run_manager.get_shift_config(), _run_manager.get_seed())
+		_world_adapter.get_desk_system().configure_drop_zone_blocker(
+			Callable(self, "_is_drop_zone_blocked")
+		)
 
 	_interaction_logger.configure(Callable(_shift_log, "record"))
 	interaction_context.interaction_logger = _interaction_logger
@@ -688,6 +694,26 @@ func _build_queue_hud_preview_snapshot():
 		1,
 		3
 	)
+
+func _rebuild_drop_zone_index() -> void:
+	_drop_zones_by_desk_id.clear()
+	for desk_node in _world_adapter.get_desk_nodes():
+		if desk_node == null:
+			continue
+		if not desk_node.has_method("get_drop_zone"):
+			continue
+		var drop_zone = desk_node.get_drop_zone()
+		if drop_zone == null:
+			continue
+		_drop_zones_by_desk_id[desk_node.desk_id] = drop_zone
+
+func _is_drop_zone_blocked(desk_id: StringName) -> bool:
+	var drop_zone = _drop_zones_by_desk_id.get(desk_id, null)
+	if drop_zone == null:
+		return false
+	if drop_zone.has_method("has_blocking_items"):
+		return bool(drop_zone.call("has_blocking_items"))
+	return false
 
 func _apply_patience_snapshot(snapshot: Dictionary) -> void:
 	_patience_by_client_id.clear()

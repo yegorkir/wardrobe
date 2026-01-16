@@ -53,3 +53,16 @@ func process_deliver_attempt(service_point_id: StringName, item_instance: ItemIn
 	if _reject_outcome_system != null:
 		_reject_outcome_system.process_desk_events(desk_events)
 	return desk_events
+
+func assign_next_client(service_point_id: StringName) -> Array:
+	if service_point_id == StringName():
+		return []
+	var desk_state: RefCounted = _desk_by_id.get(service_point_id, null)
+	if desk_state == null:
+		return []
+	return _desk_system.assign_next_client_to_desk(
+		desk_state,
+		_client_queue_state,
+		_clients,
+		_storage_state
+	)

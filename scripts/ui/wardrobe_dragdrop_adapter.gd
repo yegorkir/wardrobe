@@ -48,6 +48,7 @@ var _validate_world: Callable
 var _last_interaction_command: InteractionCommandScript
 var _event_connected := false
 var _drag_active := false
+var _highlighted_desk_node: Node
 var _hover_slot: WardrobeSlot
 var _hover_slot_original_modulate := Color.WHITE
 var _shelf_surfaces: Array = []
@@ -121,6 +122,7 @@ func configure_surface_targets(
 func on_pointer_down(cursor_pos: Vector2) -> void:
 	_drag_active = true
 	_update_hover(cursor_pos)
+	_update_drop_highlight(cursor_pos)
 	_log_debug("pointer_down pos=%.1f,%.1f hover=%s hand_item=%s", [
 		cursor_pos.x,
 		cursor_pos.y,
@@ -138,9 +140,11 @@ func on_pointer_down(cursor_pos: Vector2) -> void:
 
 func on_pointer_move(cursor_pos: Vector2) -> void:
 	_update_hover(cursor_pos)
+	_update_drop_highlight(cursor_pos)
 
 func on_pointer_up(cursor_pos: Vector2) -> void:
 	_update_hover(cursor_pos)
+	_update_drop_highlight(cursor_pos, true)
 	_log_debug("pointer_up pos=%.1f,%.1f hover=%s hand_item=%s", [
 		cursor_pos.x,
 		cursor_pos.y,
@@ -186,6 +190,7 @@ func get_dragged_item() -> ItemNode:
 func cancel_drag() -> void:
 	_drag_active = false
 	_set_hover_slot(null)
+	_update_drop_highlight(Vector2.ZERO, true)
 	if _cursor_hand:
 		_cursor_hand.set_preview_small(false)
 	if _cursor_hand and _cursor_hand.get_active_hand_item() != null:
@@ -776,14 +781,67 @@ func _is_ticket_item(item: ItemNode) -> bool:
 func _try_deliver_to_client(cursor_pos: Vector2) -> bool:
 	var drop_zone := _get_drop_zone_at_point(cursor_pos)
 	if drop_zone == null:
+		if DebugLog.enabled():
+			DebugLog.logf("Deliver attempt miss pos=%.1f,%.1f", [cursor_pos.x, cursor_pos.y])
 		return false
 	var item_instance: ItemInstance = _interaction_service.get_hand_item()
 	if item_instance == null:
+		if DebugLog.enabled():
+			DebugLog.logf("Deliver attempt no_hand_item zone=%s", [String(drop_zone.service_point_id)])
 		return false
+	if DebugLog.enabled():
+		DebugLog.logf(
+			"Deliver attempt zone=%s item=%s kind=%s",
+			[
+				String(drop_zone.service_point_id),
+				String(item_instance.id),
+				String(item_instance.kind),
+			]
+		)
 	var events := _desk_event_dispatcher.process_deliver_attempt(drop_zone.service_point_id, item_instance)
+	if DebugLog.enabled():
+		var event_types: Array = []
+		for entry in events:
+			if entry is Dictionary:
+				var event_type: StringName = entry.get(EventSchema.EVENT_KEY_TYPE, StringName())
+				if event_type != StringName():
+					event_types.append(event_type)
+		DebugLog.logf("Deliver result events=%s", [event_types])
 	_interaction_events.apply_desk_events(events)
 	_apply_deliver_results(events)
 	return true
+
+func _update_drop_highlight(cursor_pos: Vector2, force_clear: bool = false) -> void:
+	if force_clear:
+		_set_desk_highlight(null, false)
+		return
+	if _cursor_hand == null or _cursor_hand.get_active_hand_item() == null:
+		_set_desk_highlight(null, false)
+		return
+	var drop_zone := _get_drop_zone_at_point(cursor_pos)
+	if drop_zone == null:
+		_set_desk_highlight(null, false)
+		return
+	_set_desk_highlight(drop_zone.service_point_node, true)
+
+func _set_desk_highlight(desk_node: Node, enabled: bool) -> void:
+	if not enabled:
+		if _highlighted_desk_node == null:
+			return
+		if _highlighted_desk_node.has_method("set_drop_highlight"):
+			_highlighted_desk_node.call("set_drop_highlight", false)
+		_highlighted_desk_node = null
+		return
+	if desk_node == null:
+		_set_desk_highlight(null, false)
+		return
+	if _highlighted_desk_node == desk_node:
+		return
+	if _highlighted_desk_node != null and _highlighted_desk_node.has_method("set_drop_highlight"):
+		_highlighted_desk_node.call("set_drop_highlight", false)
+	if desk_node.has_method("set_drop_highlight"):
+		desk_node.call("set_drop_highlight", true)
+		_highlighted_desk_node = desk_node
 
 func _apply_deliver_results(events: Array) -> void:
 	var accepted := false
@@ -867,6 +925,21 @@ func _on_event_item_picked(slot_id: StringName, item: Dictionary, _tick: int) ->
 	_interaction_service.set_hand_item(instance)
 	if node != null:
 		_begin_drag_session(node, slot, instance.id)
+	_try_assign_after_tray_pick(slot_id)
+
+func _try_assign_after_tray_pick(slot_id: StringName) -> void:
+	if _desk_system == null or _desk_event_dispatcher == null or _storage_state == null:
+		return
+	if not _desk_system.is_tray_slot(slot_id):
+		return
+	if _storage_state.get_slot_item(slot_id) != null:
+		return
+	var desk_id := _desk_system.get_desk_id_for_tray_slot(slot_id)
+	if desk_id == StringName():
+		return
+	var events := _desk_event_dispatcher.assign_next_client(desk_id)
+	if not events.is_empty():
+		_interaction_events.apply_desk_events(events)
 
 func _on_event_item_placed(slot_id: StringName, item: Dictionary, _tick: int) -> void:
 	var slot: WardrobeSlot = _slot_lookup.get(slot_id, null)

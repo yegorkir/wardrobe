@@ -45,4 +45,28 @@
 - Moved desk layout instancing responsibility to `scripts/ui/workdesk_scene.gd` via `ensure_layout_instanced()`.
 - Removed `layout_scene` export from `scripts/wardrobe/desk_service_point.gd` and instantiate layouts from `scripts/ui/workdesk_scene.gd` instead.
 - Added explicit `LayoutRoot/DeskLayout` nodes under `Desk_A`/`Desk_B` in `scenes/screens/WorkdeskScene.tscn` for manual editing.
+- Added layout adapter script `scripts/wardrobe/desk_layout.gd` and desk lookup via `layout_adapter_path` in `scripts/wardrobe/desk_service_point.gd`.
+- Ensure tray slot ids are namespaced by desk when layout nodes use default TraySlot_* names.
 - Added debug logs in `scripts/ui/workdesk_scene.gd` to report tray/drop zone discovery and desk assignment state.
+- Adjusted `scripts/wardrobe/desk_service_point.gd` to respect `layout_root_path` before creating a LayoutRoot fallback.
+- Updated `scenes/screens/WorkdeskScene.tscn` to point desk layout adapters at `ClientDropZone/DeskLayout`.
+- Fixed `scenes/prefabs/DeskService_ClientDropZone.tscn` to use the real `scripts/wardrobe/desk_layout.gd` adapter script instead of an empty placeholder.
+- Added tray placement debug logs in `scripts/app/desk/desk_service_point_system.gd` to trace spawn decisions and slot registration.
+- Added storage `put` failure logs in `scripts/domain/storage/wardrobe_storage_state.gd` to report missing/blocked slots.
+- Added storage slot registration logs in `scripts/app/interaction/interaction_service.gd` and `scripts/ui/wardrobe_world_setup_adapter.gd` to confirm tray slots are registered.
+- Added slot collection logs in `scripts/ui/wardrobe_world_setup_adapter.gd` to verify tray slots are discovered before registration.
+- Included desk tray slots in `scripts/ui/wardrobe_world_setup_adapter.gd` slot collection so they register in storage.
+- Added desk collection/logging in `scripts/ui/wardrobe_world_setup_adapter.gd` to trace desk/tray discovery order.
+- Swapped desk/slot collection order in `scripts/ui/workdesk_scene.gd` so tray slots are discovered before storage registration.
+- Ensure `scripts/ui/wardrobe_world_setup_adapter.gd` collects desks when slot collection runs first, so tray slots are registered.
+- Hardened `scripts/wardrobe/slot.gd` to create/find ItemAnchor when missing to avoid null crashes during tray spawns.
+- Removed unused DeskSlot node from `scenes/prefabs/DeskServicePoint_Workdesk.tscn`.
+- Added delivery attempt/result logs in `scripts/ui/wardrobe_dragdrop_adapter.gd` to debug ticket handoff.
+- Added auto-sizing to `scripts/wardrobe/client_drop_zone.gd` based on a Sprite2D's rect and connected it in `scenes/prefabs/DeskService_ClientDropZone.tscn` for desk sprites.
+- Docs: https://docs.godotengine.org/en/4.5/classes/class_sprite2d.html#class-sprite2d-method-get-rect
+- Added temporary debug draw for client drop zones and enabled it in `scenes/prefabs/DeskService_ClientDropZone.tscn`.
+- Raised debug draw z-index for client drop zones to make the overlay visible.
+- Added client highlight shader `shaders/client_highlight.gdshader` and material hookup in `scenes/prefabs/DeskServicePoint_Workdesk.tscn`.
+- Added desk drop highlight control in `scripts/wardrobe/desk_service_point.gd` and hover-driven toggles in `scripts/ui/wardrobe_dragdrop_adapter.gd`.
+- Routed drop zone highlight through `service_point_node` on `scripts/wardrobe/client_drop_zone.gd` to avoid mixing desk state vs node references.
+- Made desk highlight materials local per instance in `scripts/wardrobe/desk_service_point.gd` so only the hovered client highlights.
