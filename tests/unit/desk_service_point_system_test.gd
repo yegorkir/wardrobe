@@ -125,6 +125,29 @@ func test_deliver_rejects_wrong_item_in_checkout_keeps_phase() -> void:
 	var payload := _find_event_payload(events, EventSchema.EVENT_DELIVER_RESULT_REJECT_RETURN)
 	assert_that(payload.get(EventSchema.PAYLOAD_REASON_CODE)).is_equal(EventSchema.REASON_WRONG_ITEM)
 
+func test_pickup_spawns_ticket_in_tray() -> void:
+	var system := DeskServicePointSystemScript.new()
+	_configure_queue_system(system)
+	var storage := _make_storage()
+	var desk := DeskStateScript.new(StringName("Desk_A"), StringName("DeskSlot_A"))
+	system.register_tray_slots(desk.desk_id, [StringName("Tray_0")])
+	storage.register_slot(StringName("Tray_0"))
+	var queue := ClientQueueStateScript.new()
+	var client := _make_client("Client_A", "coat_a")
+	client.set_phase(ClientStateScript.PHASE_PICK_UP)
+	var ticket := ItemInstanceScript.new(StringName("ticket_00"), ItemInstanceScript.KIND_TICKET)
+	client.assign_ticket_item(ticket)
+	var clients := {client.client_id: client}
+	queue.enqueue_checkout(client.client_id)
+
+	var events := system.assign_next_client_to_desk(desk, queue, clients, storage)
+
+	assert_that(desk.current_client_id).is_equal(client.client_id)
+	assert_that(storage.get_slot_item(StringName("Tray_0"))).is_equal(ticket)
+	assert_bool(_has_event(events, EventSchema.EVENT_DESK_SPAWNED_ITEM)).is_true()
+	var payload := _find_event_payload(events, EventSchema.EVENT_DESK_SPAWNED_ITEM)
+	assert_that(payload.get(EventSchema.PAYLOAD_ITEM_INSTANCE_ID)).is_equal(ticket.id)
+
 func test_tray_items_block_assignment() -> void:
 	var system := DeskServicePointSystemScript.new()
 	_configure_queue_system(system)

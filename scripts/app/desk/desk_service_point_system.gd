@@ -154,7 +154,17 @@ func _assign_next_client_to_desk(
 		desk_state.current_client_id = next_client_id
 		next_client.set_assigned_service_point(desk_state.desk_id)
 		if next_client.phase == ClientStateScript.PHASE_DROP_OFF:
-			return _spawn_tray_items(desk_state, storage_state, next_client)
+			var dropoff_items: Array[ItemInstance] = []
+			var coat := next_client.get_coat_item()
+			if coat != null:
+				dropoff_items.append(coat)
+			return _spawn_tray_items(desk_state, storage_state, next_client, dropoff_items)
+		if next_client.phase == ClientStateScript.PHASE_PICK_UP:
+			var pickup_items: Array[ItemInstance] = []
+			var ticket := next_client.get_ticket_item()
+			if ticket != null:
+				pickup_items.append(ticket)
+			return _spawn_tray_items(desk_state, storage_state, next_client, pickup_items)
 		return []
 	return []
 
@@ -227,7 +237,8 @@ func _handle_item_delivery(
 func _spawn_tray_items(
 	desk_state: DeskState,
 	storage_state: WardrobeStorageState,
-	client: ClientState
+	client: ClientState,
+	items: Array[ItemInstance]
 ) -> Array:
 	if storage_state == null or client == null:
 		return []
@@ -237,10 +248,8 @@ func _spawn_tray_items(
 			DebugLog.logf("DeskTray spawn_skip desk=%s reason=no_tray_slots", [String(desk_state.desk_id)])
 		return []
 	var events: Array = []
-	var items: Array[ItemInstance] = []
-	var coat := client.get_coat_item()
-	if coat != null:
-		items.append(coat)
+	if items.is_empty():
+		return []
 	var free_slots := _get_free_tray_slots(tray_slots, storage_state)
 	if DebugLog.enabled():
 		DebugLog.logf(

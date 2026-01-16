@@ -46,6 +46,7 @@ var _cursor_hand: CursorHand
 var _physics_tick
 var _validate_world: Callable
 var _last_interaction_command: InteractionCommandScript
+var _desk_by_id: Dictionary = {}
 var _event_connected := false
 var _drag_active := false
 var _highlighted_desk_node: Node
@@ -80,6 +81,7 @@ func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Cal
 	_interaction_events = typed.interaction_events
 	_desk_event_dispatcher = typed.desk_event_dispatcher
 	_desk_system = typed.desk_system
+	_desk_by_id = typed.desk_by_id
 	_find_item_instance = typed.find_item_instance
 	_interaction_logger = typed.interaction_logger
 	_cursor_hand = cursor_hand
@@ -936,6 +938,9 @@ func _try_assign_after_tray_pick(slot_id: StringName) -> void:
 		return
 	var desk_id := _desk_system.get_desk_id_for_tray_slot(slot_id)
 	if desk_id == StringName():
+		return
+	var desk_state: RefCounted = _desk_by_id.get(desk_id, null)
+	if desk_state != null and desk_state.current_client_id != StringName():
 		return
 	var events := _desk_event_dispatcher.assign_next_client(desk_id)
 	if not events.is_empty():
