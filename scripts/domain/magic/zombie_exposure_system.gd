@@ -1,11 +1,11 @@
 extends RefCounted
 class_name ZombieExposureSystem
 
-const ItemEffect := preload("res://scripts/domain/effects/item_effect.gd")
-const ItemEffectTypes := preload("res://scripts/domain/effects/item_effect_types.gd")
-const ZombieExposureState := preload("res://scripts/domain/magic/zombie_exposure_state.gd")
-const ItemInstance := preload("res://scripts/domain/storage/item_instance.gd")
-const ZombieExposureConfig := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
+const ItemEffectScript := preload("res://scripts/domain/effects/item_effect.gd")
+const ItemEffectTypesScript := preload("res://scripts/domain/effects/item_effect_types.gd")
+const ZombieExposureStateScript := preload("res://scripts/domain/magic/zombie_exposure_state.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
+const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 
 var _logger: Callable
 var _config: ZombieExposureConfig
@@ -34,9 +34,9 @@ func tick(state: ZombieExposureState, item: ItemInstance, exposure_rate: float, 
 		state.current_stage_exposure -= _config.exposure_threshold
 		state.stage_index += 1
 		
-		var effect = ItemEffect.new(
-			ItemEffectTypes.Type.ZOMBIE_AURA,
-			ItemEffectTypes.Source.ZOMBIE,
+		var effect = ItemEffectScript.new(
+			ItemEffectTypesScript.Type.ZOMBIE_AURA,
+			ItemEffectTypesScript.Source.ZOMBIE,
 			_config.quality_loss_per_stage
 		)
 		

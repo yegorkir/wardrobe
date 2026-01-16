@@ -2,7 +2,7 @@
 class_name CurtainLightAdapter
 extends Node
 
-const LightService := preload("res://scripts/app/light/light_service.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 
 @export var slider_path: NodePath
 @export var curtain_top_root_path: NodePath

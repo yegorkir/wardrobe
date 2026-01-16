@@ -1,14 +1,14 @@
 extends GdUnitTestSuite
 
-const ClientQueueSystem := preload("res://scripts/app/queue/client_queue_system.gd")
-const ClientQueueState := preload("res://scripts/domain/clients/client_queue_state.gd")
+const ClientQueueSystemScript := preload("res://scripts/app/queue/client_queue_system.gd")
+const ClientQueueStateScript := preload("res://scripts/domain/clients/client_queue_state.gd")
 
 var _system: ClientQueueSystem
 var _state: ClientQueueState
 
 func before_test() -> void:
-	_system = ClientQueueSystem.new()
-	_state = ClientQueueState.new()
+	_system = ClientQueueSystemScript.new()
+	_state = ClientQueueStateScript.new()
 
 func test_configure_sets_config() -> void:
 	var config = {
@@ -72,8 +72,8 @@ func test_deterministic_delay() -> void:
 	_system.enqueue_new_client(_state, "client_A")
 	
 	# Accessing private logic is hard, but we can verify consistency across runs if we re-instantiate
-	var sys2 = ClientQueueSystem.new()
-	var state2 = ClientQueueState.new()
+	var sys2 = ClientQueueSystemScript.new()
+	var state2 = ClientQueueStateScript.new()
 	sys2.configure(config, 123)
 	sys2.enqueue_new_client(state2, "client_A")
 	

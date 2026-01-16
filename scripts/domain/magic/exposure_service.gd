@@ -1,14 +1,14 @@
 extends RefCounted
 class_name ExposureService
 
-const VampireExposureState := preload("res://scripts/domain/magic/vampire_exposure_state.gd")
-const ZombieExposureState := preload("res://scripts/domain/magic/zombie_exposure_state.gd")
-const VampireExposureSystem := preload("res://scripts/domain/magic/vampire_exposure_system.gd")
-const ZombieExposureSystem := preload("res://scripts/domain/magic/zombie_exposure_system.gd")
-const CorruptionAuraService := preload("res://scripts/domain/magic/corruption_aura_service.gd")
-const ItemArchetypeDefinition := preload("res://scripts/domain/content/item_archetype_definition.gd")
+const VampireExposureStateScript := preload("res://scripts/domain/magic/vampire_exposure_state.gd")
+const ZombieExposureStateScript := preload("res://scripts/domain/magic/zombie_exposure_state.gd")
+const VampireExposureSystemScript := preload("res://scripts/domain/magic/vampire_exposure_system.gd")
+const ZombieExposureSystemScript := preload("res://scripts/domain/magic/zombie_exposure_system.gd")
+const CorruptionAuraServiceScript := preload("res://scripts/domain/magic/corruption_aura_service.gd")
+const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const DebugFlags := preload("res://scripts/wardrobe/config/debug_flags.gd")
-const ZombieExposureConfig := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
+const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 
 const TRANSFER_SPEED := 100.0
 const TRANSFER_TIME_MIN := 0.5
@@ -28,17 +28,17 @@ func _init(shift_log: Callable = Callable(), zombie_config: ZombieExposureConfig
 	if zombie_config:
 		_zombie_config = zombie_config
 	else:
-		_zombie_config = ZombieExposureConfig.new()
+		_zombie_config = ZombieExposureConfigScript.new()
 		
-	_vampire_system = VampireExposureSystem.new(shift_log)
-	_zombie_system = ZombieExposureSystem.new(_zombie_config, shift_log)
-	_corruption_service = CorruptionAuraService.new()
+	_vampire_system = VampireExposureSystemScript.new(shift_log)
+	_zombie_system = ZombieExposureSystemScript.new(_zombie_config, shift_log)
+	_corruption_service = CorruptionAuraServiceScript.new()
 
 func register_item(item_id: StringName) -> void:
 	if not _item_states.has(item_id):
 		_item_states[item_id] = {
-			"vampire": VampireExposureState.new(),
-			"zombie": ZombieExposureState.new()
+			"vampire": VampireExposureStateScript.new(),
+			"zombie": ZombieExposureStateScript.new()
 		}
 
 func tick(

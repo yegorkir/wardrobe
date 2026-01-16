@@ -1,7 +1,7 @@
 class_name BulbLightAdapter
 extends Node2D
 
-const LightService := preload("res://scripts/app/light/light_service.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 
 @export var row_index: int = 0
 @export var visual_node: Node2D

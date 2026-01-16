@@ -319,19 +319,15 @@ func _try_drop_to_floor(cursor_pos: Vector2) -> bool:
 func _get_target_floor_for_item(item: ItemNode) -> FloorZoneAdapter:
 	if item == null:
 		return null
-	if _surface_registry != null:
-		var item_rect := item.get_collider_aabb_global()
-		var item_x := item.global_position.x
-		if item_rect.size != Vector2.ZERO:
-			item_x = item_rect.position.x + item_rect.size.x * 0.5
-		var bottom_y := item.get_bottom_y_global()
-		var floor = _surface_registry.pick_floor_for_item(item_x, bottom_y)
-		if floor is FloorZoneAdapter:
-			return floor as FloorZoneAdapter
 	var item_rect := item.get_collider_aabb_global()
 	var item_x := item.global_position.x
 	if item_rect.size != Vector2.ZERO:
 		item_x = item_rect.position.x + item_rect.size.x * 0.5
+	var item_bottom_y := item.get_bottom_y_global()
+	if _surface_registry != null:
+		var floor_zone = _surface_registry.pick_floor_for_item(item_x, item_bottom_y)
+		if floor_zone is FloorZoneAdapter:
+			return floor_zone as FloorZoneAdapter
 	var candidates: Array[FloorZoneAdapter] = []
 	for zone in _floor_zones:
 		if zone is FloorZoneAdapter:
@@ -344,7 +340,6 @@ func _get_target_floor_for_item(item: ItemNode) -> FloorZoneAdapter:
 	var best_below: FloorZoneAdapter = null
 	var best_below_delta := INF
 	var best_below_name := ""
-	var item_bottom_y := item.get_bottom_y_global()
 	for zone in candidates:
 		var delta: float = zone.get_surface_collision_y_global() - item_bottom_y
 		if delta < 0.0:

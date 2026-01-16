@@ -1,6 +1,6 @@
 extends GdUnitTestSuite
 
-const LightService := preload("res://scripts/app/light/light_service.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 
 var _service: LightService
@@ -8,7 +8,7 @@ var _last_event: StringName
 var _last_payload: Dictionary
 
 func before_test() -> void:
-	_service = LightService.new(Callable(self, "_on_log"))
+	_service = LightServiceScript.new(Callable(self, "_on_log"))
 	_last_event = StringName()
 	_last_payload = {}
 

@@ -1,7 +1,5 @@
 extends GdUnitTestSuite
 
-const LightService := preload("res://scripts/app/light/light_service.gd")
-const LightZonesAdapter := preload("res://scripts/ui/light/light_zones_adapter.gd")
 const ItemNodeScript := preload("res://scripts/wardrobe/item_node.gd")
 const ItemScene := preload("res://scenes/prefabs/item_node.tscn")
 const WorkdeskScene := preload("res://scenes/screens/WorkdeskScene.tscn")

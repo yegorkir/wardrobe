@@ -1,10 +1,10 @@
 extends RefCounted
 class_name LandingBehaviorRegistry
 
-const DefaultLandingBehavior := preload("res://scripts/app/wardrobe/landing/default_landing_behavior.gd")
+const DefaultLandingBehaviorScript := preload("res://scripts/app/wardrobe/landing/default_landing_behavior.gd")
 const LandingBehaviorScript := preload("res://scripts/app/wardrobe/landing/landing_behavior.gd")
 
-var _default_behavior: LandingBehaviorScript = DefaultLandingBehavior.new()
+var _default_behavior: LandingBehaviorScript = DefaultLandingBehaviorScript.new()
 var _behaviors_by_kind: Dictionary = {}
 
 func register(kind: StringName, behavior: LandingBehaviorScript) -> void:

@@ -1,11 +1,10 @@
 # GdUnit generated TestSuite
-class_name BulbLightRigTest
 extends GdUnitTestSuite
 @warning_ignore('unused_parameter')
 @warning_ignore('return_value_discarded')
 
 const BulbLightRigScript := preload("res://scripts/wardrobe/lights/bulb_light_rig.gd")
-const LightService := preload("res://scripts/app/light/light_service.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 
 var _rig: BulbLightRig
 var _internal_visual: ColorRect
@@ -42,7 +41,7 @@ func _create_rig() -> void:
 	
 	_container.add_child(_rig)
 	
-	_light_service = auto_free(LightService.new(Callable()))
+	_light_service = auto_free(LightServiceScript.new(Callable()))
 	_rig.setup(_light_service)
 
 func test_external_visual_connection() -> void:
@@ -91,32 +90,6 @@ func test_unhandled_input_external() -> void:
 	_rig._toggle() # Reset to off
 	_rig._unhandled_input(event)
 	assert_bool(_light_service.is_bulb_on(0)).is_false()
-
-func test_external_visual_with_callback() -> void:
-	_create_rig()
-	
-	# Create a smart external visual (mock)
-	var script = GDScript.new()
-	script.source_code = "extends Node2D\nvar state = false\nfunc set_is_on(val):\n\tstate = val"
-	script.reload()
-	
-	var smart_visual = Node2D.new()
-	smart_visual.set_script(script)
-	smart_visual.name = "SmartVisual"
-	_container.add_child(smart_visual)
-	
-	_rig.external_visual_path = _rig.get_path_to(smart_visual)
-	
-	# Initial state check (should not be called yet or defaults false)
-	assert_bool(smart_visual.get("state")).is_false()
-	
-	# Toggle ON
-	_rig._toggle()
-	assert_bool(smart_visual.get("state")).is_true()
-	
-	# Toggle OFF
-	_rig._toggle()
-	assert_bool(smart_visual.get("state")).is_false()
 
 func test_external_visual_with_callback() -> void:
 	_create_rig()

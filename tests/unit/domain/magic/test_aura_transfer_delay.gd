@@ -72,7 +72,7 @@ func test_multiple_sources_staggered_activation() -> void:
 	
 	var archetype_provider = func(id):
 		if id == z1_id or id == z2_id:
-			return ItemArchetypeDefinitionScript.new(id, false, true, 200.0)
+			return ItemArchetypeDefinitionScript.new(id, false, true, 200)
 		return null
 		
 	# Tick 0.4s: none active
@@ -107,7 +107,7 @@ func test_exit_and_reenter_resets_pending() -> void:
 	
 	var archetype_provider = func(id):
 		if id == zombie_id:
-			return ItemArchetypeDefinitionScript.new(zombie_id, false, true, 100.0)
+			return ItemArchetypeDefinitionScript.new(zombie_id, false, true, 100)
 		return null
 		
 	# Enter aura

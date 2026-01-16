@@ -2,8 +2,8 @@
 class_name LightZonesAdapter
 extends Node2D
 
-const LightService := preload("res://scripts/app/light/light_service.gd")
-const CurtainLightAdapter := preload("res://scripts/wardrobe/lights/curtain_light_adapter.gd")
+const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
+const CurtainLightAdapterScript := preload("res://scripts/wardrobe/lights/curtain_light_adapter.gd")
 
 @export var curtain_zone_path: NodePath
 @export var bulb_row0_zone_path: NodePath
@@ -67,7 +67,7 @@ func _on_curtain_changed(ratio: float) -> void:
 		queue_redraw()
 	_update_curtain_shape(ratio)
 
-func _update_curtain_shape(ratio: float) -> void:
+func _update_curtain_shape(_ratio: float) -> void:
 	if not _curtain_zone or not (_curtain_zone.shape is RectangleShape2D):
 		return
 
