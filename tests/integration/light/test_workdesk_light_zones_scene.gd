@@ -83,7 +83,6 @@ func test_workdesk_service_light_affects_desk_slot() -> void:
 	await get_tree().process_frame
 	_service = _scene._light_service
 	assert_object(_service).is_not_null()
-	print("service_rect=", _adapter._service_rect, " anchor=", anchor.global_position)
 	assert_bool(_adapter._service_rect.has_area()).is_true()
 	assert_bool(_adapter._service_rect.has_point(anchor.global_position)).is_true()
 
