@@ -19,7 +19,7 @@ func configure(get_snapshot: Callable, config: RefCounted = null) -> void:
 	_get_snapshot = get_snapshot
 	_elapsed = 0.0
 	_config = config if config else ClientFlowConfigScript.new()
-	var interval = _config.get("tick_interval_sec")
+	var interval: Variant = _config.get("tick_interval_sec")
 	_tick_interval_sec = max(0.0, float(interval) if interval != null else 0.2)
 	_reset_cooldown()
 
@@ -75,7 +75,6 @@ func _process_director_logic(snapshot: RefCounted) -> void:
 	else:
 		# Balance logic
 		var current_total = snapshot.get("queue_total")
-		var checkin_count = snapshot.get("queue_checkin")
 		# Avoid division by zero
 		var ratio = 0.0
 		if current_total > 0:
