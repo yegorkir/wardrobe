@@ -10,3 +10,4 @@ reports/
 .godot_test_home_persist/
 .merge_ui.json
 _merged/
+.gemini/.env
