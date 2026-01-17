@@ -7,6 +7,7 @@ const SLOT_GROUP := "wardrobe_slots"
 @onready var _item_anchor: Node2D = get_node_or_null("ItemAnchor") as Node2D
 var _held_item: ItemNode
 var _reserved_item_id: StringName = StringName()
+var ticket_symbol_index: int = -1
 
 func _ready() -> void:
 	add_to_group(SLOT_GROUP)
@@ -81,6 +82,9 @@ func has_reservation() -> bool:
 func get_item_anchor() -> Node2D:
 	_ensure_item_anchor()
 	return _item_anchor
+
+func get_ticket_symbol_index() -> int:
+	return ticket_symbol_index
 
 func _ensure_item_anchor() -> void:
 	if _item_anchor != null:

@@ -1,38 +1,40 @@
-[gd_scene load_steps=2 format=3 uid="uid://cgmjqx87lwd1s"]
+[gd_scene load_steps=3 format=3 uid="uid://cgmjqx87lwd1s"]
 
-[ext_resource type="PackedScene" uid="uid://bbhmynwrgrysh" path="res://scenes/prefabs/StorageCabinetLayout_Simple.tscn" id="1"]
+[ext_resource type="Script" uid="uid://dpexjmhs03rig" path="res://scripts/wardrobe/cabinets_grid.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://bbhmynwrgrysh" path="res://scenes/prefabs/StorageCabinetLayout_Simple.tscn" id="2"]
 
 [node name="CabinetsGrid" type="Node2D"]
+script = ExtResource("1")
 
-[node name="Cabinet_100" parent="." instance=ExtResource("1")]
+[node name="Cabinet_100" parent="." instance=ExtResource("2")]
 cabinet_id = &"Cab_100"
 flip_h = true
 
-[node name="Cabinet_010" parent="." instance=ExtResource("1")]
+[node name="Cabinet_010" parent="." instance=ExtResource("2")]
 position = Vector2(195, 0)
 cabinet_id = &"Cab_010"
 
-[node name="Cabinet_001" parent="." instance=ExtResource("1")]
+[node name="Cabinet_001" parent="." instance=ExtResource("2")]
 position = Vector2(390, 0)
 cabinet_id = &"Cab_001"
 
-[node name="Cabinet_003" parent="." instance=ExtResource("1")]
+[node name="Cabinet_003" parent="." instance=ExtResource("2")]
 position = Vector2(585, 0)
 cabinet_id = &"Cab_003"
 
-[node name="Cabinet_200" parent="." instance=ExtResource("1")]
+[node name="Cabinet_200" parent="." instance=ExtResource("2")]
 position = Vector2(0, 310)
 cabinet_id = &"Cab_200"
 flip_h = true
 
-[node name="Cabinet_020" parent="." instance=ExtResource("1")]
+[node name="Cabinet_020" parent="." instance=ExtResource("2")]
 position = Vector2(195, 310)
 cabinet_id = &"Cab_020"
 
-[node name="Cabinet_002" parent="." instance=ExtResource("1")]
+[node name="Cabinet_002" parent="." instance=ExtResource("2")]
 position = Vector2(390, 310)
 cabinet_id = &"Cab_002"
 
-[node name="Cabinet_004" parent="." instance=ExtResource("1")]
+[node name="Cabinet_004" parent="." instance=ExtResource("2")]
 position = Vector2(585, 310)
 cabinet_id = &"Cab_004"

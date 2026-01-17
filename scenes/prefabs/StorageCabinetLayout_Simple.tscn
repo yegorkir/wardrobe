@@ -31,6 +31,11 @@ position = Vector2(-31, 0)
 scale = Vector2(0.8, 0.8)
 texture = ExtResource("4")
 
+[node name="PlateIcon" type="Sprite2D" parent="Slots/Pos0/SlotA"]
+texture_filter = 1
+position = Vector2(-36, -73)
+scale = Vector2(5, 5)
+
 [node name="ItemAnchor" type="Node2D" parent="Slots/Pos0/SlotA"]
 position = Vector2(-31, 0)
 
@@ -43,6 +48,11 @@ visible = false
 position = Vector2(30.999998, 0)
 scale = Vector2(0.8, 0.8)
 texture = ExtResource("4")
+
+[node name="PlateIcon" type="Sprite2D" parent="Slots/Pos0/SlotB"]
+texture_filter = 1
+position = Vector2(36, -73)
+scale = Vector2(5, 5)
 
 [node name="ItemAnchor" type="Node2D" parent="Slots/Pos0/SlotB"]
 position = Vector2(31, 0)

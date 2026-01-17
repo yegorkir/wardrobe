@@ -3,6 +3,8 @@ class_name WardrobeItemVisualsAdapter
 
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
+const CabinetSymbolAtlasScript := preload("res://scripts/wardrobe/cabinet_symbol_atlas.gd")
+const TICKET_SYMBOL_TEXTURE := preload("res://assets/sprites/symbols.png")
 const ITEM_TEXTURE_PATHS := {
 	ItemNode.ItemType.COAT: [
 		"res://assets/sprites/item_coat.png",
@@ -68,6 +70,7 @@ func spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> voi
 	else:
 		node.set_item_instance(instance)
 		apply_item_visuals(node, instance.color)
+	_apply_ticket_symbol(node, slot)
 	if _detach_item_node.is_valid():
 		_detach_item_node.call(node)
 	slot.put_item(node)
@@ -187,3 +190,16 @@ func get_item_color(item: ItemNode) -> Color:
 	if sprite:
 		return sprite.modulate
 	return Color.WHITE
+
+func _apply_ticket_symbol(item: ItemNode, slot: WardrobeSlot) -> void:
+	if item == null:
+		return
+	if item.item_type != ItemNode.ItemType.TICKET:
+		item.clear_ticket_symbol()
+		return
+	var index := slot.get_ticket_symbol_index()
+	if index < 0:
+		item.clear_ticket_symbol()
+		return
+	var atlas := CabinetSymbolAtlasScript.make_atlas_texture(TICKET_SYMBOL_TEXTURE, index)
+	item.set_ticket_symbol(atlas)

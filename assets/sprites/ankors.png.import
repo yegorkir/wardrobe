@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dvqin8h2qxm11"
-path="res://.godot/imported/sybols.png-1cc68b073cf4f25e621b3e22d43d0657.ctex"
+uid="uid://c8rx840uda2f1"
+path="res://.godot/imported/ankors.png-fc469f2e8092fec54a056462ae4cbf1b.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/sybols.png"
-dest_files=["res://.godot/imported/sybols.png-1cc68b073cf4f25e621b3e22d43d0657.ctex"]
+source_file="res://assets/sprites/ankors.png"
+dest_files=["res://.godot/imported/ankors.png-fc469f2e8092fec54a056462ae4cbf1b.ctex"]
 
 [params]
 
