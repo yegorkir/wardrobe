@@ -9,6 +9,7 @@ const CurtainLightAdapterScript := preload("res://scripts/wardrobe/lights/curtai
 @export var bulb_row0_zone_path: NodePath
 @export var bulb_row1_zone_path: NodePath
 @export var service_zone_path: NodePath
+@export var service_row_index: int = -1
 @export var curtain_adapter_path: NodePath
 @export var debug_draw: bool = true
 @export var debug_color_curtain: Color = Color(1, 1, 0, 0.2)
@@ -144,7 +145,10 @@ func is_item_in_light(item: ItemNode) -> bool:
 		
 	# Check Service Zone (Always On)
 	if _service_rect.has_area() and _service_rect.has_point(point):
-		return true
+		if service_row_index < 0:
+			return true
+		if _light_service and _light_service.is_bulb_on(service_row_index):
+			return true
 		
 	# Check Bulbs
 	if _light_service:
@@ -167,7 +171,10 @@ func which_sources_affect(item: ItemNode) -> Array[StringName]:
 		sources.append(CURTAIN_SOURCE_ID)
 		
 	if _service_rect.has_area() and _service_rect.has_point(point):
-		sources.append(SERVICE_SOURCE_ID)
+		if service_row_index < 0:
+			sources.append(SERVICE_SOURCE_ID)
+		elif _light_service and _light_service.is_bulb_on(service_row_index):
+			sources.append(SERVICE_SOURCE_ID)
 		
 	if _light_service:
 		if _light_service.is_bulb_on(0) and _bulb_row0_rect.has_point(point):

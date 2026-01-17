@@ -54,6 +54,8 @@ const CabinetsGridScript := preload("res://scripts/wardrobe/cabinets_grid.gd")
 @onready var _bulb_row1: Node2D = $StorageHall/BulbsColumn/BulbRow1
 @onready var _light_switch0: Node2D = $StorageHall/BulbsColumn/LightSwitch0
 @onready var _light_switch1: Node2D = $StorageHall/BulbsColumn/LightSwitch1
+@onready var _service_bulb_rig: BulbLightRig = $ServiceZone/LightZone/BulbLightRig
+@onready var _service_light_switch: LightSwitch = $ServiceZone/LightZone/LightSwitch
 
 var _interaction_service := WardrobeInteractionServiceScript.new()
 var _storage_state: WardrobeStorageState = _interaction_service.get_storage_state()
@@ -125,6 +127,10 @@ func _finish_ready_setup() -> void:
 		_light_switch0.setup(_light_service)
 	if _light_switch1:
 		_light_switch1.setup(_light_service)
+	if _service_bulb_rig:
+		_service_bulb_rig.setup(_light_service)
+	if _service_light_switch:
+		_service_light_switch.setup(_light_service)
 
 	_ensure_cabinets_grid_script()
 	_interaction_events_bridge.configure_bridge(

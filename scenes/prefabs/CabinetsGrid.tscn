@@ -14,13 +14,6 @@ flip_h = true
 position = Vector2(195, 0)
 cabinet_id = &"Cab_010"
 
-[node name="Cabinet_001" parent="." instance=ExtResource("2")]
-position = Vector2(390, 0)
-cabinet_id = &"Cab_001"
-
-[node name="Cabinet_003" parent="." instance=ExtResource("2")]
-position = Vector2(585, 0)
-cabinet_id = &"Cab_003"
 
 [node name="Cabinet_200" parent="." instance=ExtResource("2")]
 position = Vector2(0, 310)
@@ -30,11 +23,3 @@ flip_h = true
 [node name="Cabinet_020" parent="." instance=ExtResource("2")]
 position = Vector2(195, 310)
 cabinet_id = &"Cab_020"
-
-[node name="Cabinet_002" parent="." instance=ExtResource("2")]
-position = Vector2(390, 310)
-cabinet_id = &"Cab_002"
-
-[node name="Cabinet_004" parent="." instance=ExtResource("2")]
-position = Vector2(585, 310)
-cabinet_id = &"Cab_004"

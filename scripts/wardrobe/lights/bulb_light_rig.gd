@@ -42,6 +42,8 @@ const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 		extra_visual_path = value
 		_update_visual_source()
 
+@export var control_light_visual: bool = false
+
 @export_group("Visuals")
 @export var on_color: Color = Color(1.0, 1.0, 0.4, 1.0)
 @export var off_color: Color = Color(0.3, 0.3, 0.3, 1.0)
@@ -175,6 +177,8 @@ func _update_visuals() -> void:
 	
 	if _visual_node:
 		_visual_node.modulate = color
+	if control_light_visual and _light_visual:
+		_light_visual.visible = is_on
 
 func _on_bulb_changed(changed_row: int, _is_on: bool) -> void:
 	if changed_row != row_index:
