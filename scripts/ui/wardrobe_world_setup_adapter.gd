@@ -29,8 +29,6 @@ var _clients: Dictionary = {}
 var _client_queue_state: ClientQueueState = ClientQueueStateScript.new()
 var _desk_system: DeskServicePointSystem = DeskServicePointSystemScript.new()
 var _queue_system: ClientQueueSystem = ClientQueueSystemScript.new()
-var _ticket_rack_slots: Array[WardrobeSlot] = []
-var _ticket_racks: Array = []
 var _tray_slots: Array[WardrobeSlot] = []
 var _client_drop_zones: Array = []
 var _item_registry: Dictionary = {}
@@ -89,12 +87,6 @@ func get_desk_system() -> DeskServicePointSystem:
 
 func get_queue_system() -> ClientQueueSystem:
 	return _queue_system
-
-func get_ticket_rack_slots() -> Array[WardrobeSlot]:
-	return _ticket_rack_slots
-
-func get_ticket_racks() -> Array:
-	return _ticket_racks
 
 func get_cabinet_ticket_slots() -> Array[WardrobeSlot]:
 	var grid := _root.get_node_or_null("StorageHall/CabinetsGrid")
@@ -163,7 +155,6 @@ func collect_slots() -> void:
 			continue
 		_slots.append(tray_slot)
 		_slot_lookup[tray_id] = tray_slot
-	_collect_ticket_rack_slots()
 	if DebugLog.enabled():
 		var sample_ids: Array = []
 		for slot in _slots:
@@ -173,34 +164,6 @@ func collect_slots() -> void:
 				break
 			sample_ids.append(StringName(slot.get_slot_identifier()))
 		DebugLog.logf("Storage collect_slots sample=%s", [sample_ids])
-
-func _collect_ticket_rack_slots() -> void:
-	_ticket_rack_slots.clear()
-	_ticket_racks.clear()
-	for node in _root.get_tree().get_nodes_in_group("ticket_rack"):
-		if node == null:
-			continue
-		if not _ticket_racks.has(node):
-			_ticket_racks.append(node)
-		if node.has_method("get_slots"):
-			var slots: Array = node.call("get_slots")
-			for slot_entry in slots:
-				if slot_entry is WardrobeSlot and not _ticket_rack_slots.has(slot_entry):
-					_ticket_rack_slots.append(slot_entry)
-	if _ticket_racks.is_empty():
-		for node in _root.find_children("TicketRackController", "", true, false):
-			if node == null or _ticket_racks.has(node):
-				continue
-			_ticket_racks.append(node)
-			if node.has_method("get_slots"):
-				var slots: Array = node.call("get_slots")
-				for slot_entry in slots:
-					if slot_entry is WardrobeSlot and not _ticket_rack_slots.has(slot_entry):
-						_ticket_rack_slots.append(slot_entry)
-	if _ticket_rack_slots.is_empty():
-		for node in _root.find_children("TicketRack_*", "", true, false):
-			if node is WardrobeSlot and not _ticket_rack_slots.has(node):
-				_ticket_rack_slots.append(node)
 
 func collect_desks() -> void:
 	_desk_nodes.clear()
@@ -266,9 +229,6 @@ func clear_spawned_items() -> void:
 	_interaction_service.reset_state()
 	register_storage_slots()
 
-func get_ticket_slots() -> Array[WardrobeSlot]:
-	return _ticket_rack_slots
-
 func place_item_instance_in_slot(slot_id: StringName, instance: ItemInstance) -> void:
 	if instance == null:
 		return
@@ -325,7 +285,6 @@ func _setup_step3_context() -> void:
 	step3_context.desk_system = _desk_system
 	step3_context.queue_system = _queue_system
 	step3_context.storage_state = _storage_state
-	step3_context.get_ticket_slots = Callable(self, "get_ticket_slots")
 	step3_context.get_cabinet_ticket_slots = Callable(self, "get_cabinet_ticket_slots")
 	step3_context.place_item_instance_in_slot = Callable(self, "place_item_instance_in_slot")
 	step3_context.apply_desk_events = _apply_desk_events

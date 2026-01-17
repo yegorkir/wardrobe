@@ -31,7 +31,6 @@ const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/ite
 const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 const InteractionRulesScript := preload("res://scripts/domain/interaction/interaction_rules.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
-const DEFAULT_TICKET_RACK_SCENE := preload("res://scenes/TicketRack.tscn")
 const CabinetsGridScript := preload("res://scripts/wardrobe/cabinets_grid.gd")
 
 @export var step3_seed: int = 1337
@@ -39,9 +38,6 @@ const CabinetsGridScript := preload("res://scripts/wardrobe/cabinets_grid.gd")
 @export var debug_logs_enabled: bool = false
 @export var queue_hud_max_visible: int = 6
 @export var queue_hud_preview_enabled: bool = false
-@export var ticket_rack_scene: PackedScene = preload("res://scenes/TicketRack.tscn")
-@export var ticket_rack_position: Vector2 = Vector2(368, 520)
-
 @export_group("Zombie Balance")
 @export var zombie_radius_per_stage: float = ZombieExposureConfigScript.DEFAULT_RADIUS
 @export var zombie_quality_loss_per_stage: float = ZombieExposureConfigScript.DEFAULT_LOSS
@@ -52,8 +48,6 @@ const CabinetsGridScript := preload("res://scripts/wardrobe/cabinets_grid.gd")
 @onready var _cursor_hand: CursorHand = %CursorHand
 @onready var _physics_tick: Node = %WardrobePhysicsTick
 @onready var _run_manager: RunManagerBase = get_node_or_null("/root/RunManager") as RunManagerBase
-@onready var _service_zone: Node2D = $ServiceZone
-
 @onready var _light_zones_adapter: Node2D = $StorageHall/LightZonesAdapter
 @onready var _curtain_light_adapter: Node = $StorageHall/CurtainRig/CurtainsColumn/CurtainLightAdapter
 @onready var _bulb_row0: Node2D = $StorageHall/BulbsColumn/BulbRow0
@@ -148,7 +142,6 @@ func _finish_ready_setup() -> void:
 		Callable(_interaction_events, "apply_desk_events"),
 		Callable(_run_manager, "register_item") if _run_manager else Callable()
 	)
-	_spawn_ticket_rack()
 	_ensure_desk_layouts()
 	await get_tree().process_frame
 	if _run_manager:
@@ -190,8 +183,6 @@ func _finish_ready_setup() -> void:
 	interaction_context.desk_system = _world_adapter.get_desk_system()
 	interaction_context.client_queue_state = _world_adapter.get_client_queue_state()
 	interaction_context.clients = _world_adapter.get_clients()
-	interaction_context.ticket_rack_slots = _world_adapter.get_ticket_rack_slots()
-	interaction_context.ticket_racks = _world_adapter.get_ticket_racks()
 	interaction_context.tray_slots = _world_adapter.get_tray_slots()
 	interaction_context.client_drop_zones = _world_adapter.get_client_drop_zones()
 	interaction_context.find_item_instance = Callable(_run_manager, "find_item") if _run_manager else Callable(_world_adapter, "find_item_instance")
@@ -221,29 +212,6 @@ func _finish_ready_setup() -> void:
 	_log_desk_assignment_state("after_init")
 	_dragdrop_adapter.recover_stale_drag()
 	_setup_clients_ui()
-
-func _spawn_ticket_rack() -> void:
-	var scene := ticket_rack_scene if ticket_rack_scene != null else DEFAULT_TICKET_RACK_SCENE
-	if scene == null:
-		return
-	if _service_zone == null:
-		return
-	if _service_zone.get_node_or_null("TicketRack") != null:
-		return
-	var rack := scene.instantiate() as Node2D
-	if rack == null:
-		return
-	var controller := rack.get_node_or_null("TicketRackController")
-	var controller_node: Node = controller if controller != null else rack
-	if controller_node != null and controller_node.get_script() == null:
-		controller_node.set_script(preload("res://scripts/wardrobe/ticket_rack.gd"))
-	if controller_node != null:
-		controller_node.add_to_group("ticket_rack")
-	rack.name = "TicketRack"
-	rack.position = ticket_rack_position
-	_service_zone.add_child(rack)
-	if controller_node != null and controller_node.has_method("refresh_slots"):
-		controller_node.call("refresh_slots")
 
 func _ensure_cabinets_grid_script() -> void:
 	var grid := get_node_or_null("StorageHall/CabinetsGrid") as Node

@@ -19,6 +19,7 @@
 - Updated `scripts/wardrobe/desk_service_point.gd` to inject layout scenes and validate tray/dropzone structure.
 - Updated `scripts/ui/workdesk_scene.gd` to spawn the ticket rack and wire new context fields.
 - Updated `scripts/ui/wardrobe_world_setup_adapter.gd` and `scripts/ui/wardrobe_step3_setup.gd` for ticket rack seeding and tray slot registration.
+ - Removed TicketRack scene/controller and related adapters; ticket rack functionality dropped (later cleanup).
 
 ## 4) Event adapters and dispatcher
 - Updated `scripts/ui/wardrobe_interaction_events.gd` to recognize deliver attempt/result events and spawn tray items by slot id.

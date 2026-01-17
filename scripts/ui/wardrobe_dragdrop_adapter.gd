@@ -19,7 +19,6 @@ const SurfaceRegistry := preload("res://scripts/wardrobe/surface/surface_registr
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const EventSchema := preload("res://scripts/domain/events/event_schema.gd")
 const ClientDropZoneScript := preload("res://scripts/wardrobe/client_drop_zone.gd")
-const TicketRackScript := preload("res://scripts/wardrobe/ticket_rack.gd")
 
 const HOVER_DISTANCE_SQ := 64.0 * 64.0
 const HOVER_TIE_EPSILON := 0.001
@@ -57,8 +56,6 @@ var _floor_zone: FloorZoneAdapter
 var _floor_zones: Array = []
 var _surface_registry: SurfaceRegistry
 var _validate_pick_callback: Callable
-var _ticket_rack_slots: Array[WardrobeSlot] = []
-var _ticket_racks: Array = []
 var _tray_slots: Array[WardrobeSlot] = []
 var _client_drop_zones: Array = []
 var _drag_origin_slot: WardrobeSlot
@@ -88,8 +85,6 @@ func configure(context: RefCounted, cursor_hand: CursorHand, validate_world: Cal
 	_physics_tick = typed.physics_tick
 	_validate_world = validate_world
 	_surface_registry = SurfaceRegistry.get_autoload()
-	_ticket_rack_slots = typed.ticket_rack_slots
-	_ticket_racks = typed.ticket_racks
 	_tray_slots = typed.tray_slots
 	_client_drop_zones = typed.client_drop_zones
 	_cache_slots()
@@ -519,8 +514,6 @@ func _is_storage_slot(slot: WardrobeSlot) -> bool:
 		return false
 	if _is_tray_slot(slot):
 		return false
-	if _is_ticket_rack_slot(slot):
-		return false
 	return true
 
 func _get_world_space_state() -> PhysicsDirectSpaceState2D:
@@ -752,20 +745,11 @@ func _is_slot_blocked_for_drop(slot: WardrobeSlot, item: ItemNode) -> bool:
 		return true
 	if slot.has_reservation() and not slot.is_reserved_by(_drag_item_instance_id):
 		return true
-	if _is_ticket_rack_slot(slot) and not _is_ticket_item(item):
-		if item.has_method("play_reject_effect"):
-			item.play_reject_effect()
-		return true
 	if _is_tray_slot(slot) and slot != _drag_origin_slot:
 		if item.has_method("play_reject_effect"):
 			item.play_reject_effect()
 		return true
 	return false
-
-func _is_ticket_rack_slot(slot: WardrobeSlot) -> bool:
-	if slot == null:
-		return false
-	return _ticket_rack_slots.has(slot)
 
 func _is_tray_slot(slot: WardrobeSlot) -> bool:
 	if slot == null:
@@ -775,10 +759,6 @@ func _is_tray_slot(slot: WardrobeSlot) -> bool:
 	var slot_id := StringName(slot.get_slot_identifier())
 	return _desk_system.is_tray_slot(slot_id)
 
-func _is_ticket_item(item: ItemNode) -> bool:
-	if item == null:
-		return false
-	return item.item_type == ItemNode.ItemType.TICKET
 
 func _try_deliver_to_client(cursor_pos: Vector2) -> bool:
 	var drop_zone := _get_drop_zone_at_point(cursor_pos)
@@ -860,7 +840,7 @@ func _apply_deliver_results(events: Array) -> void:
 	if accepted:
 		_clear_drag_session()
 
-func _consume_hand_item(item_id: StringName, consume_kind: StringName) -> void:
+func _consume_hand_item(item_id: StringName, _consume_kind: StringName) -> void:
 	var node: ItemNode = _item_nodes.get(item_id, null)
 	if node == null and _cursor_hand != null:
 		node = _cursor_hand.get_active_hand_item()
@@ -872,17 +852,8 @@ func _consume_hand_item(item_id: StringName, consume_kind: StringName) -> void:
 			_item_nodes.erase(item_id)
 		node.queue_free()
 	_interaction_service.clear_hand_item()
-	if consume_kind == StringName("ticket"):
-		_clear_ticket_rack_offset(item_id)
 	_release_origin_reservation()
 	_clear_drag_session()
-
-func _clear_ticket_rack_offset(ticket_id: StringName) -> void:
-	if ticket_id == StringName():
-		return
-	for rack in _ticket_racks:
-		if rack is TicketRackScript:
-			rack.clear_ticket_offset(ticket_id)
 
 func _get_drop_zone_at_point(cursor_pos: Vector2) -> ClientDropZoneScript:
 	var best_zone: ClientDropZoneScript = null

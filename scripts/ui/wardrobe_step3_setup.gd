@@ -26,7 +26,6 @@ var _client_queue_state: ClientQueueState
 var _desk_system: DeskServicePointSystem
 var _queue_system: ClientQueueSystem
 var _storage_state: WardrobeStorageState
-var _get_ticket_slots: Callable
 var _get_cabinet_ticket_slots: Callable
 var _place_item_instance_in_slot: Callable
 var _apply_desk_events: Callable
@@ -49,7 +48,6 @@ func configure(context: RefCounted) -> void:
 	_desk_system = context.desk_system
 	_queue_system = context.queue_system
 	_storage_state = context.storage_state
-	_get_ticket_slots = context.get_ticket_slots
 	_get_cabinet_ticket_slots = context.get_cabinet_ticket_slots
 	_place_item_instance_in_slot = context.place_item_instance_in_slot
 	_apply_desk_events = context.apply_desk_events
