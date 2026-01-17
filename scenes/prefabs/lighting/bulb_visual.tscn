@@ -12,5 +12,6 @@ texture_filter = 1
 texture = ExtResource("1_erev0")
 
 [node name="BulbOn" type="Sprite2D" parent="."]
+visible = false
 texture_filter = 1
 texture = ExtResource("2_0pyqw")

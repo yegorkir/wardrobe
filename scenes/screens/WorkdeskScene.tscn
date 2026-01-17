@@ -1,11 +1,14 @@
-[gd_scene load_steps=16 format=3 uid="uid://bs3fk24bgd1l6"]
+[gd_scene load_steps=19 format=3 uid="uid://bs3fk24bgd1l6"]
 
 [ext_resource type="Script" uid="uid://d06di0ecjdy70" path="res://scripts/ui/workdesk_scene.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://bbsuw6pn2oo58" path="res://scenes/prefabs/DeskServicePoint_Workdesk.tscn" id="3"]
 [ext_resource type="Script" uid="uid://c1jb2jnhticws" path="res://scripts/wardrobe/cursor_hand.gd" id="4"]
 [ext_resource type="Script" uid="uid://ce2nlf0hgoh2r" path="res://scripts/ui/wardrobe_physics_tick_adapter.gd" id="5"]
+[ext_resource type="Texture2D" uid="uid://b8hhly1cao1kp" path="res://assets/sprites/wire_small.png" id="5_1cvfn"]
+[ext_resource type="Texture2D" uid="uid://bkk277da1d1ek" path="res://assets/sprites/wire.png" id="6_g5561"]
 [ext_resource type="Script" uid="uid://ctgc601ixkj3a" path="res://scripts/ui/queue_hud_view.gd" id="7"]
 [ext_resource type="Script" uid="uid://b5uji3ko74ljn" path="res://scripts/ui/light/light_zones_adapter.gd" id="8"]
+[ext_resource type="PackedScene" uid="uid://c5wa0yhxv34sm" path="res://scenes/prefabs/lighting/bulb_visual.tscn" id="8_ky8yc"]
 [ext_resource type="PackedScene" uid="uid://c6jy016jxlubk" path="res://scenes/prefabs/lighting/CurtainRig.tscn" id="9"]
 [ext_resource type="Texture2D" uid="uid://cvia6yud6jok" path="res://assets/sprites/table.png" id="10_qeg72"]
 [ext_resource type="PackedScene" uid="uid://boedrr2kgctj5" path="res://scenes/prefabs/lighting/BulbLightRig.tscn" id="10_rig"]
@@ -39,6 +42,32 @@ slider_path = NodePath("../../HUDLayer/LightControls/CurtainSliderMain/CurtainSl
 [node name="BulbsColumn" type="Node2D" parent="StorageHall"]
 position = Vector2(692, 456)
 
+[node name="Wire" type="Sprite2D" parent="StorageHall/BulbsColumn"]
+texture_filter = 1
+position = Vector2(-1372, -160)
+rotation = 1.5707964
+scale = Vector2(0.9438776, 1)
+texture = ExtResource("5_1cvfn")
+
+[node name="Wire2" type="Sprite2D" parent="StorageHall/BulbsColumn"]
+texture_filter = 1
+position = Vector2(-1466, -127)
+scale = Vector2(0.9438776, 1)
+texture = ExtResource("6_g5561")
+
+[node name="Wire3" type="Sprite2D" parent="StorageHall/BulbsColumn"]
+texture_filter = 1
+position = Vector2(-1372, 148)
+rotation = 1.5707964
+scale = Vector2(0.9438776, 1)
+texture = ExtResource("5_1cvfn")
+
+[node name="Wire4" type="Sprite2D" parent="StorageHall/BulbsColumn"]
+texture_filter = 1
+position = Vector2(-1466, 181)
+scale = Vector2(0.9438776, 1)
+texture = ExtResource("6_g5561")
+
 [node name="BulbRow0" parent="StorageHall/BulbsColumn" instance=ExtResource("10_rig")]
 position = Vector2(-1427, -334)
 show_zone_in_editor = true
@@ -46,11 +75,18 @@ zone_width = 400.0
 zone_height = 330.0
 light_intensity = 0.8
 bulb_offset = Vector2(36, 16)
-external_visual_path = NodePath("../LightSwitch0")
+external_visual_path = NodePath("../Bulb0")
+
+[node name="Bulb0" parent="StorageHall/BulbsColumn" node_paths=PackedStringArray("external_visual_path") instance=ExtResource("8_ky8yc")]
+position = Vector2(-1374, -273)
+external_visual_path = NodePath("../Bulb0")
+extra_visual_path = NodePath("")
 
 [node name="LightSwitch0" parent="StorageHall/BulbsColumn" instance=ExtResource("11_ax2is")]
-position = Vector2(-1372, -171)
+position = Vector2(-1566, -127)
 scale = Vector2(0.5, 0.5)
+row_index = 0
+source_id = &"bulb_row0"
 
 [node name="BulbRow1" parent="StorageHall/BulbsColumn" instance=ExtResource("10_rig")]
 position = Vector2(-1427, -4)
@@ -61,11 +97,18 @@ zone_width = 400.0
 zone_height = 330.0
 light_intensity = 0.8
 bulb_offset = Vector2(36, 16)
-external_visual_path = NodePath("../LightSwitch1")
+external_visual_path = NodePath("../Bulb1")
+
+[node name="Bulb1" parent="StorageHall/BulbsColumn" node_paths=PackedStringArray("external_visual_path") instance=ExtResource("8_ky8yc")]
+position = Vector2(-1373, 52)
+external_visual_path = NodePath("../Bulb1")
+extra_visual_path = NodePath("")
 
 [node name="LightSwitch1" parent="StorageHall/BulbsColumn" instance=ExtResource("11_ax2is")]
-position = Vector2(-1373, 138)
+position = Vector2(-1560, 176)
 scale = Vector2(0.5, 0.5)
+row_index = 1
+source_id = &"bulb_row1"
 
 [node name="LightZonesAdapter" type="Node2D" parent="StorageHall"]
 position = Vector2(2579, -1043)

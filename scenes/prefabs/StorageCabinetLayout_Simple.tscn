@@ -19,7 +19,7 @@ offset = Vector2(-21.5, -33.5)
 [node name="Slots" type="Node2D" parent="."]
 
 [node name="Pos0" type="Node2D" parent="Slots"]
-position = Vector2(0, -44)
+position = Vector2(0, -18)
 
 [node name="SlotA" type="Node2D" parent="Slots/Pos0"]
 position = Vector2(-9, -17)
@@ -51,6 +51,7 @@ position = Vector2(31, 0)
 position = Vector2(0, 76.88)
 
 [node name="ShelfSurface" parent="Slots/Shelf" instance=ExtResource("5")]
+visible = false
 position = Vector2(0, 20)
 shelf_length_px = 155.0
 drop_area_height_px = 90.0
