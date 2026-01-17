@@ -27,7 +27,6 @@ func test_tick_respects_interval() -> void:
 	# Set huge cooldown so logic doesn't block tick, or small config
 	# Actually, tick interval controls when logic runs.
 	config.tick_interval_sec = 0.5
-	config.spawn_cooldown_range = Vector2(0.0, 0.0) # Disable cooldown blocking
 	service.configure(Callable(self, "_build_snapshot"), config)
 	
 	# Mock snapshot
@@ -42,31 +41,29 @@ func test_spawn_cooldown_blocks_requests() -> void:
 	var service = ClientFlowServiceScript.new()
 	service.request_spawn.connect(_on_request_spawn)
 	var config = ClientFlowConfigScript.new()
-	config.tick_interval_sec = 0.0 # Tick immediately
+	config.tick_interval_sec = 0.0 # Tick logic immediately
 	config.spawn_cooldown_range = Vector2(10.0, 10.0) # 10 sec cooldown
 	service.configure(Callable(self, "_build_snapshot"), config)
 	
 	_test_snapshot = ClientFlowSnapshotScript.new(10, 0, 0, 0, 0, 0, 0, 0)
 
-	# First tick -> Should trigger spawn (initial cooldown is 0 after reset? No, configure calls reset)
-	# Wait, configure calls _reset_cooldown(). So initial cooldown is 10s.
-	# We want initial spawn to be possible? 
-	# Usually games start with a spawn or wait.
-	# Let's check implementation: configure calls _reset_cooldown().
-	# So we expect NO spawn initially until timer runs out.
+	# First tick -> Cooldown is active (10s), but snapshot should update? 
+	# With interval 0.0, snapshot updates every tick.
+	# But logic won't spawn.
 	
 	service.tick(0.1)
 	assert_that(_spawn_requests).is_empty()
+	assert_that(_snapshot_calls).is_equal(1) # Snapshot collected!
 	
-	# Advance time
-	service.tick(10.0)
-	# Now cooldown should be gone, next tick or this tick?
-	# Implementation: 
-	# if _spawn_cooldown > 0.0: _spawn_cooldown -= delta; return
-	# So we need one more tick after cooldown reaches 0
+	# Advance time by 5s. Cooldown should be 4.9s.
+	service.tick(5.0)
+	assert_that(_spawn_requests).is_empty()
+	assert_that(_snapshot_calls).is_equal(2)
 	
-	service.tick(0.1)
+	# Advance time by 5s. Cooldown should be expired (-0.1s).
+	service.tick(5.0)
 	assert_that(_spawn_requests).is_not_empty()
+	assert_that(_snapshot_calls).is_equal(3)
 
 func test_logic_queue_full_no_spawn() -> void:
 	var service = ClientFlowServiceScript.new()

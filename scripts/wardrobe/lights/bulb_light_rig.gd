@@ -67,15 +67,11 @@ func _ready() -> void:
 		_light_visual.material = _light_visual.material.duplicate()
 
 	_update_visual_source()
-
+	_update_zone_geometry()
+	_update_visual_params()
+	_update_visual_layout()
 	if Engine.is_editor_hint():
 		_update_editor_visibility()
-		_update_zone_geometry()
-		_update_visual_params()
-		_update_visual_layout()
-	else:
-		# In game, light zone visual is controlled by LightZonesAdapter/LightService logic
-		pass
 
 func _update_visual_source() -> void:
 	if not is_inside_tree(): return
@@ -102,6 +98,7 @@ func _update_zone_geometry() -> void:
 	if _light_collision and _light_collision.shape is RectangleShape2D:
 		var rect := _light_collision.shape as RectangleShape2D
 		rect.size = Vector2(zone_width, zone_height)
+		_light_collision.position = rect.size * 0.5
 		
 		if _light_visual:
 			_light_visual.size = rect.size
