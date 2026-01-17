@@ -1,0 +1,26 @@
+# Checklist: client-flow-missing-items (2026-01-17)
+
+- [x] Reviewed `client_flow_items` logs and identified missing client items alongside the `_find_available_coats_in_storage` nil assignment error.
+- [x] Inspected `ClientFactory`, `WardrobeWorldSetupAdapter`, and desk event handling to locate the item registry gap.
+- [x] Fixed snapshot access in `scripts/ui/workdesk_scene.gd` to avoid `Nil` dictionary assignment.
+- [x] Registered AI-spawned client items into the world adapter registry via `register_item_instance`.
+- [x] Added `find_item_instance` fallback to resolve items from the world adapter when RunManager lacks them.
+- [x] Added `tests/integration/clients/test_client_flow_spawn_items.gd` to lock director check-in tray item spawning.
+- [x] Registered tray slots before `WardrobeStorageState.put(...)` in `scripts/app/desk/desk_service_point_system.gd` to avoid missing-slot spawn failures.
+- [x] Added debug logging to trace client creation and desk assignment paths in `scripts/app/clients/client_factory.gd`, `scripts/ui/workdesk_scene.gd`, and `scripts/app/desk/desk_service_point_system.gd`.
+- [x] Fixed `str(request.type)` formatting in `scripts/ui/workdesk_scene.gd` after headless parse errors.
+- [x] Reduced temporary debug logs to keep only missing-item registration warnings.
+- [x] Disabled `client_flow_*` DebugLog events in `scripts/ui/workdesk_scene.gd`.
+- [x] Re-ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after disabling `client_flow_*` logs.
+- [x] Launched Godot with `"$GODOT_BIN" --path .` after disabling `client_flow_*` logs.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (exit 0; existing CA cert error line remains).
+- [x] Launched Godot with `"$GODOT_BIN" --path .` and observed tray spawn + client flow logs include coats/tickets.
+- [x] Adjusted checkout drop-off logic to spawn tickets when coats are absent in `scripts/app/desk/desk_service_point_system.gd`.
+- [x] Added `tests/unit/app/desk/test_desk_service_point_system.gd` for checkout drop-off ticket spawning.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after the checkout drop-off change.
+- [x] Launched Godot with `"$GODOT_BIN" --path .` after the checkout drop-off change.
+- [x] Updated check-in client item selection to cycle through coat/bottle/chest/hat ids in `scripts/app/clients/client_factory.gd`.
+- [x] Forced flow-spawned clients to use check-in items in `scripts/ui/workdesk_scene.gd`.
+- [x] Added `tests/unit/app/clients/test_client_factory.gd` for item prefix coverage.
+- [x] Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after item-type changes.
+- [x] Launched Godot with `"$GODOT_BIN" --path .` after item-type changes.
