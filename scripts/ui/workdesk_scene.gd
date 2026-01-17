@@ -45,6 +45,14 @@ const EVENT_CLIENT_FLOW_SPAWN := StringName("client_flow_spawn")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
+
+@export_group("Client Flow")
+@export var flow_tick_interval: float = 0.2
+@export var flow_min_free_hooks: int = 1
+@export var flow_max_queue_size: int = 5
+@export var flow_spawn_cooldown: Vector2 = Vector2(2.0, 4.0)
+@export var flow_checkout_ratio: float = 0.5
+
 @export var debug_logs_enabled: bool = false
 @export var queue_hud_max_visible: int = 6
 @export var queue_hud_preview_enabled: bool = false
@@ -107,6 +115,17 @@ func apply_payload(payload: Dictionary) -> void:
 	if payload.has("debug"):
 		debug_logs_enabled = bool(payload["debug"])
 		DebugFlags.set_enabled(debug_logs_enabled)
+	
+	if payload.has("flow_tick_interval"):
+		flow_tick_interval = float(payload["flow_tick_interval"])
+	if payload.has("flow_min_free_hooks"):
+		flow_min_free_hooks = int(payload["flow_min_free_hooks"])
+	if payload.has("flow_max_queue_size"):
+		flow_max_queue_size = int(payload["flow_max_queue_size"])
+	if payload.has("flow_spawn_cooldown"):
+		flow_spawn_cooldown = payload["flow_spawn_cooldown"]
+	if payload.has("flow_checkout_ratio"):
+		flow_checkout_ratio = float(payload["flow_checkout_ratio"])
 
 func _ready() -> void:
 	DebugFlags.set_enabled(debug_logs_enabled)
@@ -187,6 +206,12 @@ func _finish_ready_setup() -> void:
 		_world_adapter.collect_desks()
 		_world_adapter.collect_slots()
 	_world_adapter.reset_storage_state()
+	
+	# Fix: Explicitly register slots in storage state so items can be placed
+	for slot in _world_adapter.get_slots():
+		if slot:
+			_storage_state.register_slot(StringName(slot.get_slot_identifier()))
+			
 	_configure_floor_resolver()
 	var interaction_context := WardrobeInteractionContextScript.new()
 	interaction_context.player = null
@@ -237,6 +262,13 @@ func _finish_ready_setup() -> void:
 	_log_desk_assignment_state("after_init")
 	_dragdrop_adapter.recover_stale_drag()
 	_setup_clients_ui()
+	
+	_client_flow_config.tick_interval_sec = flow_tick_interval
+	_client_flow_config.min_free_hooks = flow_min_free_hooks
+	_client_flow_config.max_queue_size = flow_max_queue_size
+	_client_flow_config.spawn_cooldown_range = flow_spawn_cooldown
+	_client_flow_config.target_checkout_ratio = flow_checkout_ratio
+	
 	_client_flow_service.configure(Callable(self, "_build_client_flow_snapshot"), _client_flow_config)
 	_client_flow_service.request_spawn.connect(_on_client_spawn_requested)
 	
