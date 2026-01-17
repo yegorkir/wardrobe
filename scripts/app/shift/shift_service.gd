@@ -167,6 +167,16 @@ func get_queue_mix_snapshot() -> Dictionary:
 		"progress": clamp(progress, 0.0, 1.0),
 	}
 
+func get_total_tickets() -> int:
+	if _run_state == null:
+		return 0
+	return _run_state.get_total_tickets()
+
+func get_active_client_count() -> int:
+	if _run_state == null:
+		return 0
+	return _run_state.active_clients
+
 func reset_demo_hud() -> void:
 	_reset_demo_hud()
 

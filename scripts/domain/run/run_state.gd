@@ -26,6 +26,7 @@ var target_checkin: int = 0
 var target_checkout: int = 0
 var checkin_done: int = 0
 var checkout_done: int = 0
+var total_tickets: int = 0
 var completed_checkins: Dictionary = {}
 var completed_checkouts: Dictionary = {}
 var item_registry: Dictionary = {} # item_id -> ItemInstance
@@ -45,6 +46,7 @@ func reset_for_shift() -> void:
 	target_checkout = 0
 	checkin_done = 0
 	checkout_done = 0
+	total_tickets = 0
 	completed_checkins.clear()
 	completed_checkouts.clear()
 	item_registry.clear()
@@ -52,10 +54,19 @@ func reset_for_shift() -> void:
 func register_item(item: ItemInstanceScript) -> void:
 	if item == null:
 		return
-	item_registry[item.id] = item
+	var item_id := item.id
+	if item_registry.has(item_id):
+		item_registry[item_id] = item
+		return
+	item_registry[item_id] = item
+	if item.kind == ItemInstanceScript.KIND_TICKET:
+		total_tickets += 1
 
 func find_item(item_id: StringName) -> ItemInstanceScript:
 	return item_registry.get(item_id) as ItemInstanceScript
+
+func get_total_tickets() -> int:
+	return total_tickets
 
 func set_magic_links(ticket_number: int, item_ids: Array[StringName]) -> void:
 	magic_links[ticket_number] = item_ids.duplicate(true)

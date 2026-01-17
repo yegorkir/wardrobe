@@ -33,3 +33,38 @@ func test_workdesk_curtain_zone_path() -> void:
 
 	assert_bool(_adapter.is_item_in_light(item)).is_true()
 	item.queue_free()
+
+func test_workdesk_service_light_rig_wiring() -> void:
+	var rig := _scene.get_node("ServiceZone/LightZone/BulbLightRig") as BulbLightRig
+	assert_object(rig).is_not_null()
+	var visual := rig.get_node("Visual") as CanvasItem
+	assert_object(visual).is_not_null()
+	var light_visual := rig.get_node("LightZone/CollisionShape2D/LightVisual") as CanvasItem
+	assert_object(light_visual).is_not_null()
+	var zone_shape := rig.get_node("LightZone/CollisionShape2D") as CollisionShape2D
+	assert_object(zone_shape).is_not_null()
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_service = _scene._light_service
+	assert_object(_service).is_not_null()
+	var item = ItemScene.instantiate() as ItemNodeScript
+	_scene.add_child(item)
+	await get_tree().process_frame
+	item.global_position = zone_shape.global_position
+	assert_bool(_adapter.is_item_in_light(item)).is_false()
+
+	_service.toggle_bulb(rig.row_index, "test")
+	await get_tree().process_frame
+	assert_bool(visual.modulate.is_equal_approx(rig.on_color)).is_true()
+	assert_bool(light_visual.visible).is_true()
+	assert_bool(_service.is_bulb_on(0)).is_false()
+	assert_bool(_adapter.is_item_in_light(item)).is_true()
+
+	_service.toggle_bulb(rig.row_index, "test")
+	await get_tree().process_frame
+	assert_bool(visual.modulate.is_equal_approx(rig.off_color)).is_true()
+	assert_bool(light_visual.visible).is_false()
+	assert_bool(_service.is_bulb_on(0)).is_false()
+	assert_bool(_adapter.is_item_in_light(item)).is_false()
+	item.queue_free()

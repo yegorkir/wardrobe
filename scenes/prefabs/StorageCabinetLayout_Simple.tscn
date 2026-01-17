@@ -19,7 +19,7 @@ offset = Vector2(-21.5, -33.5)
 [node name="Slots" type="Node2D" parent="."]
 
 [node name="Pos0" type="Node2D" parent="Slots"]
-position = Vector2(0, -44)
+position = Vector2(0, -18)
 
 [node name="SlotA" type="Node2D" parent="Slots/Pos0"]
 position = Vector2(-9, -17)
@@ -30,6 +30,11 @@ visible = false
 position = Vector2(-31, 0)
 scale = Vector2(0.8, 0.8)
 texture = ExtResource("4")
+
+[node name="PlateIcon" type="Sprite2D" parent="Slots/Pos0/SlotA"]
+texture_filter = 1
+position = Vector2(-36, -73)
+scale = Vector2(5, 5)
 
 [node name="ItemAnchor" type="Node2D" parent="Slots/Pos0/SlotA"]
 position = Vector2(-31, 0)
@@ -44,6 +49,11 @@ position = Vector2(30.999998, 0)
 scale = Vector2(0.8, 0.8)
 texture = ExtResource("4")
 
+[node name="PlateIcon" type="Sprite2D" parent="Slots/Pos0/SlotB"]
+texture_filter = 1
+position = Vector2(36, -73)
+scale = Vector2(5, 5)
+
 [node name="ItemAnchor" type="Node2D" parent="Slots/Pos0/SlotB"]
 position = Vector2(31, 0)
 
@@ -51,6 +61,7 @@ position = Vector2(31, 0)
 position = Vector2(0, 76.88)
 
 [node name="ShelfSurface" parent="Slots/Shelf" instance=ExtResource("5")]
+visible = false
 position = Vector2(0, 20)
 shelf_length_px = 155.0
 drop_area_height_px = 90.0

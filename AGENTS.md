@@ -47,27 +47,11 @@ Rules:
 
 ### Servers in this repo
 - `godot_tools` (Solomon): launch/run/stop + safe scene ops.
-- `gdscript_diag`: GDScript diagnostics via Godot LSP.
 - `godot_docs`: Godot docs/class reference lookup (4.5).
 
 ### Global safety rules
-- Never write/edit `.tscn` by hand. Scene structure changes must go through `godot_tools` (`create_scene`, `add_node`, `save_scene`).
 - Keep all operations scoped to this repo root. Do not read/write paths outside the repo.
 - Prefer incremental checks: fix issues as soon as they appear (don’t stack 20 changes before checking).
-
-### Scene editing rules (mandatory)
-When you need to change scene structure (nodes, hierarchy, add/remove node, set script on node, etc.):
-1) Use `godot_tools.create_scene` only when creating a new scene.
-2) Use `godot_tools.add_node` for structural edits.
-3) Immediately `godot_tools.save_scene` after each logical change set.
-4) If a change touches UIDs or breaks references, run `godot_tools.update_project_uids` ONLY if necessary:
-   - It can modify many files; do it only when there is evidence of UID mismatch/broken refs.
-   - After running it, explicitly list which files changed.
-
-### Script editing rules (.gd)
-- Editing `.gd` directly is allowed.
-- After any `.gd` edits, run `gdscript_diag.get_diagnostics` and fix all errors/warnings introduced by the change.
-- Use `gdscript_diag.scan_workspace_diagnostics` only when the change is broad (refactor, moved files, renamed classes). Treat it as expensive.
 
 ### Docs usage rules (API correctness)
 If you are not 100% sure about an API name/signature/signal/enum:

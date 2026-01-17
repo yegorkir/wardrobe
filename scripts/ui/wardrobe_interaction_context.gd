@@ -22,6 +22,8 @@ var desk_by_slot_id: Dictionary = {}
 var desk_system: DeskServicePointSystem
 var client_queue_state: ClientQueueState
 var clients: Dictionary = {}
+var tray_slots: Array[WardrobeSlot] = []
+var client_drop_zones: Array = []
 var find_item_instance: Callable
 var interaction_logger
 var floor_resolver

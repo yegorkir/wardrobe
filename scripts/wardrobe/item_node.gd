@@ -71,6 +71,9 @@ const TRANSFER_SUPPORT_RAY_LENGTH := 12.0
 const TRANSFER_FORCE_LAND_FRAMES := 6
 const TRANSFER_FAILSAFE_FRAMES := 12
 const TRANSFER_SINK_LOG_FRAMES := 6
+const RETURN_TWEEN_DURATION := 0.2
+const TICKET_SYMBOL_OVERLAY_PATH := NodePath("TicketSymbolOverlay")
+const TICKET_SYMBOL_SPRITE_PATH := NodePath("TicketSymbolOverlay/SymbolSprite")
 
 @export var item_id: String = ""
 @export var item_type: ItemType = ItemType.COAT
@@ -90,6 +93,7 @@ var _burn_overlay: Sprite2D
 var _aura_debug_ring: Line2D
 var _reject_tween: Tween
 var _ghost_tween: Tween
+var _return_tween: Tween
 
 # Transfer effect metadata structure
 class TransferEffectData:
@@ -110,6 +114,8 @@ const MIN_AURA_PARTICLES := 1
 @onready var _pick_shape: CollisionShape2D = $PickArea/CollisionShape2D
 @onready var _sprite: Sprite2D = $Sprite
 @onready var _physics_shape: CollisionShape2D = get_node_or_null("PhysicsShape") as CollisionShape2D
+@onready var _ticket_symbol_overlay: Node2D = get_node_or_null(TICKET_SYMBOL_OVERLAY_PATH) as Node2D
+@onready var _ticket_symbol_sprite: Sprite2D = get_node_or_null(TICKET_SYMBOL_SPRITE_PATH) as Sprite2D
 
 var _physics_tick
 var _settle_time := 0.0
@@ -756,6 +762,34 @@ func prepare_for_slot_anchor() -> void:
 	linear_velocity = Vector2.ZERO
 	angular_velocity = 0.0
 
+func set_input_pickable(enabled: bool) -> void:
+	var pick_area := $PickArea as Area2D
+	if pick_area == null:
+		return
+	pick_area.input_pickable = enabled
+
+func return_to_origin(anchor: Node2D, on_complete: Callable = Callable()) -> void:
+	if anchor == null:
+		if on_complete.is_valid():
+			on_complete.call()
+		return
+	if _return_tween and _return_tween.is_valid():
+		_return_tween.kill()
+	set_input_pickable(false)
+	freeze = true
+	freeze_mode = FREEZE_MODE_KINEMATIC
+	linear_velocity = Vector2.ZERO
+	angular_velocity = 0.0
+	_return_tween = create_tween()
+	_return_tween.tween_property(self, "global_position", anchor.global_position, RETURN_TWEEN_DURATION)
+	_return_tween.tween_property(self, "rotation", 0.0, RETURN_TWEEN_DURATION)
+	_return_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_return_tween.finished.connect(func() -> void:
+		set_input_pickable(true)
+		if on_complete.is_valid():
+			on_complete.call()
+	)
+
 func enable_pass_through_until_y(target_y: float) -> void:
 	_start_pass_through(target_y)
 
@@ -1279,3 +1313,29 @@ func consume_landing_cause(default_cause: StringName = EventSchema.CAUSE_ACCIDEN
 
 func _clear_landing_cause() -> void:
 	_landing_cause = EventSchema.CAUSE_ACCIDENT
+
+func set_ticket_symbol(texture: Texture2D) -> void:
+	_resolve_ticket_symbol_nodes()
+	if _ticket_symbol_sprite == null:
+		return
+	if texture == null:
+		clear_ticket_symbol()
+		return
+	_ticket_symbol_sprite.texture = texture
+	_ticket_symbol_sprite.visible = true
+	if _ticket_symbol_overlay:
+		_ticket_symbol_overlay.visible = true
+
+func clear_ticket_symbol() -> void:
+	_resolve_ticket_symbol_nodes()
+	if _ticket_symbol_sprite == null:
+		return
+	_ticket_symbol_sprite.visible = false
+	if _ticket_symbol_overlay:
+		_ticket_symbol_overlay.visible = false
+
+func _resolve_ticket_symbol_nodes() -> void:
+	if _ticket_symbol_sprite != null:
+		return
+	_ticket_symbol_overlay = get_node_or_null(TICKET_SYMBOL_OVERLAY_PATH) as Node2D
+	_ticket_symbol_sprite = get_node_or_null(TICKET_SYMBOL_SPRITE_PATH) as Sprite2D

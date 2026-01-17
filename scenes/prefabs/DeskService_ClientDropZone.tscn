@@ -1,0 +1,53 @@
+[gd_scene load_steps=3 format=3 uid="uid://pnau0crra3wg"]
+
+[ext_resource type="Script" uid="uid://cyhgg1r38rehj" path="res://scripts/wardrobe/desk_layout.gd" id="1_a45we"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_8dep5"]
+size = Vector2(174.94437, 24.777771)
+
+[node name="ClientDropZone" type="Node2D"]
+
+[node name="DeskLayout" type="Node2D" parent="."]
+script = ExtResource("1_a45we")
+
+[node name="ClientTray" type="Node2D" parent="DeskLayout"]
+
+[node name="TraySlot_0" type="Node2D" parent="DeskLayout/ClientTray"]
+script = "res://scripts/wardrobe/slot.gd"
+
+[node name="SlotSprite" type="Sprite2D" parent="DeskLayout/ClientTray/TraySlot_0"]
+scale = Vector2(1e-05, 1e-05)
+
+[node name="ItemAnchor" type="Node2D" parent="DeskLayout/ClientTray/TraySlot_0"]
+
+[node name="TraySlot_1" type="Node2D" parent="DeskLayout/ClientTray"]
+script = "res://scripts/wardrobe/slot.gd"
+
+[node name="SlotSprite" type="Sprite2D" parent="DeskLayout/ClientTray/TraySlot_1"]
+scale = Vector2(1e-05, 1e-05)
+
+[node name="ItemAnchor" type="Node2D" parent="DeskLayout/ClientTray/TraySlot_1"]
+
+[node name="TraySlot_2" type="Node2D" parent="DeskLayout/ClientTray"]
+script = "res://scripts/wardrobe/slot.gd"
+
+[node name="SlotSprite" type="Sprite2D" parent="DeskLayout/ClientTray/TraySlot_2"]
+scale = Vector2(1e-05, 1e-05)
+
+[node name="ItemAnchor" type="Node2D" parent="DeskLayout/ClientTray/TraySlot_2"]
+
+[node name="TraySlot_3" type="Node2D" parent="DeskLayout/ClientTray"]
+script = "res://scripts/wardrobe/slot.gd"
+
+[node name="SlotSprite" type="Sprite2D" parent="DeskLayout/ClientTray/TraySlot_3"]
+scale = Vector2(1e-05, 1e-05)
+
+[node name="ItemAnchor" type="Node2D" parent="DeskLayout/ClientTray/TraySlot_3"]
+
+[node name="ClientDropZone" type="Area2D" parent="DeskLayout"]
+script = "res://scripts/wardrobe/client_drop_zone.gd"
+auto_size_sprite_path = NodePath("../../../DeskSprite")
+debug_draw = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DeskLayout/ClientDropZone"]
+shape = SubResource("RectangleShape2D_8dep5")

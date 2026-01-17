@@ -112,20 +112,12 @@ func _apply_warning_state(is_warning: bool) -> void:
 	_set_item_modulate(is_warning)
 	_update_shake(is_warning)
 
-func _update_shake(is_warning: bool) -> void:
+func _update_shake(_is_warning: bool) -> void:
 	if _hand_item == null:
 		return
-	if is_warning:
-		if _shake_tween and _shake_tween.is_valid():
-			return
-		_shake_tween = create_tween()
-		_shake_tween.set_loops()
-		_shake_tween.tween_property(_hand_item, "position", Vector2(2, 0), 0.05)
-		_shake_tween.tween_property(_hand_item, "position", Vector2(-2, 0), 0.05)
-	else:
-		if _shake_tween and _shake_tween.is_valid():
-			_shake_tween.kill()
-		_hand_item.position = Vector2.ZERO
+	if _shake_tween and _shake_tween.is_valid():
+		_shake_tween.kill()
+	_hand_item.position = Vector2.ZERO
 
 func _set_item_modulate(is_warning: bool) -> void:
 	var sprite := _hand_item.get_node_or_null("Sprite") as Sprite2D

@@ -5,6 +5,7 @@ class_name WardrobeStorageState
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const StorageActionResultScript := preload("res://scripts/domain/storage/storage_action_result.gd")
 const WardrobeStorageSnapshotScript := preload("res://scripts/domain/storage/wardrobe_storage_snapshot.gd")
+const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const REASON_SLOT_MISSING := StringName("slot_missing")
 const REASON_SLOT_EMPTY := StringName("slot_empty")
 const REASON_SLOT_BLOCKED := StringName("slot_blocked")
@@ -35,11 +36,17 @@ func has_slot(slot_id: StringName) -> bool:
 
 func put(slot_id: StringName, item: ItemInstance) -> StorageActionResultScript:
 	if item == null:
+		if DebugLog.enabled():
+			DebugLog.log("Storage put_fail slot=%s reason=item_missing" % [String(slot_id)])
 		return _result(false, REASON_ITEM_MISSING, null)
 	var slot := _slots.get(slot_id) as SlotState
 	if slot == null:
+		if DebugLog.enabled():
+			DebugLog.log("Storage put_fail slot=%s reason=slot_missing" % [String(slot_id)])
 		return _result(false, REASON_SLOT_MISSING, null)
 	if slot.item != null:
+		if DebugLog.enabled():
+			DebugLog.log("Storage put_fail slot=%s reason=slot_blocked" % [String(slot_id)])
 		return _result(false, REASON_SLOT_BLOCKED, null)
 	slot.item = item
 	return _result(true, REASON_OK, null)

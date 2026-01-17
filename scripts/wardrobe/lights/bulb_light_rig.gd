@@ -37,6 +37,13 @@ const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 		external_visual_path = value
 		_update_visual_source()
 
+@export var extra_visual_path: NodePath:
+	set(value):
+		extra_visual_path = value
+		_update_visual_source()
+
+@export var control_light_visual: bool = false
+
 @export_group("Visuals")
 @export var on_color: Color = Color(1.0, 1.0, 0.4, 1.0)
 @export var off_color: Color = Color(0.3, 0.3, 0.3, 1.0)
@@ -47,6 +54,7 @@ const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 
 var _light_service: LightService
 var _external_visual_node: CanvasItem
+var _extra_visual_node: CanvasItem
 
 func _ready() -> void:
 	if _light_collision and _light_collision.shape:
@@ -77,9 +85,15 @@ func _update_visual_source() -> void:
 		var node = get_node_or_null(external_visual_path)
 		if node is CanvasItem:
 			_external_visual_node = node
+
+	_extra_visual_node = null
+	if not extra_visual_path.is_empty():
+		var extra_node = get_node_or_null(extra_visual_path)
+		if extra_node is CanvasItem:
+			_extra_visual_node = extra_node
 	
 	if _visual_node:
-		_visual_node.visible = (_external_visual_node == null)
+		_visual_node.visible = (_external_visual_node == null and _extra_visual_node == null)
 	
 	_update_visuals()
 
@@ -109,6 +123,9 @@ func _update_visual_layout() -> void:
 
 func setup(service: LightService) -> void:
 	_light_service = service
+	if _light_service:
+		if not _light_service.bulb_changed.is_connected(_on_bulb_changed):
+			_light_service.bulb_changed.connect(_on_bulb_changed)
 	_update_visuals()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -120,16 +137,23 @@ func _unhandled_input(event: InputEvent) -> void:
 			var mouse_event := make_input_local(event) as InputEventMouseButton
 			var local_pos := mouse_event.position
 			
+			var hit_radius := 40.0
+			var handled := false
 			if _external_visual_node and is_instance_valid(_external_visual_node) and _external_visual_node.visible:
-				# Check against external visual (global to local conversion)
-				var ext_local = to_local(_external_visual_node.global_position)
-				if local_pos.distance_to(ext_local) < 40.0:
-					_toggle()
-					get_viewport().set_input_as_handled()
+				var ext_local := to_local(_external_visual_node.global_position)
+				if local_pos.distance_to(ext_local) < hit_radius:
+					handled = true
+			if not handled and _extra_visual_node and is_instance_valid(_extra_visual_node) and _extra_visual_node.visible:
+				var extra_local := to_local(_extra_visual_node.global_position)
+				if local_pos.distance_to(extra_local) < hit_radius:
+					handled = true
+			if handled:
+				_toggle()
+				get_viewport().set_input_as_handled()
 			else:
-				# Check against internal visual bulb radius (approx 40px)
-				# Use bulb_offset as the center
-				if local_pos.distance_to(bulb_offset) < 40.0:
+				var has_external := (_external_visual_node and is_instance_valid(_external_visual_node) and _external_visual_node.visible)
+				var has_extra := (_extra_visual_node and is_instance_valid(_extra_visual_node) and _extra_visual_node.visible)
+				if not has_external and not has_extra and local_pos.distance_to(bulb_offset) < hit_radius:
 					_toggle()
 					get_viewport().set_input_as_handled()
 
@@ -147,9 +171,19 @@ func _update_visuals() -> void:
 	if _external_visual_node and is_instance_valid(_external_visual_node):
 		if _external_visual_node.has_method("set_is_on"):
 			_external_visual_node.call("set_is_on", is_on)
+	if _extra_visual_node and is_instance_valid(_extra_visual_node):
+		if _extra_visual_node.has_method("set_is_on"):
+			_extra_visual_node.call("set_is_on", is_on)
 	
 	if _visual_node:
 		_visual_node.modulate = color
+	if control_light_visual and _light_visual:
+		_light_visual.visible = is_on
+
+func _on_bulb_changed(changed_row: int, _is_on: bool) -> void:
+	if changed_row != row_index:
+		return
+	_update_visuals()
 
 func _update_editor_visibility() -> void:
 	if not Engine.is_editor_hint():

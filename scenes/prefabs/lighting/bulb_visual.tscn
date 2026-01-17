@@ -1,0 +1,17 @@
+[gd_scene load_steps=4 format=3 uid="uid://c5wa0yhxv34sm"]
+
+[ext_resource type="Script" uid="uid://b4chxswkcuvhg" path="res://scripts/wardrobe/lights/bulb_visual.gd" id="1_0pyqw"]
+[ext_resource type="Texture2D" uid="uid://dm1djiw62ld8h" path="res://assets/sprites/bulb.png" id="1_erev0"]
+[ext_resource type="Texture2D" uid="uid://5i7o2s5rtrfn" path="res://assets/sprites/bulb_light.png" id="2_0pyqw"]
+
+[node name="Bulb" type="Node2D"]
+script = ExtResource("1_0pyqw")
+
+[node name="BulbOff" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = ExtResource("1_erev0")
+
+[node name="BulbOn" type="Sprite2D" parent="."]
+visible = false
+texture_filter = 1
+texture = ExtResource("2_0pyqw")

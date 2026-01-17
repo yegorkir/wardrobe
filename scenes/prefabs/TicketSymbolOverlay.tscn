@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://d2lymx1br7ymc"]
+
+[node name="TicketSymbolOverlay" type="Node2D"]
+visible = false
+
+[node name="SymbolSprite" type="Sprite2D" parent="."]
+visible = false
+texture_filter = 1
+position = Vector2(0, 10)
+scale = Vector2(2, 2)

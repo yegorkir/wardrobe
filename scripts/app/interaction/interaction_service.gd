@@ -8,6 +8,7 @@ const InteractionConfigScript := preload("res://scripts/app/interaction/interact
 const InteractionCommandScript := preload("res://scripts/domain/interaction/interaction_command.gd")
 const InteractionResultScript := preload("res://scripts/domain/interaction/interaction_result.gd")
 const StorageStateScript := preload("res://scripts/domain/storage/wardrobe_storage_state.gd")
+const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 var _engine: WardrobeInteractionDomainEngine = EngineScript.new()
 var _storage_state: WardrobeStorageState = StorageStateScript.new()
@@ -40,6 +41,8 @@ func reset_state() -> void:
 
 func register_slot(slot_id: StringName) -> void:
 	_storage_state.register_slot(slot_id)
+	if DebugLog.enabled():
+		DebugLog.log("Storage register_slot slot=%s" % String(slot_id))
 
 func build_auto_command(slot_id: StringName, slot_item: ItemInstance) -> InteractionCommandScript:
 	var hand_id := str(_hand_item.id) if _hand_item else ""
