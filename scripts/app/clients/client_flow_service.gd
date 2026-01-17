@@ -27,12 +27,12 @@ func tick(delta: float) -> void:
 	if not _get_snapshot.is_valid():
 		return
 	
-	if _should_skip_tick(delta):
-		return
-	
-	# Only process director logic if we have a config and cooldown allows
+	# Update cooldown every frame to ensure real-time scaling
 	if _spawn_cooldown > 0.0:
 		_spawn_cooldown -= delta
+	
+	# Guard for periodic metric sampling and director logic
+	if _should_skip_tick(delta):
 		return
 
 	var snapshot = _get_snapshot.call()
@@ -40,7 +40,9 @@ func tick(delta: float) -> void:
 		return
 	_last_snapshot = snapshot
 
-	_process_director_logic(snapshot)
+	# Only process spawn decisions if timer reached zero
+	if _spawn_cooldown <= 0.0:
+		_process_director_logic(snapshot)
 
 func get_last_snapshot() -> RefCounted:
 	return _last_snapshot.duplicate_snapshot() if _last_snapshot else null
