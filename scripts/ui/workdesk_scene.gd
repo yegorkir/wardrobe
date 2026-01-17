@@ -36,9 +36,12 @@ const CabinetsGridScript := preload("res://scripts/wardrobe/cabinets_grid.gd")
 const ClientFlowServiceScript := preload("res://scripts/app/clients/client_flow_service.gd")
 const ClientFlowSnapshotScript := preload("res://scripts/app/clients/client_flow_snapshot.gd")
 const ClientFlowConfigScript := preload("res://scripts/app/clients/client_flow_config.gd")
+const ClientSpawnRequestScript := preload("res://scripts/app/clients/client_spawn_request.gd")
+const ClientFactoryScript := preload("res://scripts/app/clients/client_factory.gd")
 
 const EVENT_CLIENT_FLOW_SNAPSHOT := StringName("client_flow_snapshot")
 const EVENT_CLIENT_FLOW_ITEMS := StringName("client_flow_items")
+const EVENT_CLIENT_FLOW_SPAWN := StringName("client_flow_spawn")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -85,6 +88,7 @@ var _clients_ui: WorkdeskClientsUIAdapter = WorkdeskClientsUIAdapterScript.new()
 var _queue_hud_adapter = QueueHudAdapterScript.new()
 var _client_flow_service = ClientFlowServiceScript.new()
 var _client_flow_config = ClientFlowConfigScript.new()
+var _client_factory = ClientFactoryScript.new()
 var _floor_resolver = FloorResolverScript.new()
 var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
@@ -234,6 +238,28 @@ func _finish_ready_setup() -> void:
 	_dragdrop_adapter.recover_stale_drag()
 	_setup_clients_ui()
 	_client_flow_service.configure(Callable(self, "_build_client_flow_snapshot"), _client_flow_config)
+	_client_flow_service.request_spawn.connect(_on_client_spawn_requested)
+	
+	var content_db := get_node_or_null("/root/ContentDB")
+	var roster: Array[StringName] = []
+	if _step3_setup.has_method("_load_wave_settings"):
+		var settings: Dictionary = _step3_setup.call("_load_wave_settings")
+		var wave_clients = settings.get("clients", [])
+		if wave_clients is Array:
+			for c in wave_clients:
+				roster.append(StringName(str(c)))
+	
+	_client_factory.configure(
+		content_db,
+		Callable(self, "_register_item_instance"),
+		roster
+	)
+
+func _register_item_instance(item: RefCounted) -> void:
+	if _run_manager:
+		var run_state = _run_manager.get_run_state()
+		if run_state:
+			run_state.call("register_item", item)
 
 func _ensure_cabinets_grid_script() -> void:
 	var grid := get_node_or_null("StorageHall/CabinetsGrid") as Node
@@ -454,6 +480,50 @@ func _build_client_flow_snapshot() -> RefCounted:
 		tickets_taken,
 		active_clients
 	)
+
+func _on_client_spawn_requested(request: ClientSpawnRequest) -> void:
+	if DebugLog.enabled():
+		DebugLog.event(EVENT_CLIENT_FLOW_SPAWN, {
+			"type": request.type,
+			"reason": request.reason
+		})
+	
+	var clients := _world_adapter.get_clients()
+	var client: ClientState
+	var spawn_index := clients.size()
+	
+	if request.type == ClientSpawnRequest.Type.CHECKIN:
+		client = _client_factory.build_checkin_client(spawn_index)
+	else:
+		var available_coats := _find_available_coats_in_storage()
+		if available_coats.is_empty():
+			# Fallback to checkin if no coats to return
+			client = _client_factory.build_checkin_client(spawn_index)
+		else:
+			var target_coat = available_coats.pick_random()
+			client = _client_factory.build_checkout_client(spawn_index, target_coat)
+	
+	if client:
+		clients[client.client_id] = client
+		var queue_system := _world_adapter.get_queue_system()
+		if queue_system:
+			queue_system.enqueue_clients(_world_adapter.get_client_queue_state(), [client.client_id])
+
+func _find_available_coats_in_storage() -> Array:
+	var coats := []
+	# Use snapshot or direct access if possible
+	# StorageState doesn't expose slots directly, let's use get_snapshot()
+	var snapshot = _storage_state.get_snapshot()
+	var slots: Dictionary = snapshot.get("slots")
+	for slot_id in slots:
+		var item_snapshot = slots[slot_id]
+		if item_snapshot != null and item_snapshot.get("kind") == ItemInstanceScript.KIND_COAT:
+			# We need the actual ItemInstance, but snapshot only has data.
+			# Let's get actual instance from StorageState
+			var actual_item = _storage_state.get_slot_item(slot_id)
+			if actual_item:
+				coats.append(actual_item)
+	return coats
 
 func _tick_exposure(delta: float) -> void:
 	if _shift_finished or not _clients_ready: return

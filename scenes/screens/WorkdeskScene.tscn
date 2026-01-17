@@ -99,7 +99,7 @@ script = ExtResource("8")
 curtain_zone_path = NodePath("../CurtainRig/CurtainZone")
 bulb_row0_zone_path = NodePath("../BulbsColumn/BulbRow0/LightZone")
 bulb_row1_zone_path = NodePath("../BulbsColumn/BulbRow1/LightZone")
-service_zone_path = NodePath("../../ServiceZone/LightZone/BulbLightRig/LightZone")
+service_zone_path = NodePath("../../ServiceZone/ServiceLightZone/LightZone")
 service_row_index = 2
 curtain_adapter_path = NodePath("../CurtainRig/CurtainsColumn/CurtainLightAdapter")
 debug_draw = false
@@ -121,9 +121,9 @@ texture = ExtResource("10_qeg72")
 
 [node name="ServiceLightZone" parent="ServiceZone" instance=ExtResource("10_rig")]
 visible = false
-position = Vector2(354, 427)
-row_index = 1
-source_id = &"bulb_row1"
+position = Vector2(0, 427)
+row_index = 2
+source_id = &"bulb_row_cli"
 show_zone_in_editor = true
 zone_width = 800.0
 zone_height = 952.0
@@ -169,7 +169,7 @@ position = Vector2(416, 737)
 external_visual_path = NodePath("../LightSwitch")
 
 [node name="BulbLightRig" parent="ServiceZone/LightZone" instance=ExtResource("10_rig")]
-position = Vector2(352, 686)
+position = Vector2(-86, 584)
 row_index = 2
 source_id = &"bulb_row_cli"
 show_zone_in_editor = true
