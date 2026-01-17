@@ -19,6 +19,12 @@ var _ui_cooldown_max: SpinBox
 var _ui_checkout_ratio: HSlider
 var _ui_ratio_label: Label
 
+var _ui_slot_decay: SpinBox
+var _ui_queue_mult: HSlider
+var _ui_queue_mult_label: Label
+var _ui_patience_max: SpinBox
+var _ui_strikes: SpinBox
+
 func _ready() -> void:
 	_start_workdesk_button.pressed.connect(_on_start_workdesk_pressed)
 	_quit_button.pressed.connect(_on_quit_pressed)
@@ -30,6 +36,15 @@ func _ready() -> void:
 
 func _on_start_workdesk_pressed() -> void:
 	if _run_manager:
+		# Update Shift Config (Patience)
+		var shift_config := {
+			"slot_decay_rate": _ui_slot_decay.value,
+			"queue_decay_multiplier": _ui_queue_mult.value,
+			"patience_max": _ui_patience_max.value,
+			"strikes_limit": int(_ui_strikes.value)
+		}
+		_run_manager.update_shift_config(shift_config)
+
 		var cooldown = Vector2(_ui_cooldown_min.value, _ui_cooldown_max.value)
 		# Ensure min <= max
 		if cooldown.x > cooldown.y:
@@ -74,7 +89,7 @@ func _build_debug_settings_ui() -> void:
 		panel.anchor_left = 1.0
 		panel.anchor_right = 1.0
 		panel.offset_left = -320
-		panel.offset_bottom = 400
+		panel.offset_bottom = 600 # Increased height
 	
 	panel.add_child(container)
 	
@@ -111,6 +126,39 @@ func _build_debug_settings_ui() -> void:
 	container.add_child(_ui_checkout_ratio)
 	
 	_ui_checkout_ratio.value_changed.connect(func(v): _ui_ratio_label.text = "%.2f" % v)
+
+	# Patience Settings Section
+	container.add_child(HSeparator.new())
+	var spacer = Control.new()
+	spacer.custom_minimum_size.y = 10
+	container.add_child(spacer)
+	
+	var pat_title = Label.new()
+	pat_title.text = "Patience Settings"
+	container.add_child(pat_title)
+
+	_ui_slot_decay = _add_setting_spinbox(container, "Slot Decay (/s)", 0.1, 10.0, 0.1, 1.0)
+	
+	_ui_queue_mult = HSlider.new()
+	_ui_queue_mult.min_value = 0.0
+	_ui_queue_mult.max_value = 2.0
+	_ui_queue_mult.step = 0.1
+	_ui_queue_mult.value = 0.5
+	
+	var q_hbox = HBoxContainer.new()
+	var q_label = Label.new()
+	q_label.text = "Queue Mult"
+	_ui_queue_mult_label = Label.new()
+	_ui_queue_mult_label.text = "%.1f" % 0.5
+	q_hbox.add_child(q_label)
+	q_hbox.add_child(_ui_queue_mult_label)
+	
+	container.add_child(q_hbox)
+	container.add_child(_ui_queue_mult)
+	_ui_queue_mult.value_changed.connect(func(v): _ui_queue_mult_label.text = "%.1f" % v)
+	
+	_ui_patience_max = _add_setting_spinbox(container, "Max Patience (s)", 5.0, 120.0, 5.0, 30.0)
+	_ui_strikes = _add_setting_spinbox(container, "Strikes Limit", 1, 10, 1, 3)
 
 func _add_setting_spinbox(parent: Control, label_text: String, min_v: float, max_v: float, step: float, default_v: float) -> SpinBox:
 	var hbox = HBoxContainer.new()
