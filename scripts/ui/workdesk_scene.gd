@@ -36,9 +36,11 @@ const CabinetsGridScript := preload("res://scripts/wardrobe/cabinets_grid.gd")
 const ClientFlowServiceScript := preload("res://scripts/app/clients/client_flow_service.gd")
 const ClientFlowSnapshotScript := preload("res://scripts/app/clients/client_flow_snapshot.gd")
 const ClientFlowConfigScript := preload("res://scripts/app/clients/client_flow_config.gd")
+const ClientSpawnRequestScript := preload("res://scripts/app/clients/client_spawn_request.gd")
 
 const EVENT_CLIENT_FLOW_SNAPSHOT := StringName("client_flow_snapshot")
 const EVENT_CLIENT_FLOW_ITEMS := StringName("client_flow_items")
+const EVENT_CLIENT_FLOW_SPAWN := StringName("client_flow_spawn")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -234,6 +236,7 @@ func _finish_ready_setup() -> void:
 	_dragdrop_adapter.recover_stale_drag()
 	_setup_clients_ui()
 	_client_flow_service.configure(Callable(self, "_build_client_flow_snapshot"), _client_flow_config)
+	_client_flow_service.request_spawn.connect(_on_client_spawn_requested)
 
 func _ensure_cabinets_grid_script() -> void:
 	var grid := get_node_or_null("StorageHall/CabinetsGrid") as Node
@@ -454,6 +457,14 @@ func _build_client_flow_snapshot() -> RefCounted:
 		tickets_taken,
 		active_clients
 	)
+
+func _on_client_spawn_requested(request: ClientSpawnRequest) -> void:
+	if DebugLog.enabled():
+		DebugLog.event(EVENT_CLIENT_FLOW_SPAWN, {
+			"type": request.type,
+			"reason": request.reason
+		})
+	# TODO: Delegate to ClientFactory to actually spawn the client
 
 func _tick_exposure(delta: float) -> void:
 	if _shift_finished or not _clients_ready: return
