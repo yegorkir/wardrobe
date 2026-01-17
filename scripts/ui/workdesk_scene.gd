@@ -27,11 +27,18 @@ const SurfaceRegistryScript := preload("res://scripts/wardrobe/surface/surface_r
 const LightServiceScript := preload("res://scripts/app/light/light_service.gd")
 const LightZonesAdapterScript := preload("res://scripts/ui/light/light_zones_adapter.gd")
 const ExposureServiceScript := preload("res://scripts/domain/magic/exposure_service.gd")
+const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const ItemArchetypeDefinitionScript := preload("res://scripts/domain/content/item_archetype_definition.gd")
 const ZombieExposureConfigScript := preload("res://scripts/domain/magic/zombie_exposure_config.gd")
 const InteractionRulesScript := preload("res://scripts/domain/interaction/interaction_rules.gd")
 const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 const CabinetsGridScript := preload("res://scripts/wardrobe/cabinets_grid.gd")
+const ClientFlowServiceScript := preload("res://scripts/app/clients/client_flow_service.gd")
+const ClientFlowSnapshotScript := preload("res://scripts/app/clients/client_flow_snapshot.gd")
+const ClientFlowConfigScript := preload("res://scripts/app/clients/client_flow_config.gd")
+
+const EVENT_CLIENT_FLOW_SNAPSHOT := StringName("client_flow_snapshot")
+const EVENT_CLIENT_FLOW_ITEMS := StringName("client_flow_items")
 
 @export var step3_seed: int = 1337
 @export var desk_event_unhandled_policy: StringName = WardrobeInteractionEventsAdapter.UNHANDLED_WARN
@@ -76,6 +83,8 @@ var _interaction_logger := WardrobeInteractionLoggerScript.new()
 var _shift_log: WardrobeShiftLog = WardrobeShiftLogScript.new()
 var _clients_ui: WorkdeskClientsUIAdapter = WorkdeskClientsUIAdapterScript.new()
 var _queue_hud_adapter = QueueHudAdapterScript.new()
+var _client_flow_service = ClientFlowServiceScript.new()
+var _client_flow_config = ClientFlowConfigScript.new()
 var _floor_resolver = FloorResolverScript.new()
 var _shelf_surfaces: Array = []
 var _floor_zone: FloorZoneAdapter
@@ -224,6 +233,7 @@ func _finish_ready_setup() -> void:
 	_log_desk_assignment_state("after_init")
 	_dragdrop_adapter.recover_stale_drag()
 	_setup_clients_ui()
+	_client_flow_service.configure(Callable(self, "_build_client_flow_snapshot"), _client_flow_config)
 
 func _ensure_cabinets_grid_script() -> void:
 	var grid := get_node_or_null("StorageHall/CabinetsGrid") as Node
@@ -365,6 +375,85 @@ func _process(delta: float) -> void:
 			queue_system.tick(queue_state, delta)
 
 	_queue_hud_adapter.update()
+	_client_flow_service.tick(delta)
+
+func _build_client_flow_snapshot() -> RefCounted:
+	var cabinet_slots: Array[WardrobeSlot] = []
+	var cabinet_slots_raw: Array = _world_adapter.get_cabinet_ticket_slots()
+	for slot in cabinet_slots_raw:
+		if slot is WardrobeSlot:
+			cabinet_slots.append(slot)
+	var total_hook_slots := cabinet_slots.size()
+	var client_items_on_scene := 0
+	var tickets_on_scene := 0
+	var spawned_items: Array = _world_adapter.get_spawned_items()
+	var item_debug: Array = []
+	for item_node in spawned_items:
+		if not is_instance_valid(item_node):
+			continue
+		if not item_node.has_method("get_item_instance"):
+			continue
+		var instance = item_node.get_item_instance()
+		if instance == null:
+			continue
+		if instance.kind == ItemInstanceScript.KIND_TICKET:
+			tickets_on_scene += 1
+			client_items_on_scene += 1
+		elif instance.kind == ItemInstanceScript.KIND_COAT:
+			client_items_on_scene += 1
+		if DebugLog.enabled():
+			item_debug.append({
+				"id": instance.id,
+				"kind": instance.kind,
+			})
+
+	var queue_state: ClientQueueState = _world_adapter.get_client_queue_state()
+	var queue_checkin := 0
+	var queue_checkout := 0
+	if queue_state:
+		queue_checkin = queue_state.get_checkin_count()
+		queue_checkout = queue_state.get_checkout_count()
+	var queue_total: int = queue_checkin + queue_checkout
+
+	var total_tickets: int = 0
+	if _run_manager:
+		total_tickets = _run_manager.get_total_tickets()
+	var tickets_taken: int = int(max(0, total_tickets - tickets_on_scene))
+	var active_clients: int = 0
+	if _run_manager:
+		active_clients = _run_manager.get_active_client_count()
+
+	if DebugLog.enabled():
+		var slot_ids: Array = []
+		for slot in cabinet_slots:
+			if slot != null:
+				slot_ids.append(StringName(slot.get_slot_identifier()))
+		DebugLog.event(EVENT_CLIENT_FLOW_ITEMS, {
+			"hook_slots": slot_ids,
+			"items": item_debug,
+		})
+		DebugLog.event(EVENT_CLIENT_FLOW_SNAPSHOT, {
+			"total_hook_slots": total_hook_slots,
+			"client_items_on_scene": client_items_on_scene,
+			"queue_total": queue_total,
+			"queue_checkin": queue_checkin,
+			"queue_checkout": queue_checkout,
+			"tickets_on_scene": tickets_on_scene,
+			"tickets_taken": tickets_taken,
+			"active_clients": active_clients,
+			"total_tickets": total_tickets,
+		})
+
+	return ClientFlowSnapshotScript.new(
+		total_hook_slots,
+		client_items_on_scene,
+		queue_total,
+		queue_checkin,
+		queue_checkout,
+		tickets_on_scene,
+		tickets_taken,
+		active_clients
+	)
 
 func _tick_exposure(delta: float) -> void:
 	if _shift_finished or not _clients_ready: return

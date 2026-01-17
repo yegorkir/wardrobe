@@ -188,6 +188,16 @@ func get_queue_mix_snapshot() -> Dictionary:
 		return _shift_service.get_queue_mix_snapshot()
 	return {}
 
+func get_total_tickets() -> int:
+	if _shift_service:
+		return _shift_service.get_total_tickets()
+	return 0
+
+func get_active_client_count() -> int:
+	if _shift_service:
+		return _shift_service.get_active_client_count()
+	return 0
+
 func _configure_input_map() -> void:
 	_ensure_action_with_events("tap", _create_tap_events())
 	_ensure_action_with_events("cancel", [_create_key_event(KEY_ESCAPE)])

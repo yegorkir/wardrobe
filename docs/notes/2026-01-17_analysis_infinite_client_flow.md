@@ -17,34 +17,40 @@ This analysis stays within the repo architecture: domain/app logic owns truth; U
 - Workdesk loop: `WorkdeskScene._process()` ticks queue system and patience, which is a natural entry point for a spawn tick.
 
 ## Requirements distilled from request
-- Provide a reliable count of free hooks for coats (capacity-based gating for new clients).
-- Provide queue size counts, including split by check-in vs check-out intent.
-- Provide count of tickets currently on hand (likely to avoid spawning when a ticket is being handled).
-- Define who consumes these metrics and how often the counting runs, to decide when to spawn new clients.
+- Track two capacity metrics instead of a single “free hooks” value:
+  - total hooks in cabinet slots on the scene
+  - total client items currently on the scene
+- Track queue size counts, including split by check-in vs check-out intent.
+- Track “tickets taken from the scene” as `total_tickets - tickets_on_scene` (approximate but acceptable for now).
+- Only build the metrics “machine” now; do not implement spawn decisions yet.
 
-## Open questions (must resolve before implementation)
-- What qualifies as a “free hook”? Only hook-board slots, or do cabinet slots count? Should tray slots count?
-- Is “tickets on hand” strictly the single cursor hand item, or should tickets on trays/shelves also count?
-- Spawn rule: do we spawn based on minimum free hooks, queue length thresholds, or target balance between check-in/out?
-- Client definitions: should new clients use `ContentDB` (wave list) or a new infinite pool config?
-- Spawn pacing: fixed interval, adaptive (based on capacity), or event-driven (on item placed/removed)?
+## Decisions from user
+- Hooks count = cabinet slots on the scene (not tray slots); compute as total hooks count.
+- Free capacity is derived later as `total_hooks - client_items_on_scene` (store both metrics).
+- Tickets taken metric = `total_tickets - tickets_on_scene` (approximate for now).
+- Do not implement spawn decisions yet; only collect metrics and provide a decision input surface.
+- Clients/items will come from `res://content` later; spawning logic is out of scope.
 
 ## Proposed solution design
 Introduce a small app-layer service that builds a “client flow snapshot” from domain state and drives spawn decisions on a fixed tick. UI adapters expose minimal read-only data needed for the snapshot.
 
 ### Data snapshot (new value object)
 `ClientFlowSnapshot` (domain/app value object, RefCounted) with:
-- `free_hook_count: int`
+- `total_hook_slots: int`
+- `client_items_on_scene: int`
 - `queue_total: int`
 - `queue_checkin: int`
 - `queue_checkout: int`
-- `tickets_in_hand: int` (0 or 1 for now)
+- `tickets_on_scene: int`
+- `tickets_taken: int` (computed as `total_tickets - tickets_on_scene`)
 - `active_clients: int` (already tracked in `RunState`)
 
 ### Metric sources
 - Queue counts: `ClientQueueState.get_checkin_count()`, `get_checkout_count()`.
-- Free hooks: count empty slots in `WardrobeStorageState` filtered to “hook slots”.
-- Tickets in hand: `WardrobeInteractionService.get_hand_item()` and check `ItemInstance.kind == ItemInstance.KIND_TICKET`.
+- Total hook slots: cabinet slots discovered via `WardrobeWorldSetupAdapter.get_cabinet_ticket_slots()` (or a dedicated hook-slot collector).
+- Client items on scene: count of `ItemNode` that belong to clients (filter by `ItemInstance.kind` and/or client registry).
+- Tickets on scene: count of ticket items among spawned items.
+- Total tickets: can be derived from initial ticket seeding count (Step 3 setup) or tracked in `RunState`.
 
 ### Hook slot filtering (options)
 Option A (naming convention): treat slots with ids beginning with `Hook_` or `HookBoard_` and ending in `_SlotA/_SlotB` as hook slots. Exclude `Cab_` and tray slots.
@@ -59,22 +65,17 @@ Option C (group-based): add hook slots to a dedicated group (e.g., `wardrobe_hoo
 - Pros: avoids naming reliance.
 - Cons: requires scene edits.
 
-### Spawn orchestration
-New app service `ClientSpawnService` (or `ClientFlowService`) with:
+### Metrics orchestration
+New app service `ClientFlowService` with:
 - `tick(delta: float)` called from `WorkdeskScene._process()` (adapter) or `ShiftService.tick()`.
-- `configure(get_snapshot: Callable, spawn_client: Callable, config: RefCounted)`.
-- Applies spawn rules based on snapshot + config, then enqueues/spawns new clients.
+- `configure(get_snapshot: Callable, publish_snapshot: Callable, config: RefCounted)`.
+- Does not spawn; only produces snapshots to drive future decisions.
 
-### Spawn rules (initial suggestions)
-- Require `free_hook_count >= min_free_hooks` (config).
-- Keep `queue_total <= max_queue_size` (config).
-- Maintain `queue_checkin : queue_checkout` ratio based on `ShiftService.get_queue_mix_snapshot()` or a new policy.
-- Optional: avoid spawn when `tickets_in_hand > 0` to reduce confusion.
+### Spawn rules (deferred)
+No spawn rules now; keep the service focused on producing metrics only.
 
-### Placement of new clients
-- Construction should move from `WardrobeStep3SetupAdapter._build_clients()` to an app-layer factory:
-  - `ClientFactory` in `scripts/app/clients/` builds `ClientState` + item instances via `ContentDB`.
-  - UI adapter remains responsible for creating visuals and placing items, but app owns client state.
+### Placement of new clients (deferred)
+Spawning and client construction are deferred; focus on metrics only.
 
 ## Architecture options
 1) **App-centric flow service (recommended)**
@@ -107,18 +108,12 @@ Adapters:
 - `DeskEventDispatcher` or `DeskServicePointSystem` handles actual queue enqueue + desk assignment.
 
 ## Tests to add
-- Unit tests for `ClientFlowService.should_spawn()` with snapshots covering:
-  - no free hooks
-  - queue full
-  - ticket in hand
-  - target mix constraints
-- Unit test for hook slot filtering (if implemented in app layer).
-- Integration test: spawn loop increases queue when free hooks are available.
+- Unit tests for snapshot building (hook count, ticket count, queue split).
+- Integration test: metrics update when items are added/removed from the scene.
 
 ## Risks
 - Slot classification drift if relying on naming only; prefer metadata or group tagging.
-- Infinite flow can starve checkout if queue mix policy isn’t applied consistently.
-- Over-frequent spawn tick may oscillate if capacity changes rapidly.
+- Tickets taken metric is approximate while “total tickets” tracking is implicit.
 
 ## References
 - Godot Node `_process(delta)` for cadence and tick integration: https://docs.godotengine.org/en/4.5/classes/class_node.html#class-node-method-process
