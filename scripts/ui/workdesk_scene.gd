@@ -289,9 +289,7 @@ func _finish_ready_setup() -> void:
 
 func _register_item_instance(item: RefCounted) -> void:
 	if _run_manager:
-		var run_state = _run_manager.get_run_state()
-		if run_state:
-			run_state.call("register_item", item)
+		_run_manager.register_item(item)
 
 func _ensure_cabinets_grid_script() -> void:
 	var grid := get_node_or_null("StorageHall/CabinetsGrid") as Node
@@ -546,7 +544,7 @@ func _find_available_coats_in_storage() -> Array:
 	# Use snapshot or direct access if possible
 	# StorageState doesn't expose slots directly, let's use get_snapshot()
 	var snapshot = _storage_state.get_snapshot()
-	var slots: Dictionary = snapshot.get("slots")
+	var slots: Dictionary = snapshot.get("slots_by_id") if snapshot else {}
 	for slot_id in slots:
 		var item_snapshot = slots[slot_id]
 		if item_snapshot != null and item_snapshot.get("kind") == ItemInstanceScript.KIND_COAT:
