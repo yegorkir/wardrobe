@@ -235,7 +235,7 @@ func _finish_ready_setup() -> void:
 	interaction_context.clients = _world_adapter.get_clients()
 	interaction_context.tray_slots = _world_adapter.get_tray_slots()
 	interaction_context.client_drop_zones = _world_adapter.get_client_drop_zones()
-	interaction_context.find_item_instance = Callable(_run_manager, "find_item") if _run_manager else Callable(_world_adapter, "find_item_instance")
+	interaction_context.find_item_instance = Callable(self, "_find_item_instance_with_fallback")
 	interaction_context.floor_resolver = _floor_resolver
 	if _run_manager != null:
 		interaction_context.apply_patience_penalty = Callable(_run_manager, "apply_patience_penalty")
@@ -283,7 +283,7 @@ func _finish_ready_setup() -> void:
 	
 	_client_factory.configure(
 		content_db,
-		Callable(self, "_register_item_instance"),
+		Callable(_world_adapter, "register_item_instance"),
 		roster
 	)
 
@@ -479,27 +479,6 @@ func _build_client_flow_snapshot() -> RefCounted:
 	if _run_manager:
 		active_clients = _run_manager.get_active_client_count()
 
-	if DebugLog.enabled():
-		var slot_ids: Array = []
-		for slot in cabinet_slots:
-			if slot != null:
-				slot_ids.append(StringName(slot.get_slot_identifier()))
-		DebugLog.event(EVENT_CLIENT_FLOW_ITEMS, {
-			"hook_slots": slot_ids,
-			"items": item_debug,
-		})
-		DebugLog.event(EVENT_CLIENT_FLOW_SNAPSHOT, {
-			"total_hook_slots": total_hook_slots,
-			"client_items_on_scene": client_items_on_scene,
-			"queue_total": queue_total,
-			"queue_checkin": queue_checkin,
-			"queue_checkout": queue_checkout,
-			"tickets_on_scene": tickets_on_scene,
-			"tickets_taken": tickets_taken,
-			"active_clients": active_clients,
-			"total_tickets": total_tickets,
-		})
-
 	return ClientFlowSnapshotScript.new(
 		total_hook_slots,
 		client_items_on_scene,
@@ -512,39 +491,26 @@ func _build_client_flow_snapshot() -> RefCounted:
 	)
 
 func _on_client_spawn_requested(request: ClientSpawnRequest) -> void:
-	if DebugLog.enabled():
-		DebugLog.event(EVENT_CLIENT_FLOW_SPAWN, {
-			"type": request.type,
-			"reason": request.reason
-		})
-	
 	var clients := _world_adapter.get_clients()
 	var client: ClientState
 	var spawn_index := clients.size()
 	
-	if request.type == ClientSpawnRequest.Type.CHECKIN:
-		client = _client_factory.build_checkin_client(spawn_index)
-	else:
-		var available_coats := _find_available_coats_in_storage()
-		if available_coats.is_empty():
-			# Fallback to checkin if no coats to return
-			client = _client_factory.build_checkin_client(spawn_index)
-		else:
-			var target_coat = available_coats.pick_random()
-			client = _client_factory.build_checkout_client(spawn_index, target_coat)
+	client = _client_factory.build_checkin_client(spawn_index)
 	
 	if client:
 		clients[client.client_id] = client
 		var queue_system := _world_adapter.get_queue_system()
 		if queue_system:
 			queue_system.enqueue_clients(_world_adapter.get_client_queue_state(), [client.client_id])
+	elif DebugLog.enabled():
+		DebugLog.logf("ClientFlow spawn_fail type=%s reason=null_client", [str(request.type)])
 
 func _find_available_coats_in_storage() -> Array:
 	var coats := []
 	# Use snapshot or direct access if possible
 	# StorageState doesn't expose slots directly, let's use get_snapshot()
 	var snapshot = _storage_state.get_snapshot()
-	var slots: Dictionary = snapshot.get("slots_by_id") if snapshot else {}
+	var slots: Dictionary = snapshot.slots_by_id if snapshot else {}
 	for slot_id in slots:
 		var item_snapshot = slots[slot_id]
 		if item_snapshot != null and item_snapshot.get("kind") == ItemInstanceScript.KIND_COAT:
@@ -554,6 +520,16 @@ func _find_available_coats_in_storage() -> Array:
 			if actual_item:
 				coats.append(actual_item)
 	return coats
+
+func _find_item_instance_with_fallback(item_id: StringName) -> ItemInstance:
+	if item_id == StringName():
+		return null
+	var instance: ItemInstance = null
+	if _run_manager:
+		instance = _run_manager.find_item(item_id)
+	if instance == null:
+		instance = _world_adapter.find_item_instance(item_id)
+	return instance
 
 func _tick_exposure(delta: float) -> void:
 	if _shift_finished or not _clients_ready: return

@@ -125,7 +125,7 @@ func _build_debug_settings_ui() -> void:
 	container.add_child(ratio_hbox)
 	container.add_child(_ui_checkout_ratio)
 	
-	_ui_checkout_ratio.value_changed.connect(func(v): _ui_ratio_label.text = "%.2f" % v)
+	_ui_checkout_ratio.value_changed.connect(_on_checkout_ratio_changed)
 
 	# Patience Settings Section
 	container.add_child(HSeparator.new())
@@ -155,10 +155,18 @@ func _build_debug_settings_ui() -> void:
 	
 	container.add_child(q_hbox)
 	container.add_child(_ui_queue_mult)
-	_ui_queue_mult.value_changed.connect(func(v): _ui_queue_mult_label.text = "%.1f" % v)
+	_ui_queue_mult.value_changed.connect(_on_queue_mult_changed)
 	
 	_ui_patience_max = _add_setting_spinbox(container, "Max Patience (s)", 5.0, 120.0, 5.0, 30.0)
 	_ui_strikes = _add_setting_spinbox(container, "Strikes Limit", 1, 10, 1, 3)
+
+func _on_checkout_ratio_changed(v: float) -> void:
+	if _ui_ratio_label:
+		_ui_ratio_label.text = "%.2f" % v
+
+func _on_queue_mult_changed(v: float) -> void:
+	if _ui_queue_mult_label:
+		_ui_queue_mult_label.text = "%.1f" % v
 
 func _add_setting_spinbox(parent: Control, label_text: String, min_v: float, max_v: float, step: float, default_v: float) -> SpinBox:
 	var hbox = HBoxContainer.new()

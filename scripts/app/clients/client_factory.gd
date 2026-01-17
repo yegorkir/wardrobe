@@ -5,6 +5,7 @@ class_name ClientFactory
 const ClientStateScript := preload("res://scripts/domain/clients/client_state.gd")
 const ItemInstanceScript := preload("res://scripts/domain/storage/item_instance.gd")
 const WardrobeItemConfigScript := preload("res://scripts/ui/wardrobe_item_config.gd")
+const DebugLog := preload("res://scripts/wardrobe/debug/debug_log.gd")
 
 var _content_db: Object
 var _register_item: Callable
@@ -28,8 +29,9 @@ func build_checkin_client(index: int) -> RefCounted:
 	var client_id := StringName("client_in_%d_%d" % [index, Time.get_ticks_msec()])
 	var color := _colors[index % _colors.size()]
 	
-	var item_id := StringName("coat_%s_%d" % [client_id, index])
-	var item_kind := ItemInstanceScript.KIND_COAT
+	var item_type := WardrobeItemConfigScript.get_demo_item_type_for_client(index)
+	var item_id := WardrobeItemConfigScript.build_client_item_id(item_type, index)
+	var item_kind := WardrobeItemConfigScript.get_kind_for_item_type(item_type)
 
 	var client_def_id := _resolve_client_def_id(index)
 	var client_def := _resolve_client_definition(client_def_id)
@@ -45,6 +47,8 @@ func build_checkin_client(index: int) -> RefCounted:
 	
 	if _register_item.is_valid():
 		_register_item.call(coat)
+	elif DebugLog.enabled():
+		DebugLog.logf("ClientFactory register_item_missing client=%s item=%s", [String(client_id), String(item_id)])
 		
 	return ClientStateScript.new(
 		client_id,
@@ -79,6 +83,8 @@ func build_checkout_client(index: int, target_item: RefCounted) -> RefCounted:
 
 	if _register_item.is_valid():
 		_register_item.call(ticket)
+	elif DebugLog.enabled():
+		DebugLog.logf("ClientFactory register_item_missing client=%s item=%s", [String(client_id), String(ticket_id)])
 
 	var client_def_id := _resolve_client_def_id(index)
 	var client_def := _resolve_client_definition(client_def_id)

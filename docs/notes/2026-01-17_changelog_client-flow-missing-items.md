@@ -1,0 +1,25 @@
+# Changelog: client-flow-missing-items (2026-01-17)
+
+- Traced `client_flow_items` logs showing only cabinet tickets and the `_find_available_coats_in_storage` nil assignment error at `scripts/ui/workdesk_scene.gd:517`.
+- Fixed storage snapshot access by reading `WardrobeStorageSnapshot.slots_by_id` directly instead of `snapshot.get("slots_by_id")` in `scripts/ui/workdesk_scene.gd`.
+- Routed client item registration through `WardrobeWorldSetupAdapter.register_item_instance` so AI-spawned coats/tickets enter the local item registry.
+- Added a RunManager-to-world-adapter fallback for `find_item_instance` in `scripts/ui/workdesk_scene.gd` to ensure desk spawn events resolve client items.
+- Added `tests/integration/clients/test_client_flow_spawn_items.gd` to assert a director check-in spawn produces a tray coat item.
+- Registered missing tray slots on-demand before `WardrobeStorageState.put(...)` in `scripts/app/desk/desk_service_point_system.gd` to prevent spawn attempts from failing when tray slots were never registered.
+- Added debug logs for client creation and item assignment in `scripts/app/clients/client_factory.gd`, `scripts/ui/workdesk_scene.gd`, and `scripts/app/desk/desk_service_point_system.gd` to trace missing item paths.
+- Fixed debug log formatting in `scripts/ui/workdesk_scene.gd` by using `str(request.type)` to avoid parse errors in headless tests.
+- Reduced temporary debug logging to only keep `ClientFactory register_item_missing` and existing flow logs.
+- Disabled `client_flow_*` DebugLog events in `scripts/ui/workdesk_scene.gd` per request.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` again (exit 0; existing CA cert error line remains).
+- Launched Godot with `"$GODOT_BIN" --path .` after disabling `client_flow_*` logs.
+- Fixed checkout drop-off handling to spawn tickets when a client has no coat in `scripts/app/desk/desk_service_point_system.gd`.
+- Added unit coverage in `tests/unit/app/desk/test_desk_service_point_system.gd` to assert checkout drop-off spawns a ticket on the tray.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (exit 0; existing CA cert error line remains).
+- Launched Godot with `"$GODOT_BIN" --path .` after the checkout drop-off fix.
+- Updated check-in client item generation to cycle through coat/bottle/chest/hat ids in `scripts/app/clients/client_factory.gd`.
+- Forced flow-spawned clients to use check-in items in `scripts/ui/workdesk_scene.gd`.
+- Added `tests/unit/app/clients/test_client_factory.gd` to verify allowed item id prefixes.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` after the item-type changes (exit 0; existing CA cert error line remains).
+- Launched Godot with `"$GODOT_BIN" --path .` after the item-type changes.
+- Ran `GODOT_TEST_HOME="$PWD/.godot_test_home_persist" task tests` (exit 0; existing CA cert error line remains).
+- Launched Godot with `"$GODOT_BIN" --path .`; logs show desk tray spawn events and client flow items include coats/tickets.
