@@ -159,6 +159,10 @@ func _assign_next_client_to_desk(
 			var coat := next_client.get_coat_item()
 			if coat != null:
 				dropoff_items.append(coat)
+			else:
+				var ticket := next_client.get_ticket_item()
+				if ticket != null:
+					dropoff_items.append(ticket)
 			return _spawn_tray_items(desk_state, storage_state, next_client, dropoff_items)
 		if next_client.phase == ClientStateScript.PHASE_PICK_UP:
 			var pickup_items: Array[ItemInstance] = []
@@ -275,6 +279,8 @@ func _spawn_tray_items(
 					[String(desk_state.desk_id), String(slot_id)]
 				)
 			continue
+		if not storage_state.has_slot(slot_id):
+			storage_state.register_slot(slot_id)
 		var put_result := storage_state.put(slot_id, item)
 		if not put_result.success:
 			if DebugLog.enabled():

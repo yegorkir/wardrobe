@@ -58,7 +58,7 @@ scale = Vector2(0.9438776, 1)
 texture = ExtResource("5_1cvfn")
 
 [node name="BulbRow0" parent="StorageHall/BulbsColumn" instance=ExtResource("10_rig")]
-position = Vector2(-1291, -333)
+position = Vector2(-1439, -459)
 show_zone_in_editor = true
 zone_width = 400.0
 zone_height = 330.0
@@ -74,7 +74,7 @@ position = Vector2(-1237, -126)
 scale = Vector2(0.5, 0.5)
 
 [node name="BulbRow1" parent="StorageHall/BulbsColumn" instance=ExtResource("10_rig")]
-position = Vector2(-1289, -3)
+position = Vector2(-1438, -136)
 row_index = 1
 source_id = &"bulb_row1"
 show_zone_in_editor = true

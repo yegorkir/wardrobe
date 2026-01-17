@@ -80,6 +80,16 @@ func setup(
 	_initialize_run_state()
 	_reset_demo_hud()
 
+func update_config(new_config: Dictionary) -> void:
+	if new_config.is_empty():
+		return
+	for key in new_config:
+		_shift_config[key] = new_config[key]
+	
+	# If seed override changed, re-resolve seed
+	if new_config.has("seed_override"):
+		_resolve_seed()
+
 func _resolve_seed() -> void:
 	if _shift_config.has("seed_override") and _shift_config["seed_override"] != null:
 		_seed = int(_shift_config["seed_override"])

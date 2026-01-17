@@ -84,6 +84,8 @@ var ticket_number: int = -1
 var durability: float = 100.0
 
 const GHOST_SHADER := preload("res://assets/shaders/ghost_item.gdshader")
+const GHOST_PARAM_TRANSPARENCY := StringName("transparency")
+const GHOST_PARAM_GLOW := StringName("glow_power")
 
 var _item_instance: RefCounted
 var _aura_particles: GPUParticles2D
@@ -289,8 +291,8 @@ func set_ghost_appearance(is_in_light: bool, dark_alpha: float) -> void:
 	var target_glow := 0.8 if is_in_light else 0.0
 	
 	# Check if we need to tween (optimization: don't retween if close)
-	var current_alpha := float(mat.get_shader_parameter("transparency")) if mat.get_shader_parameter("transparency") != null else 1.0
-	var current_glow := float(mat.get_shader_parameter("glow_power")) if mat.get_shader_parameter("glow_power") != null else 0.0
+	var current_alpha := float(mat.get_shader_parameter(GHOST_PARAM_TRANSPARENCY)) if mat.get_shader_parameter(GHOST_PARAM_TRANSPARENCY) != null else 1.0
+	var current_glow := float(mat.get_shader_parameter(GHOST_PARAM_GLOW)) if mat.get_shader_parameter(GHOST_PARAM_GLOW) != null else 0.0
 	
 	if is_equal_approx(current_alpha, target_alpha) and is_equal_approx(current_glow, target_glow):
 		return
@@ -300,8 +302,12 @@ func set_ghost_appearance(is_in_light: bool, dark_alpha: float) -> void:
 	
 	_ghost_tween = create_tween()
 	_ghost_tween.set_parallel(true)
-	_ghost_tween.tween_method(func(val): mat.set_shader_parameter("transparency", val), current_alpha, target_alpha, 0.3)
-	_ghost_tween.tween_method(func(val): mat.set_shader_parameter("glow_power", val), current_glow, target_glow, 0.3)
+	_ghost_tween.tween_method(Callable(self, "_set_shader_param_value").bind(mat, GHOST_PARAM_TRANSPARENCY), current_alpha, target_alpha, 0.3)
+	_ghost_tween.tween_method(Callable(self, "_set_shader_param_value").bind(mat, GHOST_PARAM_GLOW), current_glow, target_glow, 0.3)
+
+func _set_shader_param_value(value: float, shader_material: ShaderMaterial, param: StringName) -> void:
+	if shader_material:
+		shader_material.set_shader_parameter(param, value)
 
 func play_reject_effect() -> void:
 	if _reject_tween and _reject_tween.is_valid():
@@ -784,11 +790,12 @@ func return_to_origin(anchor: Node2D, on_complete: Callable = Callable()) -> voi
 	_return_tween.tween_property(self, "global_position", anchor.global_position, RETURN_TWEEN_DURATION)
 	_return_tween.tween_property(self, "rotation", 0.0, RETURN_TWEEN_DURATION)
 	_return_tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	_return_tween.finished.connect(func() -> void:
-		set_input_pickable(true)
-		if on_complete.is_valid():
-			on_complete.call()
-	)
+	_return_tween.finished.connect(_on_return_tween_finished.bind(on_complete))
+
+func _on_return_tween_finished(on_complete: Callable) -> void:
+	set_input_pickable(true)
+	if on_complete.is_valid():
+		on_complete.call()
 
 func enable_pass_through_until_y(target_y: float) -> void:
 	_start_pass_through(target_y)

@@ -165,6 +165,10 @@ func get_shift_config() -> Dictionary:
 		return _shift_service.get_shift_config()
 	return {}
 
+func update_shift_config(config: Dictionary) -> void:
+	if _shift_service:
+		_shift_service.update_config(config)
+
 func get_patience_snapshot() -> Dictionary:
 	if _shift_service:
 		return _shift_service.get_patience_snapshot()

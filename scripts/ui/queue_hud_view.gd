@@ -153,7 +153,7 @@ func _play_append_from_queue_items(item: Control) -> void:
 	item.set_as_top_level(true)
 	item.global_position = start_pos
 	item.modulate = Color(1, 1, 1, 0)
-	var tween := create_tween()
+	var tween := create_tween().bind_node(item)
 	tween.tween_property(item, "modulate:a", 1.0, APPEND_FADE_DURATION)
 	tween.tween_property(item, "global_position", target_pos, APPEND_MOVE_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tween.tween_callback(func() -> void:
@@ -167,7 +167,7 @@ func _play_simple_append(item: Control) -> void:
 		return
 	content.position = Vector2(20, 0)
 	item.modulate = Color(1, 1, 1, 0)
-	var tween := create_tween()
+	var tween := create_tween().bind_node(item)
 	tween.tween_property(item, "modulate:a", 1.0, 0.15)
 	tween.tween_property(content, "position", Vector2.ZERO, 0.15)
 
@@ -175,7 +175,7 @@ func _play_timeout(client_id: StringName, item: Control) -> void:
 	if _leaving_ids.has(client_id):
 		return
 	_leaving_ids[client_id] = true
-	var tween := create_tween()
+	var tween := create_tween().bind_node(item)
 	tween.tween_property(item, "modulate", Color(1.0, 0.3, 0.3, 1.0), 0.1)
 	tween.tween_property(item, "modulate:a", 0.0, 0.2)
 	tween.tween_callback(func() -> void:
@@ -194,7 +194,7 @@ func _play_queue_exit(client_id: StringName, item: Control) -> void:
 	var end_scale := start_scale * EXIT_SCALE_FACTOR
 	item.set_as_top_level(true)
 	item.global_position = start_pos
-	var tween := create_tween()
+	var tween := create_tween().bind_node(item)
 	tween.tween_property(item, "global_position", end_pos, EXIT_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	tween.parallel().tween_property(item, "scale", end_scale, EXIT_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	tween.parallel().tween_property(item, "modulate:a", 0.0, EXIT_DURATION)
