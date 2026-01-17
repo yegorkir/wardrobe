@@ -32,6 +32,7 @@ position = Vector2(1920, 128)
 
 [node name="CabinetsGrid" parent="StorageHall" instance=ExtResource("11")]
 position = Vector2(-779, 174)
+script = null
 
 [node name="CurtainRig" parent="StorageHall" instance=ExtResource("9")]
 position = Vector2(-28, 396)
@@ -55,13 +56,6 @@ position = Vector2(-1466, -127)
 scale = Vector2(0.9438776, 1)
 texture = ExtResource("6_g5561")
 
-[node name="Wire3" type="Sprite2D" parent="StorageHall/BulbsColumn"]
-texture_filter = 1
-position = Vector2(-1372, 148)
-rotation = 1.5707964
-scale = Vector2(0.9438776, 1)
-texture = ExtResource("5_1cvfn")
-
 [node name="Wire4" type="Sprite2D" parent="StorageHall/BulbsColumn"]
 texture_filter = 1
 position = Vector2(-1466, 181)
@@ -77,16 +71,12 @@ light_intensity = 0.8
 bulb_offset = Vector2(36, 16)
 external_visual_path = NodePath("../Bulb0")
 
-[node name="Bulb0" parent="StorageHall/BulbsColumn" node_paths=PackedStringArray("external_visual_path") instance=ExtResource("8_ky8yc")]
+[node name="Bulb0" parent="StorageHall/BulbsColumn" instance=ExtResource("8_ky8yc")]
 position = Vector2(-1374, -273)
-external_visual_path = NodePath("../Bulb0")
-extra_visual_path = NodePath("")
 
 [node name="LightSwitch0" parent="StorageHall/BulbsColumn" instance=ExtResource("11_ax2is")]
 position = Vector2(-1566, -127)
 scale = Vector2(0.5, 0.5)
-row_index = 0
-source_id = &"bulb_row0"
 
 [node name="BulbRow1" parent="StorageHall/BulbsColumn" instance=ExtResource("10_rig")]
 position = Vector2(-1427, -4)
@@ -99,10 +89,8 @@ light_intensity = 0.8
 bulb_offset = Vector2(36, 16)
 external_visual_path = NodePath("../Bulb1")
 
-[node name="Bulb1" parent="StorageHall/BulbsColumn" node_paths=PackedStringArray("external_visual_path") instance=ExtResource("8_ky8yc")]
+[node name="Bulb1" parent="StorageHall/BulbsColumn" instance=ExtResource("8_ky8yc")]
 position = Vector2(-1373, 52)
-external_visual_path = NodePath("../Bulb1")
-extra_visual_path = NodePath("")
 
 [node name="LightSwitch1" parent="StorageHall/BulbsColumn" instance=ExtResource("11_ax2is")]
 position = Vector2(-1560, 176)
@@ -169,6 +157,33 @@ layout_adapter_path = NodePath("ClientDropZone/DeskLayout")
 
 [node name="ClientDropZone" parent="ServiceZone/ServiceSlots/Desk_B" instance=ExtResource("11_8dep5")]
 position = Vector2(20.444454, 51.111103)
+
+[node name="LightZone" type="Node" parent="ServiceZone"]
+
+[node name="BulbRowService" parent="ServiceZone/LightZone" instance=ExtResource("10_rig")]
+position = Vector2(372, 726)
+show_zone_in_editor = true
+zone_width = 855.05
+zone_height = 191.7
+light_intensity = 1.0
+bulb_offset = Vector2(36, 16)
+external_visual_path = NodePath("../BulbService")
+extra_visual_path = NodePath("../LightSwitchService")
+
+[node name="BulbService" parent="ServiceZone/LightZone" instance=ExtResource("8_ky8yc")]
+position = Vector2(420, 783)
+external_visual_path = NodePath("../LightSwitchService")
+
+[node name="Wire3" type="Sprite2D" parent="ServiceZone/LightZone"]
+texture_filter = 1
+position = Vector2(420, 889.75006)
+rotation = 1.5707964
+scale = Vector2(0.9311226, 1)
+texture = ExtResource("5_1cvfn")
+
+[node name="LightSwitchService" parent="ServiceZone/LightZone" instance=ExtResource("11_ax2is")]
+position = Vector2(420, 842)
+scale = Vector2(0.5, 0.5)
 
 [node name="HandRoot" type="Node2D" parent="."]
 z_index = 1000

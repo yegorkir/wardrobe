@@ -153,6 +153,7 @@ func _assign_next_client_to_desk(
 			continue
 		desk_state.current_client_id = next_client_id
 		next_client.set_assigned_service_point(desk_state.desk_id)
+		next_client.set_presence(ClientStateScript.PRESENCE_PRESENT)
 		if next_client.phase == ClientStateScript.PHASE_DROP_OFF:
 			var dropoff_items: Array[ItemInstance] = []
 			var coat := next_client.get_coat_item()

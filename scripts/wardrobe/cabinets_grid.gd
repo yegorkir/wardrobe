@@ -8,6 +8,10 @@ func _ready() -> void:
 	_assign_ticket_symbol_indices()
 	_refresh_cabinet_plate_icons()
 
+func ensure_ticket_symbols() -> void:
+	_assign_ticket_symbol_indices()
+	_refresh_cabinet_plate_icons()
+
 func get_ticket_slots() -> Array[WardrobeSlot]:
 	var ticket_slots: Array[WardrobeSlot] = []
 	for node in find_children("*", "WardrobeSlot", true, true):

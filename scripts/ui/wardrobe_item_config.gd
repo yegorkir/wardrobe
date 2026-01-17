@@ -22,11 +22,11 @@ const ITEM_DATA := {
 		"kind": ItemInstanceScript.KIND_ANCHOR_TICKET,
 	},
 	ItemNode.ItemType.BOTTLE: {
-		"place_flags": PlacementTypes.PlaceFlags.LAY,
+		"place_flags": PlacementTypes.PlaceFlags.HANG,
 		"kind": ItemInstanceScript.KIND_COAT,
 	},
 	ItemNode.ItemType.CHEST: {
-		"place_flags": PlacementTypes.PlaceFlags.LAY,
+		"place_flags": PlacementTypes.PlaceFlags.HANG,
 		"kind": ItemInstanceScript.KIND_COAT,
 	},
 	ItemNode.ItemType.HAT: {

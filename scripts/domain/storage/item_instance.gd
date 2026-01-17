@@ -17,6 +17,7 @@ var kind: StringName
 var archetype_id: StringName
 var color: Color
 var quality_state: RefCounted # ItemQualityState
+var ticket_symbol_index: int = -1
 
 func _init(item_id: StringName, item_kind: StringName, item_archetype_id: StringName = &"", item_color: Color = Color.WHITE, p_quality_state: RefCounted = null) -> void:
 	id = item_id
@@ -35,7 +36,9 @@ func duplicate_instance() -> ItemInstance:
 	var dup_quality = null
 	if quality_state:
 		dup_quality = quality_state.call("duplicate_state")
-	return get_script().new(id, kind, archetype_id, color, dup_quality) as ItemInstance
+	var duplicate := get_script().new(id, kind, archetype_id, color, dup_quality) as ItemInstance
+	duplicate.ticket_symbol_index = ticket_symbol_index
+	return duplicate
 
 func to_snapshot() -> Dictionary:
 	var snapshot := {
@@ -44,6 +47,8 @@ func to_snapshot() -> Dictionary:
 		"archetype_id": archetype_id,
 		"color": color,
 	}
+	if ticket_symbol_index >= 0:
+		snapshot["ticket_symbol_index"] = ticket_symbol_index
 	if quality_state:
 		snapshot["quality"] = quality_state.call("to_snapshot")
 	return snapshot

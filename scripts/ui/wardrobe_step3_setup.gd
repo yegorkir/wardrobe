@@ -254,12 +254,15 @@ func _seed_cabinet_tickets() -> void:
 	var slot_count: int = cabinet_slots.size()
 	for index in range(slot_count):
 		var color := colors[index % colors.size()]
+		var slot := cabinet_slots[index] as WardrobeSlot
 		var ticket := ItemInstanceScript.new(
 			StringName("ticket_cabinet_%02d" % index),
 			ItemInstanceScript.KIND_TICKET,
 			StringName(),
 			color
 		)
+		if slot:
+			ticket.ticket_symbol_index = slot.ticket_symbol_index
 		if _place_item_instance_in_slot.is_valid():
 			_place_item_instance_in_slot.call(
 				StringName(cabinet_slots[index].get_slot_identifier()),

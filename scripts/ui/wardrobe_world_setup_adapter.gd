@@ -91,6 +91,8 @@ func get_queue_system() -> ClientQueueSystem:
 func get_cabinet_ticket_slots() -> Array[WardrobeSlot]:
 	var grid := _root.get_node_or_null("StorageHall/CabinetsGrid")
 	if grid != null and grid.has_method("get_ticket_slots"):
+		if grid.has_method("ensure_ticket_symbols"):
+			grid.call("ensure_ticket_symbols")
 		var slots: Array = grid.call("get_ticket_slots")
 		var filtered: Array[WardrobeSlot] = []
 		for entry in slots:

@@ -70,7 +70,7 @@ func spawn_or_move_item_node(slot_id: StringName, instance: ItemInstance) -> voi
 	else:
 		node.set_item_instance(instance)
 		apply_item_visuals(node, instance.color)
-	_apply_ticket_symbol(node, slot)
+	_apply_ticket_symbol(node, slot, instance)
 	if _detach_item_node.is_valid():
 		_detach_item_node.call(node)
 	slot.put_item(node)
@@ -191,15 +191,22 @@ func get_item_color(item: ItemNode) -> Color:
 		return sprite.modulate
 	return Color.WHITE
 
-func _apply_ticket_symbol(item: ItemNode, slot: WardrobeSlot) -> void:
+func _apply_ticket_symbol(item: ItemNode, slot: WardrobeSlot, instance: ItemInstance) -> void:
 	if item == null:
 		return
 	if item.item_type != ItemNode.ItemType.TICKET:
 		item.clear_ticket_symbol()
 		return
-	var index := slot.get_ticket_symbol_index()
+	var index := _resolve_ticket_symbol_index(slot, instance)
 	if index < 0:
 		item.clear_ticket_symbol()
 		return
 	var atlas := CabinetSymbolAtlasScript.make_atlas_texture(TICKET_SYMBOL_TEXTURE, index)
 	item.set_ticket_symbol(atlas)
+
+func _resolve_ticket_symbol_index(slot: WardrobeSlot, instance: ItemInstance) -> int:
+	if instance != null and instance.ticket_symbol_index >= 0:
+		return instance.ticket_symbol_index
+	if slot == null:
+		return -1
+	return slot.get_ticket_symbol_index()
